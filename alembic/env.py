@@ -11,7 +11,7 @@ from backend.src.db.orm.base import Base
 config = context.config
 # '%' must be escaped for ConfigParser (passwords can contain it)
 config.set_main_option(
-    "sqlalchemy.url", Settings.require_test_database().replace("%", "%%"))
+    "sqlalchemy.url", Settings.require_database().replace("%", "%%"))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

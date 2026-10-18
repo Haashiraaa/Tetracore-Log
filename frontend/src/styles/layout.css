@@ -1,0 +1,258 @@
+/* frontend/src/styles/layout.css : app shell, navigation, page frames, auth screens */
+
+/* ---------- shell ---------- */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.shell__bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 1rem;
+  padding-top: calc(0.6rem + env(safe-area-inset-top));
+  background: var(--bar);
+  color: #ffffff;
+}
+
+.main {
+  flex: 1;
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 2.5rem;
+}
+
+.page--narrow {
+  max-width: 40rem;
+  margin-inline: auto;
+}
+
+/* ---------- brand ---------- */
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.brand--static {
+  color: var(--ink);
+}
+
+.brand__mark {
+  width: 1.75rem;
+  height: 1.2rem;
+  background: #ffffff;
+  border: 2px solid currentColor;
+  border-top: 0.35rem solid var(--amber);
+  border-radius: 0.25rem;
+}
+
+.brand__name {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* ---------- navigation ---------- */
+
+.nav {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: 1rem;
+}
+
+.nav__link {
+  padding: 0.55rem 0.9rem;
+  border-bottom: 3px solid transparent;
+  border-radius: var(--radius) var(--radius) 0 0;
+  color: #cfe0ef;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.nav__link:hover {
+  background: rgb(255 255 255 / 0.08);
+}
+
+.nav__link[aria-current="page"] {
+  border-bottom-color: var(--amber);
+  color: #ffffff;
+}
+
+/* ---------- account menu ---------- */
+
+.account {
+  position: relative;
+  margin-left: auto;
+}
+
+.account__summary {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.25rem 0.4rem;
+  border-radius: var(--radius);
+  list-style: none;
+  cursor: pointer;
+}
+
+.account__summary::-webkit-details-marker {
+  display: none;
+}
+
+.account__avatar {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  background: #ffffff;
+  border-radius: 50%;
+  color: #0b2540;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.account__who {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.account__name {
+  font-weight: 600;
+}
+
+.account__meta {
+  color: #a9c3da;
+  font-size: 0.8125rem;
+}
+
+.account__panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 15rem;
+  padding: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-pop);
+  color: var(--ink);
+}
+
+.account__line {
+  color: var(--ink-soft);
+  font-size: 0.9375rem;
+}
+
+.account__action {
+  display: block;
+  width: 100%;
+  margin-top: 0.15rem;
+  padding: 0.65rem 0.5rem;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.account__action:hover {
+  background: var(--surface-sunk);
+}
+
+/* ---------- page header ---------- */
+
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.page-head__sub {
+  margin-top: 0.25rem;
+  color: var(--ink-soft);
+}
+
+/* ---------- auth screens ---------- */
+
+.auth {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: 1.25rem;
+}
+
+.auth__card {
+  width: min(26rem, 100%);
+  padding: 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: calc(var(--radius) + 4px);
+  box-shadow: 0 10px 30px rgb(8 18 28 / 0.1);
+}
+
+/* ---------- phones: navigation moves to the thumb ---------- */
+
+@media (max-width: 52rem) {
+  .nav {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 30;
+    gap: 0;
+    margin: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+  }
+
+  .nav__link {
+    flex: 1;
+    padding: 0.9rem 0.25rem;
+    border-top: 4px solid transparent;
+    border-bottom: 0;
+    border-radius: 0;
+    color: var(--ink-soft);
+    text-align: center;
+  }
+
+  .nav__link:hover {
+    background: none;
+  }
+
+  .nav__link[aria-current="page"] {
+    border-top-color: var(--amber);
+    color: var(--ink);
+  }
+
+  .account__who {
+    display: none;
+  }
+
+  .main {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  }
+}

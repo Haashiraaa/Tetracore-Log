@@ -142,7 +142,7 @@ def main() -> int:
     p = sub.add_parser("create", help="create a NEW super admin account")
     add_target(p)
     p.add_argument("--name", required=True)
-    p.add_argument("--role", default=Role.CSO.value,
+    p.add_argument("--role", default=Role.OFFICER.value,
                    choices=[r.value for r in Role])
     p.set_defaults(fn=cmd_create)
 

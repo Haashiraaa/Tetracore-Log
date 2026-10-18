@@ -30,31 +30,25 @@ def revoke_all_sessions(db: Session, officer_id: uuid.UUID) -> None:
     )
 
 
-def _next_facility_code(db: Session, facility: Facility, prefix: str) -> str:
-    while True:
-        seq = facility.next_officer_seq
-        facility.next_officer_seq = seq + 1
-        code = f"{prefix}-{seq:03d}"
-        taken = db.scalar(select(Officer.id).where(
-            Officer.facility_id == facility.id, Officer.officer_code == code))
-        if taken is None:
-            return code
-
-
-def _next_global_code(db: Session, prefix: str) -> str:
-    name = f"officer_code:{prefix}"
+def _next_code(db: Session, *, prefix: str, facility_id: uuid.UUID | None) -> str:
+    """PREFIX-001, PREFIX-002 ... counted per (facility, prefix).
+    Global accounts (facility_id None) count under 'global'."""
+    scope = str(facility_id) if facility_id else "global"
+    name = f"officer_code:{scope}:{prefix}"
     db.execute(pg_insert(Counter).values(name=name, next_value=1)
                .on_conflict_do_nothing(index_elements=["name"]))
-    row = db.scalar(select(Counter).where(
-        Counter.name == name).with_for_update())
+    row = db.scalar(
+        select(Counter).where(Counter.name == name).with_for_update()
+        .execution_options(populate_existing=True))
     assert row is not None
     while True:
         seq = row.next_value
         row.next_value = seq + 1
         code = f"{prefix}-{seq:03d}"
-        taken = db.scalar(select(Officer.id).where(
-            Officer.facility_id.is_(None), Officer.officer_code == code))
-        if taken is None:
+        clash = Officer.officer_code == code
+        where_fac = (Officer.facility_id == facility_id if facility_id
+                     else Officer.facility_id.is_(None))
+        if db.scalar(select(Officer.id).where(clash, where_fac)) is None:
             return code
 
 
@@ -80,9 +74,10 @@ def create_account(
             .execution_options(populate_existing=True))
         if facility is None:
             raise NotFoundError("Facility not found.")
-        code = _next_facility_code(db, facility, CODE_PREFIX[role])
+        code = _next_code(
+            db, prefix=CODE_PREFIX[role], facility_id=facility.id)
     else:
-        code = _next_global_code(db, CODE_PREFIX[role])
+        code = _next_code(db, prefix=CODE_PREFIX[role], facility_id=None)
 
     pin = generate_temp_pin()
     officer = Officer(
