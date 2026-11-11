@@ -43,7 +43,7 @@ One line per account:
 
 ```
 ADM-01     Ada Obi                      role=admin            facility=-            admin  active
-OFF-001    Musa Bello                   role=officer          facility=CNG-A        -      active
+OFF-001    Musa Bello                   role=officer          facility=CNG-LAG-01    -      active
 ```
 
 | Column | Meaning |
