@@ -4,6 +4,13 @@ All notable changes to Tetracore Log. Entries above the baseline are written aut
 release-please from commit messages when a release pull request is merged (see
 [docs/releasing.md](docs/releasing.md)), so do not edit them by hand.
 
+## [0.7.0](https://github.com/Haashiraaa/Tetracore-Log/compare/v0.6.0...v0.7.0) (2026-11-11)
+
+
+### Features
+
+* **logs:** search visitors and staff by phone as the number is typed ([#17](https://github.com/Haashiraaa/Tetracore-Log/issues/17)) ([564149d](https://github.com/Haashiraaa/Tetracore-Log/commit/564149d8bc9a0c1802d4c39d57a6ef7fcab3361e))
+
 ## [0.6.0](https://github.com/Haashiraaa/Tetracore-Log/compare/v0.5.0...v0.6.0) (2026-11-11)
 
 
