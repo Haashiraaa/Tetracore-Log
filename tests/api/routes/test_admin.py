@@ -36,10 +36,11 @@ def test_facility_codes_are_issued_per_state(client, admin):
 def test_a_facility_number_is_never_reused(client, admin):
     from sqlalchemy import delete
 
-    from backend.src.db.orm.tables import Facility
+    from backend.src.db.orm.tables import Event, Facility
     from backend.src.db.session import create_session
     assert mkfac(client, admin).json()["code"] == "CNG-LAG-01"
     with create_session() as db:  # even if the facility is removed behind our back
+        db.execute(delete(Event))  # (the "facility added" notice points at it)
         db.execute(delete(Facility))
         db.commit()
     assert mkfac(client, admin).json()["code"] == "CNG-LAG-02"

@@ -2,14 +2,18 @@
 
 # backend/src/main.py
 
-from contextlib import asynccontextmanager
+import asyncio
+import logging
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from backend.src.api import event_service
 from backend.src.api.routes import ROUTERS
 from backend.src.config.settings import Settings
+from backend.src.db.session import create_session
 from backend.src.exceptions.errors import (
     AccountLockedError,
     AuthError,
@@ -22,12 +26,39 @@ from backend.src.exceptions.errors import (
     WeakPinError,
 )
 
+log = logging.getLogger(__name__)
+
+
+def _check_left_inside() -> None:
+    with create_session() as db:
+        event_service.check_left_inside(db)
+
+
+async def _watch_left_inside(every_minutes: int) -> None:
+    """Every few minutes, warn about anyone still inside long after signing in. Several
+    servers can run this at once: the database lets one warning through per entry."""
+    while True:
+        try:
+            await asyncio.to_thread(_check_left_inside)
+        except Exception:  # noqa: BLE001 - keep watching whatever one pass hit
+            log.exception("left-inside check failed")
+        await asyncio.sleep(every_minutes * 60)
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     Settings.require_jwt_secret()
     Settings.require_pin_pepper()
-    yield
+    watcher = None
+    if Settings.LEFT_INSIDE_CHECK_MINUTES > 0:
+        watcher = asyncio.create_task(_watch_left_inside(Settings.LEFT_INSIDE_CHECK_MINUTES))
+    try:
+        yield
+    finally:
+        if watcher is not None:
+            watcher.cancel()
+            with suppress(asyncio.CancelledError):
+                await watcher
 
 
 app = FastAPI(title="Tetracore Log", version="0.1.0", lifespan=lifespan)

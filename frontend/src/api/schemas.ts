@@ -219,3 +219,39 @@ export interface StaffEntry extends EntryBase {
 }
 
 export type AnyEntry = TruckEntry | VisitorEntry | StaffEntry;
+
+// ---- notifications (the admin's feed) ----
+
+export interface EventItem {
+  id: number;
+  created_at: string;
+  kind: string;
+  severity: "info" | "warning";
+  summary: string;
+  facility_code: string | null;
+  /** Who did it. null for things nobody did, such as "left inside". */
+  actor_name: string | null;
+  entry_id: string | null;
+}
+
+export interface EventsSummary {
+  latest_id: number;
+  last_read_id: number;
+  unread: number;
+}
+
+export type EventGroup = "gate" | "admin" | "warnings";
+
+export interface EventsQuery {
+  limit?: number;
+  before_id?: number;
+  after_id?: number;
+  facility_code?: string;
+  group?: EventGroup;
+}
+
+/** What the browser's PushSubscription.toJSON() gives. */
+export interface PushSubscriptionJson {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+}

@@ -16,6 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from backend.src.api import event_service
 from backend.src.api.account_ops import create_account
 from backend.src.db.orm._helpers import normalize_code
 from backend.src.db.orm.tables import Facility, Officer
@@ -33,7 +34,9 @@ def _facility_code_taken(db: Session, code: str) -> bool:
     return db.scalar(select(Facility.id).where(Facility.code == code)) is not None
 
 
-def create_facility(db: Session, *, state: str, name: str) -> Facility:
+def create_facility(
+    db: Session, *, actor_id: uuid.UUID, state: str, name: str
+) -> Facility:
     """The server issues the code: CNG-<state>-<number>. `state` is already a
     canonical state name (the request schema checks it). The number comes from a
     per-state counter that only goes up, and skips a code that is already taken
@@ -46,10 +49,15 @@ def create_facility(db: Session, *, state: str, name: str) -> Facility:
     facility = Facility(code=code, state=state, name=name.strip())
     db.add(facility)
     try:
+        db.flush()
+        event = event_service.record(
+            db, kind="facility_added", facility_id=facility.id, actor_id=actor_id,
+            summary=f"Facility {facility.code} ({facility.name}) was added.")
         db.commit()
     except IntegrityError:  # a parallel request took the same name: let it retry
         db.rollback()
         raise ConflictError("Could not issue a facility code. Try again.") from None
+    event_service.announce(event.id)
     return facility
 
 
@@ -72,14 +80,23 @@ def _managed_officer(db: Session, officer_id: uuid.UUID) -> Officer:
     return officer
 
 
+def _record(db: Session, kind: str, officer: Officer, actor_id: uuid.UUID, summary: str):
+    return event_service.record(
+        db, kind=kind, summary=summary, facility_id=officer.facility_id, actor_id=actor_id)
+
+
 def create_officer(
-    db: Session, *, facility_code: str, full_name: str, role: str = DEFAULT_ROLE
+    db: Session, *, actor_id: uuid.UUID, facility_code: str, full_name: str,
+    role: str = DEFAULT_ROLE,
 ) -> tuple[Officer, Facility, str]:
     """Returns (officer, facility, temp_pin). The temp PIN exists in plain text
     only in this return value."""
     officer, facility, pin = create_account(
         db, full_name=full_name, role=role, facility_code=facility_code)
+    event = _record(db, "officer_added", officer, actor_id,
+                    f"{officer.full_name} ({officer.officer_code}) was added to {facility.code}.")
     db.commit()
+    event_service.announce(event.id)
     return officer, facility, pin
 
 
@@ -97,7 +114,9 @@ def list_officers(
     return [(o, f) for o, f in db.execute(stmt).all()]
 
 
-def reset_pin(db: Session, officer_id: uuid.UUID) -> tuple[Officer, str]:
+def reset_pin(
+    db: Session, officer_id: uuid.UUID, *, actor_id: uuid.UUID
+) -> tuple[Officer, str]:
     """New temp PIN, must_change_pin on, lockout cleared, every phone signed out."""
     officer = _managed_officer(db, officer_id)
     pin = generate_temp_pin()
@@ -106,20 +125,33 @@ def reset_pin(db: Session, officer_id: uuid.UUID) -> tuple[Officer, str]:
     officer.failed_pin_attempts = 0
     officer.locked_until = None
     sign_out_everywhere(db, officer.id)
+    event = _record(db, "officer_pin_reset", officer, actor_id,
+                    f"PIN reset for {officer.full_name} ({officer.officer_code}).")
     db.commit()
+    event_service.announce(event.id)
     return officer, pin
 
 
-def set_officer_active(db: Session, officer_id: uuid.UUID, active: bool) -> None:
+def set_officer_active(
+    db: Session, officer_id: uuid.UUID, active: bool, *, actor_id: uuid.UUID
+) -> None:
     officer = _managed_officer(db, officer_id)
     officer.is_active = active
     if not active:
         sign_out_everywhere(db, officer.id)
+    event = _record(
+        db, "officer_enabled" if active else "officer_disabled", officer, actor_id,
+        f"{officer.full_name} ({officer.officer_code}) was "
+        f"{'enabled' if active else 'disabled'}.")
     db.commit()
+    event_service.announce(event.id)
 
 
-def revoke_sessions(db: Session, officer_id: uuid.UUID) -> None:
+def revoke_sessions(db: Session, officer_id: uuid.UUID, *, actor_id: uuid.UUID) -> None:
     """Lost phone: sign the officer out everywhere, keep the account enabled."""
     officer = _managed_officer(db, officer_id)
     sign_out_everywhere(db, officer.id)
+    event = _record(db, "sessions_revoked", officer, actor_id,
+                    f"{officer.full_name} ({officer.officer_code}) was signed out everywhere.")
     db.commit()
+    event_service.announce(event.id)

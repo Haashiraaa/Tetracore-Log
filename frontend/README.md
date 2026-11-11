@@ -48,8 +48,9 @@ Rule of thumb: `api/*` never contains a decision, `services/*` never touches the
 ## Behaviour worth knowing
 
 - **Three logs.** Trucks, visitors and staff share one set of screens: Gate (sign in), Inside (who is in now, sign out), Log (history, CSV, both signatures). Everyone signs on the way in and on the way out. Visitors and staff need a full name and a phone; the sign-in screens search by phone as you type and prefill returning people (see `docs/people-logs.md`).
+- **Alerts.** Admins get an **Alerts** page: a live feed of every event (polled every 5 s, `components/notifications/`), a bell count in the menu and tab title, and a switch for browser push per device (`public/sw.js` shows the notification). See `docs/notifications.md`.
 - **Look.** "Hi-vis": black, off-white, one yellow for the next action, orange for still inside. Tokens are in `src/styles/tokens.css`. Light only for now.
-- **Who sees what.** The role is a free-form label and changes nothing. Accounts with a facility get Gate, Inside, Log and can write entries. Accounts without a facility get Inside and Log (read-only, all facilities). Admins add Admin. The backend re-checks every request; the UI only hides what you can't use.
+- **Who sees what.** The role is a free-form label and changes nothing. Accounts with a facility get Gate, Inside, Log and can write entries. Accounts without a facility get Inside and Log (read-only, all facilities). Admins add Accounts and Alerts. The backend re-checks every request; the UI only hides what you can't use.
 - **Sessions.** Access token in memory, refresh token in `localStorage`. An expired token is refreshed once and the request retried. Only `session_revoked` logs you out; a wrong current PIN on Change PIN does not.
 - **Retries are safe.** The sign-in entry id is generated once when the form opens and reused on retry, so a lost response can't create a duplicate.
 - **Times.** The server stamps sign-in and sign-out times while the app is online. Everything is displayed in Lagos time (`config/env.ts`).

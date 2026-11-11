@@ -127,3 +127,16 @@ def test_list_all_on_an_empty_database(run):
 def test_there_is_no_super_admin_command():
     with pytest.raises(SystemExit):
         admin_manager.main(["promote", "--code", "X"])
+
+
+def test_admin_changes_from_the_console_reach_the_notification_feed(client, run):
+    watcher = make_actor(client, code="ADM-000", role="admin", is_admin=True)
+    make_account(code="OFF-003", facility="CNG-A")
+    run("grant", "--code", "OFF-003", "--facility", "CNG-A")
+    run("revoke", "--code", "OFF-003", "--facility", "CNG-A")
+    events = client.get("/api/admin/events", params={"group": "admin"},
+                        headers=watcher.headers).json()
+    assert [e["kind"] for e in reversed(events)] == ["admin_granted", "admin_revoked"]
+    assert events[0]["summary"] == (
+        "Test OFF-003 (OFF-003) is no longer an admin (from the server console).")
+    assert events[0]["facility_code"] == "CNG-A" and events[0]["actor_name"] is None

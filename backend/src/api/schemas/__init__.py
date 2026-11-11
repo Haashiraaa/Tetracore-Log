@@ -25,6 +25,14 @@ from backend.src.api.schemas.auth import (
     RefreshResult,
 )
 from backend.src.api.schemas.common import EntryOut, EntrySignInRequest, EntrySignOutRequest
+from backend.src.api.schemas.events import (
+    EventOut,
+    EventsSummaryOut,
+    MarkReadRequest,
+    PushConfigOut,
+    PushSubscribeRequest,
+    PushUnsubscribeRequest,
+)
 from backend.src.api.schemas.staff import StaffEntryOut, StaffLookupOut, StaffSignInRequest
 from backend.src.api.schemas.trucks import (
     TruckEntryOut,
@@ -41,6 +49,8 @@ from backend.src.api.schemas.visitors import (
 __all__ = [
     "AdminOfficerOut", "StateOut", "ChangePinRequest", "CreateFacilityRequest",
     "CreateOfficerRequest", "CreateOfficerResponse", "CurrentOfficer",
+    "EventOut", "EventsSummaryOut", "MarkReadRequest", "PushConfigOut",
+    "PushSubscribeRequest", "PushUnsubscribeRequest",
     "EntryOut", "EntrySignInRequest", "EntrySignOutRequest", "FacilityOut",
     "LoginRequest", "LoginResponse", "LoginResult", "LogoutRequest",
     "OfficerProfile", "RefreshRequest", "RefreshResponse", "RefreshResult",

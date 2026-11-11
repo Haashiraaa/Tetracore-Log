@@ -111,6 +111,24 @@
   font-weight: 600;
 }
 
+.nav__badge {
+  min-width: 1.4rem;
+  margin-left: auto;
+  padding: 0.05rem 0.4rem;
+  background: var(--hi);
+  border-radius: 999px;
+  color: var(--on-hi);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.nav__link[aria-current="page"] .nav__badge {
+  background: var(--on-hi);
+  color: var(--hi);
+}
+
 /* ---------- account menu ---------- */
 
 .account {
@@ -358,6 +376,18 @@
 
   .nav__link:hover {
     background: none;
+  }
+
+  .nav__link {
+    position: relative;
+  }
+
+  .nav__badge {
+    position: absolute;
+    top: 0.2rem;
+    left: calc(50% + 0.35rem);
+    margin: 0;
+    font-size: 0.6875rem;
   }
 
   .nav__link[aria-current="page"] {

@@ -1150,3 +1150,106 @@ form.card {
   color: var(--ink-soft);
   font-size: 0.875rem;
 }
+
+/* ---------- notifications ---------- */
+
+.kind-tabs--four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-column: 1 / -1;
+  max-width: 34rem;
+}
+
+.push {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem 1rem;
+  align-items: center;
+}
+
+.push .banner {
+  grid-column: 1 / -1;
+}
+
+.push__text p {
+  margin: 0.15rem 0 0;
+}
+
+.center {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 0;
+}
+
+/* One long line per event, like the Inside list. */
+.events {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.event {
+  display: grid;
+  grid-template-columns: 9.5rem 8rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.25rem 1rem;
+  padding: 0.7rem 1rem;
+  border-top: 1px solid var(--line);
+  border-left: 4px solid transparent;
+}
+
+.event:first-child {
+  border-top: 0;
+}
+
+.event--new {
+  background: var(--hi-soft, #f6ffc8);
+  border-left-color: var(--hi);
+}
+
+.event--warning {
+  border-left-color: var(--amber);
+}
+
+.event--warning.event--new {
+  background: var(--amber-soft);
+}
+
+.event__time {
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+}
+
+.event__by {
+  color: var(--ink-soft);
+}
+
+.event__where {
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+}
+
+@media (max-width: 40rem) {
+  .event {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 0.7rem 0.85rem;
+  }
+
+  .event__summary {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .event__time {
+    justify-self: end;
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .event__where {
+    grid-column: 1 / -1;
+  }
+}

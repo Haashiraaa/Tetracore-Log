@@ -13,6 +13,7 @@ import TruckInPage from "@/pages/gate/TruckInPage";
 import InsidePage from "@/pages/inside/InsidePage";
 import LoginPage from "@/pages/LoginPage";
 import LogPage from "@/pages/log/LogPage";
+import NotificationsPage from "@/pages/notifications/NotificationsPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 
 function HomeRedirect() {
@@ -43,6 +44,7 @@ export default function App() {
 
           <Route element={<RequireAccess allow={isAdmin} />}>
             <Route path="admin" element={<AdminPage />} />
+            <Route path="notifications" element={<NotificationsPage />} />
           </Route>
         </Route>
       </Route>

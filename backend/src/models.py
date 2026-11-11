@@ -88,3 +88,22 @@ class AccessClaims:
     officer_id: uuid.UUID
     session_id: uuid.UUID
     expires_at: datetime
+
+
+# ---- events: what the global admin is told about ----
+# One row per thing that happens. `kind` says what, `severity` says whether it needs a look.
+
+GATE_KINDS = ("truck_in", "truck_out", "visitor_in", "visitor_out", "staff_in", "staff_out")
+ADMIN_KINDS = (
+    "facility_added", "officer_added", "officer_pin_reset", "officer_disabled",
+    "officer_enabled", "sessions_revoked", "admin_granted", "admin_revoked",
+)
+WARNING_KINDS = ("already_inside", "left_inside")
+EVENT_KINDS = GATE_KINDS + ADMIN_KINDS + WARNING_KINDS
+
+# The filter on the Notifications page. "warnings" is by severity, not by kind.
+EVENT_GROUPS = ("gate", "admin", "warnings")
+
+
+def event_severity(kind: str) -> str:
+    return "warning" if kind in WARNING_KINDS else "info"
