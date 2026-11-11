@@ -24,9 +24,10 @@ export interface SignOutTarget {
   signedInAt: string | null;
 }
 
-export function signOutTargetOf(kind: LogKind, entry: AnyEntry): SignOutTarget {
+/** `cameInAt` overrides the time inside is counted from (a truck counts from entering). */
+export function signOutTargetOf(kind: LogKind, entry: AnyEntry, cameInAt?: string): SignOutTarget {
   const face = entryService.faceOf(entry);
-  return { kind, entryId: entry.id, plate: face.plate, name: face.name, signedInAt: entry.signed_in_at };
+  return { kind, entryId: entry.id, plate: face.plate, name: face.name, signedInAt: cameInAt ?? entry.signed_in_at };
 }
 
 interface SignOutSheetProps {

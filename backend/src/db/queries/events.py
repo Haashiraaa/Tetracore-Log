@@ -38,16 +38,19 @@ def add_event(
     return event
 
 
-def add_left_inside(
-    db: Session, *, summary: str, facility_id: uuid.UUID, entry_id: uuid.UUID
+def add_raised(
+    db: Session, *, kind: str, summary: str, facility_id: uuid.UUID, entry_id: uuid.UUID
 ) -> Optional[int]:
-    """The id of the new event, or None if this entry was already reported."""
+    """For the warnings the server raises itself: one per (kind, entry_id). The id of the
+    new event, or None if that one was already reported."""
     stmt = (
         pg_insert(Event)
-        .values(kind="left_inside", severity="warning", summary=summary[:300],
+        .values(kind=kind, severity="warning", summary=summary[:300],
                 facility_id=facility_id, entry_id=entry_id)
         .on_conflict_do_nothing(
-            index_elements=["entry_id"], index_where=text("kind = 'left_inside'"))
+            index_elements=["kind", "entry_id"],
+            index_where=text(
+                "kind IN ('left_inside','queued_too_long','on_duty_too_long','gate_unmanned')"))
         .returning(Event.id))
     return db.execute(stmt).scalar_one_or_none()
 

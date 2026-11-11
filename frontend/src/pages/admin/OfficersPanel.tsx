@@ -18,7 +18,7 @@ import { roleLabel } from "@/lib/format";
 import { DEFAULT_ROLE, ROLE_MAX_LENGTH } from "@/models";
 import * as adminService from "@/services/adminService";
 
-type PendingKind = "reset" | "disable" | "revoke";
+type PendingKind = "reset" | "disable" | "revoke" | "endDuty";
 interface Pending {
   kind: PendingKind;
   officer: OfficerSummary;
@@ -37,6 +37,13 @@ const CONFIRM_COPY: Record<PendingKind, { title: string; label: string; danger: 
     label: "Disable",
     danger: true,
     body: (o) => `${o.full_name} will be signed out everywhere and won't be able to log in until you enable the account.`,
+  },
+  endDuty: {
+    title: "End duty",
+    label: "End duty",
+    danger: false,
+    body: (o) =>
+      `${o.full_name} is taken off duty now, wherever they are. Use this when they forgot to go off duty. Nothing they logged changes.`,
   },
   revoke: {
     title: "Sign out everywhere",
@@ -87,6 +94,7 @@ export function OfficersPanel({ facilities }: { facilities: Facility[] }) {
     const { kind, officer } = pending;
     if (kind === "reset") setReveal(await adminService.resetOfficerPin(officer.id, officer.facility_code));
     else if (kind === "disable") await adminApi.disableOfficer(officer.id);
+    else if (kind === "endDuty") await adminService.endDuty(officer.id);
     else await adminApi.revokeSessions(officer.id);
     setPending(null);
     officers.reload();
@@ -221,6 +229,11 @@ export function OfficersPanel({ facilities }: { facilities: Facility[] }) {
                       <Button variant="secondary" size="sm" onClick={() => setPending({ kind: "reset", officer: o })}>
                         Reset PIN
                       </Button>
+                      {o.can_write_entries && (
+                        <Button variant="secondary" size="sm" onClick={() => setPending({ kind: "endDuty", officer: o })}>
+                          End duty
+                        </Button>
+                      )}
                       <Button variant="secondary" size="sm" onClick={() => setPending({ kind: "revoke", officer: o })}>
                         Sign out everywhere
                       </Button>

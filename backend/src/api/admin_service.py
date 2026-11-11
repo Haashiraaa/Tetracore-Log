@@ -16,12 +16,13 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from backend.src.api import event_service
+from backend.src.api import duty_service, event_service
 from backend.src.api.account_ops import create_account
 from backend.src.db.orm._helpers import normalize_code
 from backend.src.db.orm.tables import Facility, Officer
+from backend.src.db.queries import duty as duty_q
 from backend.src.db.queries.counters import take_number
-from backend.src.exceptions.errors import ConflictError, NotFoundError
+from backend.src.exceptions.errors import ConflictError, InvalidGateError, NotFoundError
 from backend.src.facility_codes import format_code, state_abbrev
 from backend.src.models import DEFAULT_ROLE
 from backend.src.security.passwords import generate_temp_pin, hash_pin
@@ -35,7 +36,7 @@ def _facility_code_taken(db: Session, code: str) -> bool:
 
 
 def create_facility(
-    db: Session, *, actor_id: uuid.UUID, state: str, name: str
+    db: Session, *, actor_id: uuid.UUID, state: str, name: str, gate_count: int = 1
 ) -> Facility:
     """The server issues the code: CNG-<state>-<number>. `state` is already a
     canonical state name (the request schema checks it). The number comes from a
@@ -46,17 +47,45 @@ def create_facility(
         code = format_code(state, take_number(db, counter_name))
         if not _facility_code_taken(db, code):
             break
-    facility = Facility(code=code, state=state, name=name.strip())
+    facility = Facility(code=code, state=state, name=name.strip(), gate_count=gate_count)
     db.add(facility)
     try:
         db.flush()
         event = event_service.record(
             db, kind="facility_added", facility_id=facility.id, actor_id=actor_id,
-            summary=f"Facility {facility.code} ({facility.name}) was added.")
+            summary=f"Facility {facility.code} ({facility.name}) was added "
+                    f"with {gate_count} gate{'' if gate_count == 1 else 's'}.")
         db.commit()
     except IntegrityError:  # a parallel request took the same name: let it retry
         db.rollback()
         raise ConflictError("Could not issue a facility code. Try again.") from None
+    event_service.announce(event.id)
+    return facility
+
+
+def set_gate_count(
+    db: Session, facility_code: str, gate_count: int, *, actor_id: uuid.UUID
+) -> Facility:
+    """Change how many gates a facility has. Refused while someone is on duty at a gate
+    that would no longer exist: they change gate or go off duty first."""
+    facility = db.scalar(select(Facility).where(
+        Facility.code == normalize_code(facility_code)).with_for_update())
+    if facility is None:
+        raise NotFoundError("Facility not found.")
+    busiest = duty_q.highest_open_gate(db, facility.id)
+    if busiest is not None and busiest > gate_count:
+        raise InvalidGateError(
+            f"Someone is on duty at gate {busiest}. They must change gate or go off duty "
+            "before that gate can be removed.")
+    if facility.gate_count == gate_count:
+        return facility
+    before = facility.gate_count
+    facility.gate_count = gate_count
+    event = event_service.record(
+        db, kind="gates_changed", facility_id=facility.id, actor_id=actor_id,
+        summary=f"{facility.code} now has {gate_count} gate"
+                f"{'' if gate_count == 1 else 's'} (was {before}).")
+    db.commit()
     event_service.announce(event.id)
     return facility
 
@@ -137,14 +166,30 @@ def set_officer_active(
 ) -> None:
     officer = _managed_officer(db, officer_id)
     officer.is_active = active
+    off_duty = None
     if not active:
         sign_out_everywhere(db, officer.id)
+        off_duty = duty_service.end_duty_by_admin(
+            db, officer_id=officer.id, actor_id=actor_id, name=officer.full_name,
+            facility_id=officer.facility_id)
     event = _record(
         db, "officer_enabled" if active else "officer_disabled", officer, actor_id,
         f"{officer.full_name} ({officer.officer_code}) was "
         f"{'enabled' if active else 'disabled'}.")
     db.commit()
-    event_service.announce(event.id)
+    event_service.announce(*(e.id for e in (off_duty, event) if e is not None))
+
+
+def end_duty(db: Session, officer_id: uuid.UUID, *, actor_id: uuid.UUID) -> bool:
+    """Take an officer off duty (they forgot to). True if they were on duty."""
+    officer = _managed_officer(db, officer_id)
+    event = duty_service.end_duty_by_admin(
+        db, officer_id=officer.id, actor_id=actor_id, name=officer.full_name,
+        facility_id=officer.facility_id)
+    db.commit()
+    if event is not None:
+        event_service.announce(event.id)
+    return event is not None
 
 
 def revoke_sessions(db: Session, officer_id: uuid.UUID, *, actor_id: uuid.UUID) -> None:

@@ -52,12 +52,15 @@ export interface Facility {
   state: string | null;
   name: string;
   is_active: boolean;
+  /** Gates are numbered 1..gate_count. */
+  gate_count: number;
 }
 
 /** No code: the server issues it from the state, e.g. CNG-LAG-01. */
 export interface CreateFacilityRequest {
   state: string;
   name: string;
+  gate_count: number;
 }
 
 export interface StateOption {
@@ -101,6 +104,9 @@ export interface EntryBase {
   signed_out_by: string | null;
   signed_out_by_name: string | null;
   device_id: string | null;
+  /** The gate it came in through / went out through (the gate its officer stood at). */
+  gate_in: number | null;
+  gate_out: number | null;
   /** Signed on the way in. */
   has_signature: boolean;
   has_signature_out: boolean;
@@ -139,22 +145,43 @@ export interface EntryQuery extends EntryFilters {
 
 // ---- trucks ----
 
+/** Queued (registered, still outside) -> On site (let in) -> Departed (signed out).
+ *  Or Queued -> Left queue (gave up before entering). */
+export type TruckStatus = "queued" | "on_site" | "departed" | "left_queue";
+
 export interface TruckLookup {
   truck_id: string;
   plate_number: string;
   driver_name: string;
   driver_phone: string | null;
   company: string | null;
-  /** Set when the truck is currently inside. */
+  /** Set when the truck is in the middle of a visit: queued or on site. */
   open_entry_id: string | null;
+  open_entry_status: "queued" | "on_site" | null;
 }
 
-export interface TruckSignInRequest extends EntrySignInBase {
+/** Register a truck. Without `enter_now` it joins the queue and needs no signature;
+ *  with it the truck is let in on the spot and the driver signs. */
+export interface TruckSignInRequest extends Omit<EntrySignInBase, "signature"> {
   plate_number: string;
   driver_name: string;
   driver_phone?: string | null;
   company?: string | null;
   scm_purchased?: string | null;
+  signature?: string | null;
+  enter_now?: boolean;
+}
+
+/** Let a queued truck in: the driver signs. */
+export interface TruckEnterRequest {
+  entered_at?: string | null;
+  signature: string;
+}
+
+/** A queued truck gave up. A reason is required. */
+export interface TruckLeaveQueueRequest {
+  reason: string;
+  left_at?: string | null;
 }
 
 export interface TruckSignOutRequest extends EntrySignOutRequest {
@@ -168,6 +195,12 @@ export interface TruckEntry extends EntryBase {
   driver_phone: string | null;
   company: string | null;
   scm_purchased: string | null;
+  status: TruckStatus;
+  /** When it was let in. signed_in_at is when it joined the queue. */
+  entered_at: string | null;
+  entered_by: string | null;
+  queued_gate: number | null;
+  left_queue_reason: string | null;
 }
 
 // ---- visitors ----
@@ -219,6 +252,60 @@ export interface StaffEntry extends EntryBase {
 }
 
 export type AnyEntry = TruckEntry | VisitorEntry | StaffEntry;
+
+// ---- duty (security officers log themselves) ----
+
+/** One stretch of duty at one gate. A change of gate closes it and opens another that
+ *  shares the shift_id. */
+export interface DutyEntry {
+  id: string;
+  facility_id: string;
+  facility_code: string;
+  officer_id: string;
+  officer_name: string;
+  officer_code: string;
+  gate: number;
+  shift_id: string;
+  on_duty_at: string;
+  off_duty_at: string | null;
+  started_how: "on" | "moved";
+  ended_how: "off" | "moved" | "admin" | null;
+  device_id: string | null;
+  has_signature: boolean;
+  has_signature_out: boolean;
+}
+
+export interface DutyStatus {
+  facility_code: string;
+  gate_count: number;
+  /** null = off duty. */
+  current: DutyEntry | null;
+}
+
+export interface DutyOnRequest {
+  id: string;
+  gate: number;
+  signature?: string | null;
+  device_id?: string | null;
+}
+
+export interface DutyChangeGateRequest {
+  id: string;
+  gate: number;
+}
+
+export interface DutyOffRequest {
+  signature?: string | null;
+}
+
+export interface DutyQuery {
+  open?: boolean;
+  facility_code?: string;
+  date_from?: string;
+  date_to?: string;
+  limit?: number;
+  offset?: number;
+}
 
 // ---- notifications (the admin's feed) ----
 

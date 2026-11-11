@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, ForeignKey, LargeBinary, String, Uuid, func
+from sqlalchemy import DateTime, ForeignKey, LargeBinary, SmallInteger, String, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 # --------------------------------------------------------------------------
@@ -67,3 +67,7 @@ class EntryMixin:
         Uuid, ForeignKey("officers.id", ondelete="RESTRICT"), nullable=True
     )
     device_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    # The gate the officer was posted to when they did it (from their duty entry).
+    # Null on rows from before gates existed.
+    gate_in: Mapped[Optional[int]] = mapped_column(SmallInteger, nullable=True)
+    gate_out: Mapped[Optional[int]] = mapped_column(SmallInteger, nullable=True)

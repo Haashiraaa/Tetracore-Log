@@ -2,10 +2,11 @@
 // Route table. Counterpart of the include_router calls in backend/src/main.py.
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "@/auth/AuthContext";
-import { RequireAccess, RequireAuth } from "@/auth/guards";
+import { RequireAccess, RequireAuth, RequireDuty } from "@/auth/guards";
 import { canWriteEntries, homePathFor, isAdmin } from "@/auth/permissions";
 import { AppShell } from "@/components/layout/AppShell";
 import AdminPage from "@/pages/admin/AdminPage";
+import DutyPage from "@/pages/duty/DutyPage";
 import ChangePinPage from "@/pages/ChangePinPage";
 import GateHomePage from "@/pages/gate/GateHomePage";
 import PersonInPage from "@/pages/gate/PersonInPage";
@@ -34,11 +35,14 @@ export default function App() {
 
           <Route element={<RequireAccess allow={canWriteEntries} />}>
             <Route path="gate" element={<GateHomePage />} />
-            <Route path="gate/truck" element={<TruckInPage />} />
-            <Route path="gate/visitor" element={<PersonInPage kind="visitors" />} />
-            <Route path="gate/staff" element={<PersonInPage kind="staff" />} />
+            <Route element={<RequireDuty />}>
+              <Route path="gate/truck" element={<TruckInPage />} />
+              <Route path="gate/visitor" element={<PersonInPage kind="visitors" />} />
+              <Route path="gate/staff" element={<PersonInPage kind="staff" />} />
+            </Route>
           </Route>
 
+          <Route path="duty" element={<DutyPage />} />
           <Route path="inside" element={<InsidePage />} />
           <Route path="log" element={<LogPage />} />
 

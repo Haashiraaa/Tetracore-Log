@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from backend.src.api.schemas.auth import OfficerProfile
 from backend.src.db.orm.tables import Facility, Officer
 from backend.src.facility_codes import canonical_state
-from backend.src.models import DEFAULT_ROLE, clean_full_name, clean_role
+from backend.src.models import DEFAULT_ROLE, MAX_GATES, clean_full_name, clean_role
 
 
 class CreateFacilityRequest(BaseModel):
@@ -17,6 +17,7 @@ class CreateFacilityRequest(BaseModel):
 
     state: str = Field(min_length=2, max_length=40)
     name: str = Field(min_length=2, max_length=200)
+    gate_count: int = Field(default=1, ge=1, le=MAX_GATES)
 
     @field_validator("state")
     @classmethod
@@ -25,6 +26,10 @@ class CreateFacilityRequest(BaseModel):
         if state is None:
             raise ValueError("Choose one of the listed states.")
         return state
+
+
+class SetGatesRequest(BaseModel):
+    gate_count: int = Field(ge=1, le=MAX_GATES)
 
 
 class StateOut(BaseModel):
@@ -40,6 +45,7 @@ class FacilityOut(BaseModel):
     state: str | None
     name: str
     is_active: bool
+    gate_count: int
 
 
 class CreateOfficerRequest(BaseModel):

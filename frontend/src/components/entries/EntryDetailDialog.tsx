@@ -16,6 +16,7 @@ import { formatScm } from "@/lib/format";
 import { LOG_LABEL, type LogKind } from "@/models";
 import { faceOf, isTruck, isVisitor } from "@/services/entryService";
 import { EntryStatus } from "./EntryStatus";
+import { STATUS_LABEL } from "@/services/truckService";
 
 type SigState =
   | { kind: "none" }
@@ -74,6 +75,8 @@ function OwnFacts({ entry }: { entry: AnyEntry }) {
   if (isTruck(entry)) {
     return (
       <>
+        <dt>Status</dt>
+        <dd>{STATUS_LABEL[entry.status]}</dd>
         <dt>Full name</dt>
         <dd>{entry.driver_name}</dd>
         <dt>Phone number</dt>
@@ -82,6 +85,12 @@ function OwnFacts({ entry }: { entry: AnyEntry }) {
         <dd>{entry.company ?? "—"}</dd>
         <dt>Gas bought</dt>
         <dd>{entry.scm_purchased ? `${formatScm(entry.scm_purchased)} SCM` : "—"}</dd>
+        {entry.status === "left_queue" && (
+          <>
+            <dt>Why it left</dt>
+            <dd>{entry.left_queue_reason}</dd>
+          </>
+        )}
       </>
     );
   }
@@ -143,15 +152,38 @@ export function EntryDetailDialog({ kind, entry, onClose }: EntryDetailDialogPro
             <OwnFacts entry={entry} />
             <dt>Facility</dt>
             <dd>{entry.facility_code}</dd>
-            <dt>Time in</dt>
-            <dd>
-              {formatDateTime(entry.signed_in_at, true)} by {entry.signed_in_by_name}
-            </dd>
+            {isTruck(entry) ? (
+              <>
+                <dt>Joined the queue</dt>
+                <dd>
+                  {formatDateTime(entry.signed_in_at, true)} by {entry.signed_in_by_name}
+                  {entry.queued_gate ? `, gate ${entry.queued_gate}` : ""}
+                </dd>
+                <dt>Let in</dt>
+                <dd>
+                  {entry.entered_at
+                    ? `${formatDateTime(entry.entered_at, true)}${entry.gate_in ? `, gate ${entry.gate_in}` : ""}`
+                    : "Not yet"}
+                </dd>
+              </>
+            ) : (
+              <>
+                <dt>Time in</dt>
+                <dd>
+                  {formatDateTime(entry.signed_in_at, true)} by {entry.signed_in_by_name}
+                  {entry.gate_in ? `, gate ${entry.gate_in}` : ""}
+                </dd>
+              </>
+            )}
             <dt>Time out</dt>
             <dd>
               {entry.signed_out_at
-                ? `${formatDateTime(entry.signed_out_at, true)} by ${entry.signed_out_by_name ?? "unknown"}`
-                : `Still inside (${formatDuration(entry.signed_in_at)})`}
+                ? `${formatDateTime(entry.signed_out_at, true)} by ${entry.signed_out_by_name ?? "unknown"}${
+                    entry.gate_out ? `, gate ${entry.gate_out}` : ""
+                  }`
+                : isTruck(entry) && entry.status === "queued"
+                  ? `Still in the queue (${formatDuration(entry.signed_in_at)})`
+                  : `Still inside (${formatDuration(isTruck(entry) && entry.entered_at ? entry.entered_at : entry.signed_in_at)})`}
             </dd>
           </dl>
 

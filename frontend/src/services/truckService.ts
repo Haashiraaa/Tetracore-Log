@@ -15,6 +15,7 @@ import type { FieldErrors } from "./entryService";
 export type LookupResult =
   | { kind: "new"; plate: string }
   | { kind: "returning"; truck: TruckLookup }
+  | { kind: "queued"; truck: TruckLookup }
   | { kind: "inside"; truck: TruckLookup };
 
 export function validatePlate(raw: string): { plate: string } | { error: string } {
@@ -26,10 +27,12 @@ export function validatePlate(raw: string): { plate: string } | { error: string 
 export async function lookup(plate: string): Promise<LookupResult> {
   const truck = await trucksApi.lookupTruck(plate);
   if (truck === null) return { kind: "new", plate };
-  return truck.open_entry_id ? { kind: "inside", truck } : { kind: "returning", truck };
+  if (truck.open_entry_status === "queued") return { kind: "queued", truck };
+  if (truck.open_entry_id) return { kind: "inside", truck };
+  return { kind: "returning", truck };
 }
 
-// ---- sign-in ----
+// ---- registering a truck ----
 
 export interface SignInForm {
   plate: string;
@@ -40,17 +43,19 @@ export interface SignInForm {
 
 type SignInField = "driverName" | "signature";
 
+/** Register a truck. By default it joins the queue (no signature yet); with `enterNow` it
+ *  is let in on the spot, which needs the driver's signature. */
 export function buildSignInRequest(
   entryId: string,
   form: SignInForm,
-  signaturePng: string | null,
+  opts: { enterNow: boolean; signaturePng: string | null },
 ): { ok: true; value: TruckSignInRequest } | { ok: false; errors: FieldErrors<SignInField> } {
   const errors: FieldErrors<SignInField> = {};
   const driverName = form.driverName.trim();
   const nameProblem = fullNameError(driverName, "the driver's");
   if (nameProblem) errors.driverName = nameProblem;
-  if (!signaturePng) errors.signature = "Ask the driver to sign.";
-  if (Object.keys(errors).length > 0 || !signaturePng) return { ok: false, errors };
+  if (opts.enterNow && !opts.signaturePng) errors.signature = "Ask the driver to sign.";
+  if (Object.keys(errors).length > 0) return { ok: false, errors };
 
   return {
     ok: true,
@@ -60,7 +65,7 @@ export function buildSignInRequest(
       driver_name: cleanFullName(driverName),
       driver_phone: form.driverPhone.trim() || null,
       company: form.company.trim() || null,
-      signature: signaturePng,
+      ...(opts.enterNow ? { enter_now: true, signature: opts.signaturePng } : {}),
       device_id: deviceId(),
       // signed_in_at is left out on purpose: the server clock is the truth while online.
     },
@@ -70,3 +75,32 @@ export function buildSignInRequest(
 export function signIn(request: TruckSignInRequest): Promise<TruckEntry> {
   return trucksApi.signIn(request);
 }
+
+// ---- moving a queued truck on ----
+
+export const LEAVE_REASON_MAX = 300;
+
+export function leaveReasonError(raw: string): string | null {
+  const reason = raw.trim();
+  if (reason.length < 2) return "Say why the truck left the queue.";
+  if (reason.length > LEAVE_REASON_MAX) return `Keep it under ${LEAVE_REASON_MAX} characters.`;
+  return null;
+}
+
+/** Let a queued truck in; the driver signs. */
+export function enter(entryId: string, signaturePng: string): Promise<TruckEntry> {
+  return trucksApi.enter(entryId, { signature: signaturePng });
+}
+
+/** A queued truck gave up before entering. */
+export function leaveQueue(entryId: string, reason: string): Promise<TruckEntry> {
+  return trucksApi.leaveQueue(entryId, { reason: reason.trim() });
+}
+
+/** The words for a status, for badges and CSV. */
+export const STATUS_LABEL: Record<TruckEntry["status"], string> = {
+  queued: "Queued",
+  on_site: "On site",
+  departed: "Departed",
+  left_queue: "Left queue",
+};

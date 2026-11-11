@@ -21,6 +21,7 @@ from backend.src.api.schemas import (
     FacilityOut,
     OfficerProfile,
     ResetPinResponse,
+    SetGatesRequest,
     StateOut,
 )
 from backend.src.db.session import get_db
@@ -52,7 +53,22 @@ def create_facility(
     db: Session = Depends(get_db),
 ) -> FacilityOut:
     facility = admin_service.create_facility(
-        db, actor_id=admin.officer_id, state=body.state, name=body.name)
+        db, actor_id=admin.officer_id, state=body.state, name=body.name,
+        gate_count=body.gate_count)
+    return FacilityOut.model_validate(facility)
+
+
+@router.put("/facilities/{facility_code}/gates", response_model=FacilityOut)
+def set_gates(
+    facility_code: str,
+    body: SetGatesRequest,
+    admin: CurrentOfficer = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> FacilityOut:
+    """How many gates a facility has. Refused while someone is on duty at a gate that
+    would go away."""
+    facility = admin_service.set_gate_count(
+        db, facility_code, body.gate_count, actor_id=admin.officer_id)
     return FacilityOut.model_validate(facility)
 
 
@@ -117,6 +133,18 @@ def enable_officer(
     db: Session = Depends(get_db),
 ) -> Response:
     admin_service.set_officer_active(db, officer_id, True, actor_id=admin.officer_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/officers/{officer_id}/end-duty",
+             status_code=status.HTTP_204_NO_CONTENT)
+def end_duty(
+    officer_id: uuid.UUID,
+    admin: CurrentOfficer = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Take an officer off duty (a forgotten sign-off). Does nothing if they are off."""
+    admin_service.end_duty(db, officer_id, actor_id=admin.officer_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

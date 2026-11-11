@@ -6,17 +6,16 @@ _entries.py. No commits, no business rules (those live in api/truck_service.py).
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
-from decimal import Decimal
 from typing import Any, Optional
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from backend.src.db.orm._helpers import normalize_plate
 from backend.src.db.orm.tables import Truck, TruckEntry
 from backend.src.db.queries import _entries
+from backend.src.models import TRUCK_OPEN_STATUSES
 
 
 def find_truck(db: Session, facility_id: uuid.UUID, plate: str) -> Truck | None:
@@ -25,16 +24,18 @@ def find_truck(db: Session, facility_id: uuid.UUID, plate: str) -> Truck | None:
         Truck.plate_number == normalize_plate(plate)))
 
 
-def find_open_entry_id(
+def find_open_entry(
     db: Session, facility_id: uuid.UUID, truck_id: uuid.UUID
-) -> uuid.UUID | None:
-    return db.scalar(
-        select(TruckEntry.id)
+) -> tuple[uuid.UUID, str] | None:
+    """(id, status) of the visit this truck is in the middle of (queued or on site)."""
+    row = db.execute(
+        select(TruckEntry.id, TruckEntry.status)
         .where(TruckEntry.facility_id == facility_id,
                TruckEntry.truck_id == truck_id,
-               TruckEntry.signed_out_at.is_(None))
+               TruckEntry.status.in_(TRUCK_OPEN_STATUSES))
         .order_by(TruckEntry.signed_in_at.desc())
-        .limit(1))
+        .limit(1)).first()
+    return None if row is None else (row[0], row[1])
 
 
 def upsert_truck(
@@ -67,16 +68,20 @@ def insert_entry(
         db, TruckEntry, id=entry_id, plate_number=normalize_plate(plate), **values)
 
 
-def sign_out_entry(
-    db: Session, *, entry_id: uuid.UUID, facility_id: uuid.UUID,
-    officer_id: uuid.UUID, signed_out_at: datetime,
-    scm_purchased: Optional[Decimal], signature: Optional[bytes] = None,
+def update_open_entry(
+    db: Session, *, entry_id: uuid.UUID, facility_id: uuid.UUID, from_status: str,
+    **values: Any,
 ) -> bool:
-    extra = {} if scm_purchased is None else {"scm_purchased": scm_purchased}
-    return _entries.sign_out_entry(
-        db, TruckEntry, entry_id=entry_id, facility_id=facility_id,
-        officer_id=officer_id, signed_out_at=signed_out_at,
-        signature=signature, extra=extra)
+    """Move a visit on from `from_status` (queued -> on site, queued -> left queue).
+    True if this call did it; False = not found or it is no longer in that status."""
+    stmt = (
+        update(TruckEntry)
+        .where(TruckEntry.id == entry_id, TruckEntry.facility_id == facility_id,
+               TruckEntry.status == from_status)
+        .values(**values, updated_at=func.now())
+        .returning(TruckEntry.id)
+        .execution_options(synchronize_session=False))
+    return db.execute(stmt).scalar_one_or_none() is not None
 
 
 def get_entry(db: Session, entry_id: uuid.UUID, scope: uuid.UUID | None) -> Any | None:

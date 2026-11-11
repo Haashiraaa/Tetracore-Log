@@ -45,7 +45,9 @@ from sqlalchemy import (
     ForeignKeyConstraint,
     Index,
     Integer,
+    LargeBinary,
     Numeric,
+    SmallInteger,
     String,
     UniqueConstraint,
     Uuid,
@@ -83,8 +85,15 @@ class Facility(TimestampMixin, Base):
     is_active: Mapped[bool] = mapped_column(
         default=True, server_default=text("true"), nullable=False
     )
+    # Gates are numbered 1..gate_count. Officers pick theirs when they go on duty.
+    gate_count: Mapped[int] = mapped_column(
+        SmallInteger, default=1, server_default=text("1"), nullable=False
+    )
 
-    __table_args__ = (UniqueConstraint("code", name="uq_facilities_code"),)
+    __table_args__ = (
+        UniqueConstraint("code", name="uq_facilities_code"),
+        CheckConstraint("gate_count BETWEEN 1 AND 20", name="gate_count_range"),
+    )
 
     @validates("code")
     def _normalize_code(self, _key: str, value: str) -> str:
@@ -249,12 +258,16 @@ class Event(Base):
     __table_args__ = (
         CheckConstraint("severity IN ('info', 'warning')", name="event_severity"),
         Index("ix_events_facility_id_id", "facility_id", "id"),
-        # "Left inside" is raised once per entry, even if two servers notice at once.
+        # A warning the server raises by itself comes once per entry, even if two servers
+        # notice at once. (kind, entry_id): a truck can be both queued-too-long and, later,
+        # left-inside.
         Index(
-            "uq_events_left_inside_entry",
+            "uq_events_raised_once",
+            "kind",
             "entry_id",
             unique=True,
-            postgresql_where=text("kind = 'left_inside'"),
+            postgresql_where=text(
+                "kind IN ('left_inside', 'queued_too_long', 'on_duty_too_long', 'gate_unmanned')"),
         ),
     )
 
@@ -290,6 +303,58 @@ class PushSubscription(Base):
     )
 
     __table_args__ = (Index("ix_push_subscriptions_officer_id", "officer_id"),)
+
+
+# --------------------------------------------------------------------------
+# Duty log (security officers)
+# --------------------------------------------------------------------------
+
+
+class DutyEntry(TimestampMixin, Base):
+    """A stretch of an officer's duty at ONE gate. Going on duty opens a row (signature in);
+    going off closes it (signature out). Changing gate mid-shift closes the row (no
+    signature) and opens a new one at the new gate, so one shift can be several rows that
+    share a shift_id. Open = off_duty_at is null. An officer has at most one open row."""
+
+    __tablename__ = "duty_entries"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, primary_key=True, default=uuid.uuid4)  # supplied by the phone on "go on duty"
+    facility_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("facilities.id", ondelete="RESTRICT"), nullable=False
+    )
+    officer_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("officers.id", ondelete="RESTRICT"), nullable=False
+    )
+    gate: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    # The id of the row that began the shift. Every row of one shift carries it.
+    shift_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    on_duty_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    off_duty_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True)
+    started_how: Mapped[str] = mapped_column(
+        String(8), default="on", server_default=text("'on'"), nullable=False)
+    ended_how: Mapped[Optional[str]] = mapped_column(String(8), nullable=True)
+    # PNG bytes. Only "on" starts and "off" ends carry one (a move or an admin end does not).
+    signature_in: Mapped[Optional[bytes]] = mapped_column(
+        LargeBinary, nullable=True, deferred=True)
+    signature_out: Mapped[Optional[bytes]] = mapped_column(
+        LargeBinary, nullable=True, deferred=True)
+    device_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+
+    __table_args__ = (
+        CheckConstraint("gate BETWEEN 1 AND 20", name="duty_gate_range"),
+        CheckConstraint("started_how IN ('on', 'moved')", name="duty_started_how"),
+        CheckConstraint(
+            "ended_how IS NULL OR ended_how IN ('off', 'moved', 'admin')",
+            name="duty_ended_how"),
+        # One open stretch per officer: the database refuses a second "on duty".
+        Index("uq_duty_entries_one_open", "officer_id", unique=True,
+              postgresql_where=text("off_duty_at IS NULL")),
+        Index("ix_duty_entries_facility_on_duty_at", "facility_id", "on_duty_at"),
+        Index("ix_duty_entries_open_gate", "facility_id", "gate",
+              postgresql_where=text("off_duty_at IS NULL")),
+    )
 
 
 # --------------------------------------------------------------------------
@@ -348,8 +413,25 @@ class TruckEntry(EntryMixin, TimestampMixin, Base):
     scm_purchased: Mapped[Optional[Decimal]] = mapped_column(
         Numeric(12, 2), nullable=True
     )
+    # Where the truck is in its visit. signed_in_at is when it was FIRST LOGGED (for a
+    # queued truck, when it joined the queue); entered_at is when it was let in.
+    # A truck that gave up is closed with signed_out_at/by set and status "left_queue".
+    status: Mapped[str] = mapped_column(
+        String(12), default="queued", nullable=False
+    )
+    entered_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    entered_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("officers.id", ondelete="RESTRICT"), nullable=True
+    )
+    queued_gate: Mapped[Optional[int]] = mapped_column(SmallInteger, nullable=True)
+    left_queue_reason: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
 
     __table_args__ = (
+        CheckConstraint(
+            "status IN ('queued', 'on_site', 'departed', 'left_queue')",
+            name="truck_entry_status"),
         ForeignKeyConstraint(
             ["facility_id", "truck_id"],
             ["trucks.facility_id", "trucks.id"],

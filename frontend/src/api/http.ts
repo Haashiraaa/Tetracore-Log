@@ -7,7 +7,7 @@ import { ApiError, ErrorCode } from "@/exceptions/errors";
 export type QueryValue = string | number | boolean | null | undefined;
 
 export interface RequestOptions {
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "PUT";
   body?: unknown;
   query?: Record<string, QueryValue>;
   headers?: Record<string, string>;

@@ -8,6 +8,7 @@ import { EXPORT_ROW_CAP, PAGE_SIZE } from "@/config/env";
 import { toCsv } from "@/lib/csv";
 import { formatDateTime } from "@/lib/dates";
 import type { LogKind } from "@/models";
+import { STATUS_LABEL } from "./truckService";
 
 export type FieldErrors<K extends string> = Partial<Record<K, string>>;
 
@@ -129,6 +130,9 @@ const OWN_COLUMNS: Record<LogKind, Column[]> = {
     ["Phone", (e) => (isTruck(e) ? (e.driver_phone ?? "") : "")],
     ["Company", (e) => (isTruck(e) ? (e.company ?? "") : "")],
     ["SCM purchased", (e) => (isTruck(e) ? (e.scm_purchased ?? "") : "")],
+    ["Status", (e) => (isTruck(e) ? STATUS_LABEL[e.status] : "")],
+    ["Let in at", (e) => (isTruck(e) && e.entered_at ? formatDateTime(e.entered_at, true) : "")],
+    ["Why it left the queue", (e) => (isTruck(e) ? (e.left_queue_reason ?? "") : "")],
   ],
   visitors: [
     ["Full name", (e) => (isVisitor(e) ? e.full_name : "")],
@@ -151,6 +155,8 @@ const SHARED_COLUMNS: Column[] = [
   ["Signed out", (e) => (e.has_signature_out ? "yes" : "no")],
   ["Signed in by", (e) => e.signed_in_by_name],
   ["Signed out by", (e) => e.signed_out_by_name ?? ""],
+  ["Gate in", (e) => (e.gate_in ? String(e.gate_in) : "")],
+  ["Gate out", (e) => (e.gate_out ? String(e.gate_out) : "")],
 ];
 
 export function entriesToCsv(kind: LogKind, entries: AnyEntry[], includeFacility: boolean): string {

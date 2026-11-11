@@ -10,6 +10,7 @@ from backend.src.api.schemas.admin import (
     CreateOfficerResponse,
     FacilityOut,
     ResetPinResponse,
+    SetGatesRequest,
     StateOut,
 )
 from backend.src.api.schemas.auth import (
@@ -25,6 +26,13 @@ from backend.src.api.schemas.auth import (
     RefreshResult,
 )
 from backend.src.api.schemas.common import EntryOut, EntrySignInRequest, EntrySignOutRequest
+from backend.src.api.schemas.duty import (
+    DutyChangeGateRequest,
+    DutyEntryOut,
+    DutyOffRequest,
+    DutyOnRequest,
+    DutyStatusOut,
+)
 from backend.src.api.schemas.events import (
     EventOut,
     EventsSummaryOut,
@@ -35,7 +43,9 @@ from backend.src.api.schemas.events import (
 )
 from backend.src.api.schemas.staff import StaffEntryOut, StaffLookupOut, StaffSignInRequest
 from backend.src.api.schemas.trucks import (
+    TruckEnterRequest,
     TruckEntryOut,
+    TruckLeaveQueueRequest,
     TruckLookupOut,
     TruckSignInRequest,
     TruckSignOutRequest,
@@ -47,6 +57,8 @@ from backend.src.api.schemas.visitors import (
 )
 
 __all__ = [
+    "DutyChangeGateRequest", "DutyEntryOut", "DutyOffRequest", "DutyOnRequest",
+    "DutyStatusOut",
     "AdminOfficerOut", "StateOut", "ChangePinRequest", "CreateFacilityRequest",
     "CreateOfficerRequest", "CreateOfficerResponse", "CurrentOfficer",
     "EventOut", "EventsSummaryOut", "MarkReadRequest", "PushConfigOut",
@@ -54,7 +66,9 @@ __all__ = [
     "EntryOut", "EntrySignInRequest", "EntrySignOutRequest", "FacilityOut",
     "LoginRequest", "LoginResponse", "LoginResult", "LogoutRequest",
     "OfficerProfile", "RefreshRequest", "RefreshResponse", "RefreshResult",
-    "ResetPinResponse", "StaffEntryOut", "StaffLookupOut", "StaffSignInRequest", "TruckEntryOut",
+    "ResetPinResponse", "SetGatesRequest", "StaffEntryOut", "StaffLookupOut",
+    "StaffSignInRequest", "TruckEntryOut",
     "TruckLookupOut", "TruckSignInRequest", "TruckSignOutRequest",
+    "TruckEnterRequest", "TruckLeaveQueueRequest",
     "VisitorEntryOut", "VisitorLookupOut", "VisitorSignInRequest",
 ]

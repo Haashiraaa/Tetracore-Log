@@ -15,7 +15,9 @@ from backend.src.api.deps import get_facility_scope, require_entry_writer
 from backend.src.api.routes._entries import EntryFilters, SignatureSide, signature_response
 from backend.src.api.schemas import (
     CurrentOfficer,
+    TruckEnterRequest,
     TruckEntryOut,
+    TruckLeaveQueueRequest,
     TruckLookupOut,
     TruckSignInRequest,
     TruckSignOutRequest,
@@ -35,7 +37,7 @@ def lookup(
     db: Session = Depends(get_db),
 ) -> Optional[TruckLookupOut]:
     """null = new truck. Otherwise stored driver details to CONFIRM, plus
-    open_entry_id if the truck is currently inside."""
+    open_entry_id and open_entry_status if the truck is queued or inside."""
     return truck_service.lookup_by_plate(db, officer=officer, plate=plate)
 
 
@@ -51,6 +53,28 @@ def sign_in(
     if not created:
         response.status_code = status.HTTP_200_OK  # idempotent replay
     return entry
+
+
+@router.post("/entries/{entry_id}/enter", response_model=TruckEntryOut)
+def enter(
+    entry_id: uuid.UUID,
+    body: TruckEnterRequest,
+    officer: CurrentOfficer = Depends(require_entry_writer),
+    db: Session = Depends(get_db),
+) -> TruckEntryOut:
+    """Let a queued truck in; the driver signs."""
+    return truck_service.enter(db, officer=officer, entry_id=entry_id, data=body)
+
+
+@router.post("/entries/{entry_id}/leave-queue", response_model=TruckEntryOut)
+def leave_queue(
+    entry_id: uuid.UUID,
+    body: TruckLeaveQueueRequest,
+    officer: CurrentOfficer = Depends(require_entry_writer),
+    db: Session = Depends(get_db),
+) -> TruckEntryOut:
+    """A queued truck gave up and left. A reason is required."""
+    return truck_service.leave_queue(db, officer=officer, entry_id=entry_id, data=body)
 
 
 @router.post("/entries/{entry_id}/sign-out", response_model=TruckEntryOut)

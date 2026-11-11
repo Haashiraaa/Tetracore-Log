@@ -423,3 +423,31 @@
     margin-inline: auto;
   }
 }
+
+/* ---------- duty chip: where this officer stands, always in view ---------- */
+
+.duty-chip {
+  display: inline-block;
+  align-self: flex-start;
+  margin: 0.75rem 1rem 0;
+  padding: 0.3rem 0.75rem;
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.duty-chip--on {
+  border-color: var(--green);
+  background: var(--green-soft);
+  color: var(--green-ink);
+}
+
+@media (max-width: 52rem) {
+  .duty-chip {
+    margin: 0;
+  }
+}

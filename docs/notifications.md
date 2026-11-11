@@ -8,9 +8,9 @@ pushed to their phone or laptop. Code: `backend/src/api/event_service.py`, `push
 
 | Group | Kinds | When |
 |---|---|---|
-| **Gate** | `truck_in`, `truck_out`, `visitor_in`, `visitor_out`, `staff_in`, `staff_out` | Every sign-in and sign-out, in every facility |
-| **Admin** | `facility_added`, `officer_added`, `officer_pin_reset`, `officer_disabled`, `officer_enabled`, `sessions_revoked`, `admin_granted`, `admin_revoked` | Changes made on the Accounts page, and admin changes made from the server console (`scripts/admin_manager.py`) |
-| **Warnings** | `already_inside`, `left_inside` | Someone is signed in who is still inside, or someone is still inside many hours after signing in |
+| **Gate** | `truck_queued`, `truck_in`, `truck_out`, `truck_left_queue`, `visitor_in`, `visitor_out`, `staff_in`, `staff_out`, `officer_on_duty`, `officer_off_duty`, `officer_gate_changed` | Every sign-in and sign-out, every change in a truck's queue, and every officer going on duty, off duty or changing gate, in every facility |
+| **Admin** | `facility_added`, `gates_changed`, `officer_added`, `officer_pin_reset`, `officer_disabled`, `officer_enabled`, `sessions_revoked`, `admin_granted`, `admin_revoked` | Changes made on the Accounts page, and admin changes made from the server console (`scripts/admin_manager.py`) |
+| **Warnings** | `already_inside`, `left_inside`, `queued_too_long`, `on_duty_too_long`, `gate_unmanned` | Someone is signed in who is still inside, someone is still inside many hours after signing in, a truck has queued too long, an officer has been on duty too long, or a gate has nobody on it |
 
 Nothing else is recorded: logins, failed logins and PIN changes are **not** events.
 
@@ -21,14 +21,18 @@ Nothing else is recorded: logins, failed logins and PIN changes are **not** even
 - Admin changes made from the console are in the feed (marked "from the server console") but are
   **not pushed**: only the running server sends push.
 
-## The two warnings
+## The warnings
 
 - **`already_inside`**: a truck, visitor or staff member is signed in while they already have an
   open entry. The sign-in is refused (409) as before; the warning is the record that someone tried.
 - **`left_inside`**: nobody is acting, so the server notices. Every `LEFT_INSIDE_CHECK_MINUTES`
   minutes it looks for entries still open `LEFT_INSIDE_HOURS` after sign-in and raises **one** warning
   per entry (the database refuses a second, so several servers can run the check safely).
-  Set `LEFT_INSIDE_CHECK_MINUTES=0` to turn the check off.
+  A truck counts from when it was let in (`entered_at`); a truck still in the queue is never "left inside".
+  Set `LEFT_INSIDE_CHECK_MINUTES=0` to turn all the server's checks off.
+- **`queued_too_long`**, **`on_duty_too_long`**, **`gate_unmanned`**: raised by the same check, once each. What they
+  mean and their settings are in [trucks-and-duty.md](trucks-and-duty.md#warnings-the-server-raises). Their dedupe key
+  is the truck entry, the shift, or the last stretch that left the gate.
 
 ## Who sees it
 
@@ -81,9 +85,13 @@ Things to know:
 |---|---|---|
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | unset | Browser push. All three or it stays off |
 | `LEFT_INSIDE_HOURS` | 12 | Hours after sign-in before "left inside" |
-| `LEFT_INSIDE_CHECK_MINUTES` | 10 | How often the server looks. 0 = off |
+| `LEFT_INSIDE_CHECK_MINUTES` | 10 | How often the server looks for all the warnings below. 0 = off |
+| `QUEUED_WARN_HOURS` | 6 | Hours a truck may wait in the queue before the warning. 0 = off |
+| `DUTY_WARN_HOURS` | 14 | Hours a shift may run before the warning. 0 = off |
+| `GATE_UNMANNED_MINUTES` | 15 | Minutes a manned gate may be empty before the warning. 0 = off |
 
 ## Database
 
 `events` (append-only, ordered by `id`), `event_cursors` (each admin's read position) and
 `push_subscriptions` (one row per browser). Migration `e1b5c7d9a3f4`: run `alembic upgrade head`.
+Migration `f2c8d4a6b1e7` widens the "once only" rule to every warning the server raises (one per kind and entry).

@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Optional, Sequence
 
+from sqlalchemy import ColumnElement
 from sqlalchemy.orm import Session
 
 from backend.src.api import event_service
@@ -17,10 +18,12 @@ from backend.src.api.schemas import CurrentOfficer
 from backend.src.api.signature import decode_signature_png
 from backend.src.db.orm.tables import StaffEntry, TruckEntry, VisitorEntry
 from backend.src.db.queries import _entries
+from backend.src.db.queries import duty as duty_q
 from backend.src.exceptions.errors import (
     AlreadyInsideError,
     ConflictError,
     NotFoundError,
+    NotOnDutyError,
     PermissionDeniedError,
 )
 from backend.src.security.tokens import utcnow
@@ -40,6 +43,14 @@ def facility_of(officer: CurrentOfficer) -> uuid.UUID:
         raise PermissionDeniedError(
             "Only accounts that belong to a facility can write log entries.")
     return officer.facility_id
+
+
+def require_gate(db: Session, officer: CurrentOfficer) -> int:
+    """The gate this officer is on duty at. Nobody logs anything without being on duty."""
+    gate = duty_q.open_gate(db, officer.officer_id)
+    if gate is None:
+        raise NotOnDutyError()
+    return gate
 
 
 def stored_entry(
@@ -98,6 +109,7 @@ def create_entry(
     stored = stored_entry(db, model, data.id, facility_id)
     if stored is not None:
         return stored, False
+    gate = require_gate(db, officer)
     if fields.get("phone"):  # people are found by phone: only one open sign-in each
         try:
             refuse_if_inside(db, facility_id=facility_id, model=model,
@@ -113,7 +125,7 @@ def create_entry(
     created = _entries.insert_entry(
         db, model, id=data.id, facility_id=facility_id,
         signed_in_at=data.signed_in_at or utcnow(), signature_in=signature,
-        signed_in_by=officer.officer_id, device_id=data.device_id, **fields)
+        signed_in_by=officer.officer_id, device_id=data.device_id, gate_in=gate, **fields)
     event = None
     if created:  # a retry of the same entry is not news
         event = event_service.record(
@@ -137,15 +149,23 @@ def close_entry(
     signed_out_at: Optional[datetime] = None,
     signature: Optional[str] = None,
     extra: Optional[dict[str, Any]] = None,
+    require: Sequence[ColumnElement[bool]] = (),
     not_found: str = "Entry not found.",
 ) -> Any:
-    """Sign someone out. Idempotent: a repeat returns the stored row, first sign-out wins."""
+    """Sign someone out. Idempotent: a repeat returns the stored row, first sign-out wins
+    (and needs no duty: it changes nothing)."""
     facility_id = facility_of(officer)
     png = decode_signature_png(signature)
+    row = _entries.get_entry(db, model, entry_id, facility_id)
+    if row is None:
+        raise NotFoundError(not_found)
+    if row[0].signed_out_at is not None:
+        return row
+    gate = require_gate(db, officer)
     closed = _entries.sign_out_entry(
         db, model, entry_id=entry_id, facility_id=facility_id,
         officer_id=officer.officer_id, signed_out_at=signed_out_at or utcnow(),
-        signature=png, extra=extra)
+        signature=png, extra={"gate_out": gate, **(extra or {})}, require=require)
     row = _entries.get_entry(db, model, entry_id, facility_id)
     event = None
     if closed and row is not None:  # a repeat sign-out is not news
