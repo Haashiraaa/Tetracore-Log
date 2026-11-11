@@ -4,6 +4,13 @@ All notable changes to Tetracore Log. Entries above the baseline are written aut
 release-please from commit messages when a release pull request is merged (see
 [docs/releasing.md](docs/releasing.md)), so do not edit them by hand.
 
+## [0.5.0](https://github.com/Haashiraaa/Tetracore-Log/compare/v0.4.1...v0.5.0) (2026-11-11)
+
+
+### Features
+
+* issue facility codes from the state (CNG-LAG-01) ([#13](https://github.com/Haashiraaa/Tetracore-Log/issues/13)) ([578ae3c](https://github.com/Haashiraaa/Tetracore-Log/commit/578ae3c9d081f16e2496bb5b5c04b71b68c0582a))
+
 ## [0.4.1](https://github.com/Haashiraaa/Tetracore-Log/compare/v0.4.0...v0.4.1) (2026-11-11)
 
 
