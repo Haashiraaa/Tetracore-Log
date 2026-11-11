@@ -4,6 +4,13 @@ All notable changes to Tetracore Log. Entries above the baseline are written aut
 release-please from commit messages when a release pull request is merged (see
 [docs/releasing.md](docs/releasing.md)), so do not edit them by hand.
 
+## [0.6.0](https://github.com/Haashiraaa/Tetracore-Log/compare/v0.5.0...v0.6.0) (2026-11-11)
+
+
+### Features
+
+* **logs:** phone lookup, staff capacity, full names and enforced sign-out ([#15](https://github.com/Haashiraaa/Tetracore-Log/issues/15)) ([edc566d](https://github.com/Haashiraaa/Tetracore-Log/commit/edc566da5a01fbca3cdc5e5f8b5601fc11550739))
+
 ## [0.5.0](https://github.com/Haashiraaa/Tetracore-Log/compare/v0.4.1...v0.5.0) (2026-11-11)
 
 
