@@ -110,6 +110,20 @@ def test_list_shows_only_admins(run):
     assert code == 0 and "ADM-01" in out and "OFF-001" not in out
 
 
+def test_list_all_shows_every_account_and_marks_admins(run):
+    make_account(code="ADM-01", role="admin", is_admin=True)
+    make_account(code="OFF-001", facility="CNG-A")
+    code, out, _ = run("list", "--all")
+    lines = {ln.split()[0]: ln for ln in out.splitlines()}
+    assert code == 0 and set(lines) == {"ADM-01", "OFF-001"}
+    assert "admin" in lines["ADM-01"].split("active")[0].split("facility=")[1]
+    assert "facility=CNG-A" in lines["OFF-001"]
+
+
+def test_list_all_on_an_empty_database(run):
+    assert "No accounts" in run("list", "--all")[1]
+
+
 def test_there_is_no_super_admin_command():
     with pytest.raises(SystemExit):
         admin_manager.main(["promote", "--code", "X"])

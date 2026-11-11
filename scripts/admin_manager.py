@@ -8,7 +8,8 @@
     python -m scripts.admin_manager grant  --code OFF-003 --facility CNG-A
     python -m scripts.admin_manager revoke --code ADM-01
     python -m scripts.admin_manager reset-pin --code ADM-01
-    python -m scripts.admin_manager list
+    python -m scripts.admin_manager list          # admins only
+    python -m scripts.admin_manager list --all    # every account, admin or not
 
 Add --facility CODE for accounts that belong to a facility; leave it out for a
 global account. PINs are prompted (hidden), never passed as arguments. `revoke`
@@ -85,20 +86,29 @@ def cmd_reset_pin(db: Session, args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_list(db: Session, _args: argparse.Namespace) -> int:
-    rows = db.execute(
+def cmd_list(db: Session, args: argparse.Namespace) -> int:
+    stmt = (
         select(Officer, Facility.code)
         .outerjoin(Facility, Facility.id == Officer.facility_id)
-        .where(Officer.is_admin.is_(True))
-        .order_by(Officer.officer_code)
-    ).all()
+        .order_by(Officer.is_admin.desc(), Facility.code, Officer.officer_code)
+    )
+    if not args.all:
+        stmt = stmt.where(Officer.is_admin.is_(True))
+    rows = db.execute(stmt).all()
     if not rows:
-        print("No admins.")
+        print("No accounts." if args.all else "No admins.")
     for officer, facility_code in rows:
         state = "active" if officer.is_active else "DISABLED"
+        admin = "admin" if officer.is_admin else "-"
         print(f"{officer.officer_code:<10} {officer.full_name:<28} "
-              f"role={officer.role:<16} facility={facility_code or '-':<12} {state}")
+              f"role={officer.role:<16} facility={facility_code or '-':<12} "
+              f"{admin:<6} {state}")
     return 0
+
+
+def _add_list(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--all", action="store_true",
+                   help="include accounts that are not admins")
 
 
 def _add_target(p: argparse.ArgumentParser) -> None:
@@ -124,7 +134,7 @@ COMMANDS: dict[str, tuple[str, Handler, Callable[[argparse.ArgumentParser], None
     "grant": ("make an existing account an admin", cmd_grant, _add_target),
     "revoke": ("drop admin powers, keep the account", cmd_revoke, _add_revoke),
     "reset-pin": ("set a new PIN for an admin", cmd_reset_pin, _add_target),
-    "list": ("list admins", cmd_list, lambda _p: None),
+    "list": ("list admins (--all: every account)", cmd_list, _add_list),
 }
 
 

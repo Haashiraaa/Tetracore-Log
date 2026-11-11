@@ -1,0 +1,23 @@
+# Tetracore Log documentation
+
+Start with the [project README](../README.md). This folder holds the detail.
+
+| Doc | About |
+|---|---|
+| [releasing.md](releasing.md) | Automated changelog, versions and tags. Squash-merge only, and why |
+| [scripts/README.md](scripts/README.md) | The operator scripts and the rules they follow |
+| [scripts/admin_manager.md](scripts/admin_manager.md) | List accounts, create or drop admins, reset an admin's PIN |
+
+## Keeping these docs true
+
+When you change code, update its guide **in the same pull request**:
+
+| You changed | Review |
+|---|---|
+| `scripts/<name>.py` | `docs/scripts/<name>.md` and the table in `docs/scripts/README.md` |
+| Who can do what (roles, facility scoping, admin) | `docs/scripts/admin_manager.md`, "How access works", and the note on the Accounts page |
+| Releases, commit rules, CI | `docs/releasing.md` |
+| A new script or doc | The tables in this file and in `docs/scripts/README.md` |
+
+Before opening a pull request, read the guides for the files you touched and check that every
+command, option and example output still matches what the code does.
