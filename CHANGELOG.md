@@ -4,6 +4,13 @@ All notable changes to Tetracore Log. Entries above the baseline are written aut
 release-please from commit messages when a release pull request is merged (see
 [docs/releasing.md](docs/releasing.md)), so do not edit them by hand.
 
+## [0.4.0](https://github.com/Haashiraaa/Tetracore-Log/compare/v0.3.0...v0.4.0) (2026-11-11)
+
+
+### Features
+
+* **frontend:** hi-vis redesign with visitor and staff logs ([#9](https://github.com/Haashiraaa/Tetracore-Log/issues/9)) ([6981b51](https://github.com/Haashiraaa/Tetracore-Log/commit/6981b51afdb3334301e1dee4f79c6201b3eaf046))
+
 ## [0.3.0](https://github.com/Haashiraaa/Tetracore-Log/compare/v0.2.0...v0.3.0) (2026-11-11)
 
 
