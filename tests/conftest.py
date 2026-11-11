@@ -24,6 +24,8 @@ if "test" not in urlparse(_TEST_URL).path.lower():
 os.environ["DATABASE_URL"] = _TEST_URL
 os.environ["JWT_SECRET"] = "t" * 48
 os.environ["PIN_PEPPER"] = "p" * 48
+os.environ["LEFT_INSIDE_CHECK_MINUTES"] = "0"  # no background watcher: tests call it directly
+os.environ.pop("VAPID_PRIVATE_KEY", None)       # push stays off unless a test turns it on
 
 from alembic.config import Config  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
@@ -52,7 +54,8 @@ def _clean():
     yield
     with engine.begin() as conn:
         conn.execute(text(
-            "TRUNCATE truck_entries, visitor_entries, staff_entries, trucks, "
+            "TRUNCATE events, event_cursors, push_subscriptions, truck_entries, "
+            "visitor_entries, staff_entries, trucks, "
             "officer_sessions, officers, counters, facilities RESTART IDENTITY CASCADE"))
 
 

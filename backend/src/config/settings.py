@@ -37,6 +37,20 @@ class Settings:
     MAX_PIN_ATTEMPTS = _int_env('MAX_PIN_ATTEMPTS', 5)
     LOCKOUT_MINUTES = _int_env('LOCKOUT_MINUTES', 15)
 
+    # --- notifications ---
+    # Browser push is off until all three VAPID values are set (see docs/notifications.md).
+    VAPID_PUBLIC_KEY = os.getenv('VAPID_PUBLIC_KEY', '')
+    VAPID_PRIVATE_KEY = os.getenv('VAPID_PRIVATE_KEY', '')
+    VAPID_SUBJECT = os.getenv('VAPID_SUBJECT', '')   # mailto:you@example.com
+    # "Left inside": still not signed out this many hours after signing in.
+    LEFT_INSIDE_HOURS = _int_env('LEFT_INSIDE_HOURS', 12)
+    # How often the server looks for them. 0 turns the check off (the tests do).
+    LEFT_INSIDE_CHECK_MINUTES = _int_env('LEFT_INSIDE_CHECK_MINUTES', 10)
+
+    @classmethod
+    def push_enabled(cls) -> bool:
+        return bool(cls.VAPID_PUBLIC_KEY and cls.VAPID_PRIVATE_KEY and cls.VAPID_SUBJECT)
+
     @classmethod
     def _require(cls, name: str) -> str:
         value = getattr(cls, name)

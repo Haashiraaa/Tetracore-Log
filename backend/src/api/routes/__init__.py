@@ -5,11 +5,13 @@ its module here; main.py needs no change."""
 
 from fastapi import APIRouter
 
-from backend.src.api.routes import admin, auth, staff, trucks, visitors
+from backend.src.api.routes import admin, auth, events, staff, trucks, visitors
 
 ROUTERS: tuple[APIRouter, ...] = (
     auth.router,
     admin.router,
+    events.router,
+    events.push_router,
     trucks.router,
     visitors.router,
     staff.router,

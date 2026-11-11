@@ -15,6 +15,8 @@ export const SIGNATURE_MAX_BYTES = 180 * 1024;
 export const PAGE_SIZE = 50;
 export const INSIDE_REFRESH_MS = 30_000;
 export const EXPORT_ROW_CAP = 5_000;
+/** How often the bell asks the server whether anything new happened. */
+export const NOTIFICATIONS_POLL_MS = 5_000;
 
 /** Mirrors validate_pin_policy in backend/src/security/passwords.py. */
 export const PIN_MIN_LENGTH = 6;

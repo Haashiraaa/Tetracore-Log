@@ -17,6 +17,7 @@ from backend.src.api.schemas import (
     CreateFacilityRequest,
     CreateOfficerRequest,
     CreateOfficerResponse,
+    CurrentOfficer,
     FacilityOut,
     OfficerProfile,
     ResetPinResponse,
@@ -46,10 +47,12 @@ def list_facilities(db: Session = Depends(get_db)) -> list[FacilityOut]:
 @router.post("/facilities", response_model=FacilityOut,
              status_code=status.HTTP_201_CREATED)
 def create_facility(
-    body: CreateFacilityRequest, db: Session = Depends(get_db)
+    body: CreateFacilityRequest,
+    admin: CurrentOfficer = Depends(require_admin),
+    db: Session = Depends(get_db),
 ) -> FacilityOut:
     facility = admin_service.create_facility(
-        db, state=body.state, name=body.name)
+        db, actor_id=admin.officer_id, state=body.state, name=body.name)
     return FacilityOut.model_validate(facility)
 
 
@@ -66,10 +69,11 @@ def list_officers(
 def create_officer(
     body: CreateOfficerRequest,
     response: Response,
+    admin: CurrentOfficer = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> CreateOfficerResponse:
     officer, facility, temp_pin = admin_service.create_officer(
-        db, facility_code=body.facility_code,
+        db, actor_id=admin.officer_id, facility_code=body.facility_code,
         full_name=body.full_name, role=body.role
     )
     response.headers["Cache-Control"] = "no-store"  # response holds a PIN
@@ -80,9 +84,12 @@ def create_officer(
 
 @router.post("/officers/{officer_id}/reset-pin", response_model=ResetPinResponse)
 def reset_pin(
-    officer_id: uuid.UUID, response: Response, db: Session = Depends(get_db)
+    officer_id: uuid.UUID,
+    response: Response,
+    admin: CurrentOfficer = Depends(require_admin),
+    db: Session = Depends(get_db),
 ) -> ResetPinResponse:
-    officer, temp_pin = admin_service.reset_pin(db, officer_id)
+    officer, temp_pin = admin_service.reset_pin(db, officer_id, actor_id=admin.officer_id)
     response.headers["Cache-Control"] = "no-store"
     return ResetPinResponse(
         officer_code=officer.officer_code,
@@ -94,25 +101,31 @@ def reset_pin(
 @router.post("/officers/{officer_id}/disable",
              status_code=status.HTTP_204_NO_CONTENT)
 def disable_officer(
-    officer_id: uuid.UUID, db: Session = Depends(get_db)
+    officer_id: uuid.UUID,
+    admin: CurrentOfficer = Depends(require_admin),
+    db: Session = Depends(get_db),
 ) -> Response:
-    admin_service.set_officer_active(db, officer_id, False)
+    admin_service.set_officer_active(db, officer_id, False, actor_id=admin.officer_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/officers/{officer_id}/enable",
              status_code=status.HTTP_204_NO_CONTENT)
 def enable_officer(
-    officer_id: uuid.UUID, db: Session = Depends(get_db)
+    officer_id: uuid.UUID,
+    admin: CurrentOfficer = Depends(require_admin),
+    db: Session = Depends(get_db),
 ) -> Response:
-    admin_service.set_officer_active(db, officer_id, True)
+    admin_service.set_officer_active(db, officer_id, True, actor_id=admin.officer_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/officers/{officer_id}/revoke-sessions",
              status_code=status.HTTP_204_NO_CONTENT)
 def revoke_sessions(
-    officer_id: uuid.UUID, db: Session = Depends(get_db)
+    officer_id: uuid.UUID,
+    admin: CurrentOfficer = Depends(require_admin),
+    db: Session = Depends(get_db),
 ) -> Response:
-    admin_service.revoke_sessions(db, officer_id)
+    admin_service.revoke_sessions(db, officer_id, actor_id=admin.officer_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -13,6 +13,7 @@ server that is the real one.
 
 | Script | Talks to | Changes data? | Use it to |
 |---|---|---|---|
+| [vapid_keys.py](vapid_keys.md) | nothing | no | Make the key pair browser push needs |
 | [admin_manager.py](admin_manager.md) | your real database | yes (one transaction per command, except `list`) | List accounts, create admins, grant or drop admin powers, reset an admin's PIN |
 
 ## Rules for scripts

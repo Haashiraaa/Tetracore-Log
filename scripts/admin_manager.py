@@ -28,6 +28,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.src.db.orm.tables import Facility, Officer
+from backend.src.db.queries import events as events_q
 from backend.src.db.session import create_session
 from backend.src.security import accounts
 
@@ -47,6 +48,14 @@ def _target(db: Session, args: argparse.Namespace) -> Officer:
         db, officer_code=args.code, facility_code=args.facility)
 
 
+def _record(db: Session, kind: str, officer: Officer, summary: str) -> None:
+    """Tell the feed. Same transaction as the change. From the console there is no browser
+    push (only the running server sends it); the event is in the feed for the next look."""
+    events_q.add_event(
+        db, kind=kind, severity="info", summary=f"{summary} (from the server console).",
+        facility_id=officer.facility_id, actor_id=None)
+
+
 def cmd_create(db: Session, args: argparse.Namespace) -> int:
     pin = _prompt_pin()
     if pin is None:
@@ -54,6 +63,8 @@ def cmd_create(db: Session, args: argparse.Namespace) -> int:
     officer = accounts.create_officer(
         db, officer_code=args.code, full_name=args.name, pin=pin,
         role=args.role, is_admin=True, facility_code=args.facility)
+    _record(db, "admin_granted", officer,
+            f"{officer.full_name} ({officer.officer_code}) was created as an admin")
     db.commit()
     print(f"Admin {officer.officer_code} created (role={officer.role}). id={officer.id}")
     return 0
@@ -62,6 +73,8 @@ def cmd_create(db: Session, args: argparse.Namespace) -> int:
 def cmd_grant(db: Session, args: argparse.Namespace) -> int:
     officer = _target(db, args)
     accounts.grant_admin(officer)
+    _record(db, "admin_granted", officer,
+            f"{officer.full_name} ({officer.officer_code}) was made an admin")
     db.commit()
     print(f"{officer.officer_code} is now an admin.")
     return 0
@@ -70,6 +83,8 @@ def cmd_grant(db: Session, args: argparse.Namespace) -> int:
 def cmd_revoke(db: Session, args: argparse.Namespace) -> int:
     officer = _target(db, args)
     accounts.revoke_admin(db, officer, force=args.force)
+    _record(db, "admin_revoked", officer,
+            f"{officer.full_name} ({officer.officer_code}) is no longer an admin")
     db.commit()
     print(f"{officer.officer_code} is no longer an admin (the account is unchanged).")
     return 0

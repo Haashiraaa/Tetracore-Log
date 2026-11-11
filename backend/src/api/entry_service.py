@@ -12,8 +12,10 @@ from typing import Any, Optional
 
 from sqlalchemy.orm import Session
 
+from backend.src.api import event_service
 from backend.src.api.schemas import CurrentOfficer
 from backend.src.api.signature import decode_signature_png
+from backend.src.db.orm.tables import StaffEntry, TruckEntry, VisitorEntry
 from backend.src.db.queries import _entries
 from backend.src.exceptions.errors import (
     AlreadyInsideError,
@@ -22,6 +24,14 @@ from backend.src.exceptions.errors import (
     PermissionDeniedError,
 )
 from backend.src.security.tokens import utcnow
+
+_LOG_NAME = {TruckEntry: "truck", VisitorEntry: "visitor", StaffEntry: "staff"}
+
+
+def _who(entry: Any) -> str:
+    """How an entry reads in a notification: "Truck LAG123AB" or the person's full name."""
+    plate = getattr(entry, "plate_number", None)
+    return f"Truck {plate}" if plate else entry.full_name
 
 
 def facility_of(officer: CurrentOfficer) -> uuid.UUID:
@@ -89,13 +99,30 @@ def create_entry(
     if stored is not None:
         return stored, False
     if fields.get("phone"):  # people are found by phone: only one open sign-in each
-        refuse_if_inside(db, facility_id=facility_id, model=model,
-                         phone=fields["phone"], entry_id=data.id)
+        try:
+            refuse_if_inside(db, facility_id=facility_id, model=model,
+                             phone=fields["phone"], entry_id=data.id)
+        except AlreadyInsideError:
+            warning = event_service.record(
+                db, kind="already_inside", facility_id=facility_id,
+                actor_id=officer.officer_id,
+                summary=f"{fields['full_name']} tried to sign in but is already inside.")
+            db.commit()
+            event_service.announce(warning.id)
+            raise
     created = _entries.insert_entry(
         db, model, id=data.id, facility_id=facility_id,
         signed_in_at=data.signed_in_at or utcnow(), signature_in=signature,
         signed_in_by=officer.officer_id, device_id=data.device_id, **fields)
+    event = None
+    if created:  # a retry of the same entry is not news
+        event = event_service.record(
+            db, kind=f"{_LOG_NAME[model]}_in", facility_id=facility_id,
+            actor_id=officer.officer_id, entry_id=data.id,
+            summary=f"{fields['full_name']} signed in.")
     db.commit()
+    if event is not None:
+        event_service.announce(event.id)
     row = _entries.get_entry(db, model, data.id, facility_id)
     assert row is not None
     return row, created
@@ -115,12 +142,20 @@ def close_entry(
     """Sign someone out. Idempotent: a repeat returns the stored row, first sign-out wins."""
     facility_id = facility_of(officer)
     png = decode_signature_png(signature)
-    _entries.sign_out_entry(
+    closed = _entries.sign_out_entry(
         db, model, entry_id=entry_id, facility_id=facility_id,
         officer_id=officer.officer_id, signed_out_at=signed_out_at or utcnow(),
         signature=png, extra=extra)
-    db.commit()
     row = _entries.get_entry(db, model, entry_id, facility_id)
+    event = None
+    if closed and row is not None:  # a repeat sign-out is not news
+        event = event_service.record(
+            db, kind=f"{_LOG_NAME[model]}_out", facility_id=facility_id,
+            actor_id=officer.officer_id, entry_id=entry_id,
+            summary=f"{_who(row[0])} signed out.")
+    db.commit()
+    if event is not None:
+        event_service.announce(event.id)
     if row is None:
         raise NotFoundError(not_found)
     return row

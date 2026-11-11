@@ -80,6 +80,13 @@ Three things decide what an account can do. The `role` label is not one of them.
 
 So `role` is a label for people ("Supervisor", "Officer"). Use any text you like.
 
+## Notifications
+
+`create`, `grant` and `revoke` add an event to the admins' notification feed, marked "from the
+server console" (see [../notifications.md](../notifications.md)). The event is written in the same
+transaction as the change. The console does **not** send browser push: only the running server does,
+so these appear in the feed the next time an admin looks.
+
 ## Safety
 
 - `revoke` refuses to remove the **last active admin** unless you pass `--force`. Without an
@@ -93,6 +100,6 @@ So `role` is a label for people ("Supervisor", "Officer"). Use any text you like
 
 ## Tests
 
-`tests/scripts/test_admin_manager.py` covers every command, including the last-admin guard,
+`tests/scripts/test_admin_manager.py` covers every command, that grant and revoke reach the notification feed, including the last-admin guard,
 the non-admin refusal on `reset-pin`, and that a granted or revoked admin changes on the next
 request.

@@ -5,6 +5,7 @@ import { useRef, type ReactNode } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { useAuth, useOfficer } from "@/auth/AuthContext";
 import { canWriteEntries, isAdmin } from "@/auth/permissions";
+import { NotificationsProvider, useNotifications } from "@/components/notifications/NotificationsContext";
 import { roleLabel } from "@/lib/format";
 
 interface NavItem {
@@ -24,20 +25,32 @@ function Icon({ children }: { children: ReactNode }) {
 const GATE: NavItem = { to: "/gate", label: "Gate", icon: <Icon><path d="M4 20V6M20 20V6M4 9h16M4 15h16" /></Icon> };
 const INSIDE: NavItem = { to: "/inside", label: "Inside", icon: <Icon><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="2.5" /></Icon> };
 const LOG: NavItem = { to: "/log", label: "Log", icon: <Icon><path d="M6 4h12v16H6zM9 9h6M9 13h6M9 17h3" /></Icon> };
+const ALERTS: NavItem = { to: "/notifications", label: "Alerts", icon: <Icon><path d="M6 17V11a6 6 0 0 1 12 0v6l1.500 2h-15zM10 21h4" /></Icon> };
 const ADMIN: NavItem = { to: "/admin", label: "Accounts", icon: <Icon><circle cx="12" cy="8" r="3.5" /><path d="M5 20c.8-3.6 3.5-5.5 7-5.5s6.200 1.900 7 5.500" /></Icon> };
+
+/** The unread count on the Alerts link. Nothing when there is nothing unread. */
+function NavBadge({ to }: { to: string }) {
+  const unread = useNotifications()?.summary?.unread ?? 0;
+  if (to !== "/notifications" || unread === 0) return null;
+  return (
+    <span className="nav__badge" aria-label={`${unread} unread`}>
+      {unread > 99 ? "99+" : unread}
+    </span>
+  );
+}
 
 export function AppShell() {
   const profile = useOfficer();
   const { logout } = useAuth();
   const menu = useRef<HTMLDetailsElement>(null);
 
-  const links = [canWriteEntries(profile) ? GATE : null, INSIDE, LOG, isAdmin(profile) ? ADMIN : null].filter(
+  const links = [canWriteEntries(profile) ? GATE : null, INSIDE, LOG, isAdmin(profile) ? ALERTS : null, isAdmin(profile) ? ADMIN : null].filter(
     (l): l is NavItem => l !== null,
   );
   const where = profile.facility_code ?? "All facilities";
   const closeMenu = () => menu.current?.removeAttribute("open");
 
-  return (
+  const frame = (
     <div className="shell">
       <aside className="side">
         <Link to="/" className="brand" aria-label="Tetracore Log home">
@@ -52,6 +65,7 @@ export function AppShell() {
             <NavLink key={l.to} to={l.to} className="nav__link">
               {l.icon}
               <span>{l.label}</span>
+              <NavBadge to={l.to} />
             </NavLink>
           ))}
         </nav>
@@ -86,4 +100,5 @@ export function AppShell() {
       </main>
     </div>
   );
+  return isAdmin(profile) ? <NotificationsProvider>{frame}</NotificationsProvider> : frame;
 }

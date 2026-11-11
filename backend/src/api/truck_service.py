@@ -11,6 +11,7 @@ import uuid
 
 from sqlalchemy.orm import Session
 
+from backend.src.api import event_service
 from backend.src.api.entry_service import close_entry, facility_of, stored_entry
 from backend.src.api.schemas import (
     CurrentOfficer,
@@ -85,9 +86,27 @@ def sign_in(
     if stored is not None:
         return TruckEntryOut.from_row(stored), False
 
-    truck_id = _register_truck(db, facility_id, data)
+    try:
+        truck_id = _register_truck(db, facility_id, data)
+    except TruckAlreadyInsideError:  # _register_truck rolled back: write the warning fresh
+        warning = event_service.record(
+            db, kind="already_inside", facility_id=facility_id, actor_id=officer.officer_id,
+            summary=f"Truck {normalize_plate(data.plate_number)} tried to sign in "
+                    "but is already inside.")
+        db.commit()
+        event_service.announce(warning.id)
+        raise
     created = _insert_visit(db, officer, facility_id, truck_id, data, signature)
+    event = None
+    if created:  # a retry of the same visit is not news
+        event = event_service.record(
+            db, kind="truck_in", facility_id=facility_id, actor_id=officer.officer_id,
+            entry_id=data.id,
+            summary=f"Truck {normalize_plate(data.plate_number)} signed in, "
+                    f"driver {data.driver_name}.")
     db.commit()
+    if event is not None:
+        event_service.announce(event.id)
 
     row = q.get_entry(db, data.id, facility_id)
     assert row is not None

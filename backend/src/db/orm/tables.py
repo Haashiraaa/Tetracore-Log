@@ -38,6 +38,7 @@ from decimal import Decimal
 from typing import Optional
 
 from sqlalchemy import (
+    BigInteger,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -212,6 +213,84 @@ class Counter(Base):
     next_value: Mapped[int] = mapped_column(
         Integer, default=1, server_default=text("1"), nullable=False
     )
+
+# --------------------------------------------------------------------------
+# Events (the global admin's notification feed)
+# --------------------------------------------------------------------------
+
+
+class Event(Base):
+    """One thing that happened: a gate sign-in or sign-out, an admin change, or a warning.
+    Written in the SAME transaction as the thing itself, so nothing is announced that did not
+    happen and nothing that happened is missed. Ordered by id (it only goes up), which is what
+    the app polls on. Rows are never edited or deleted."""
+
+    __tablename__ = "events"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    severity: Mapped[str] = mapped_column(
+        String(8), default="info", server_default=text("'info'"), nullable=False
+    )
+    facility_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("facilities.id", ondelete="RESTRICT"), nullable=True
+    )
+    # Who did it (the officer or admin). None for things nobody did, like "left inside".
+    actor_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("officers.id", ondelete="RESTRICT"), nullable=True
+    )
+    # The log entry it is about, when there is one (no FK: three different tables).
+    entry_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, nullable=True)
+    summary: Mapped[str] = mapped_column(String(300), nullable=False)
+
+    __table_args__ = (
+        CheckConstraint("severity IN ('info', 'warning')", name="event_severity"),
+        Index("ix_events_facility_id_id", "facility_id", "id"),
+        # "Left inside" is raised once per entry, even if two servers notice at once.
+        Index(
+            "uq_events_left_inside_entry",
+            "entry_id",
+            unique=True,
+            postgresql_where=text("kind = 'left_inside'"),
+        ),
+    )
+
+
+class EventCursor(Base):
+    """How far each admin has read in the feed. Unread = events with a larger id."""
+
+    __tablename__ = "event_cursors"
+
+    officer_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("officers.id", ondelete="CASCADE"), primary_key=True
+    )
+    last_read_id: Mapped[int] = mapped_column(
+        BigInteger, default=0, server_default=text("0"), nullable=False
+    )
+
+
+class PushSubscription(Base):
+    """One browser an admin turned push on in. `endpoint` is the browser's own address
+    for it, so it is unique. A subscription the push service reports gone is deleted."""
+
+    __tablename__ = "push_subscriptions"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    officer_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("officers.id", ondelete="CASCADE"), nullable=False
+    )
+    endpoint: Mapped[str] = mapped_column(String(1000), unique=True, nullable=False)
+    p256dh: Mapped[str] = mapped_column(String(200), nullable=False)
+    auth: Mapped[str] = mapped_column(String(100), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    __table_args__ = (Index("ix_push_subscriptions_officer_id", "officer_id"),)
+
 
 # --------------------------------------------------------------------------
 # Trucks
