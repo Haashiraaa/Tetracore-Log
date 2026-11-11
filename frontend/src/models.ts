@@ -1,19 +1,9 @@
 // frontend/src/models.ts
-// Shared enums and labels. Mirrors backend/src/models.py.
+// Shared constants. Mirrors backend/src/models.py.
 
-export type Role = "officer" | "facility_manager" | "cso";
+/** A free-form label, such as "officer" or "Shift supervisor". Nothing in the app checks it:
+ *  what an account can do comes from the profile (`can_write_entries`, `is_admin`, ...). */
+export type Role = string;
 
-export const ROLE_LABEL: Record<Role, string> = {
-  officer: "Gate officer",
-  facility_manager: "Facility manager",
-  cso: "Chief security officer",
-};
-
-/** Roles that belong to exactly one facility. */
-export const FACILITY_ROLES: readonly Role[] = ["officer", "facility_manager"];
-/** Roles with no facility (they see everything). */
-export const GLOBAL_ROLES: readonly Role[] = ["cso"];
-
-export function isFacilityRole(role: Role): boolean {
-  return FACILITY_ROLES.includes(role);
-}
+export const DEFAULT_ROLE: Role = "officer";
+export const ROLE_MAX_LENGTH = 32;

@@ -10,11 +10,16 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from backend.src.db.orm._helpers import normalize_plate
 from backend.src.db.orm.tables import Facility, Officer
-from backend.src.models import FACILITY_ROLES, Role
+from backend.src.models import (
+    DEFAULT_ROLE,
+    clean_role,
+    may_write_entries,
+    sees_every_facility,
+)
 
 # ---- helpers -----
 
@@ -34,14 +39,17 @@ class CurrentOfficer:
     officer_id: uuid.UUID
     session_id: uuid.UUID
     facility_id: uuid.UUID | None
-    role: Role
     is_admin: bool
-    is_super_admin: bool
     must_change_pin: bool
 
     @property
     def sees_all_facilities(self) -> bool:
-        return self.is_admin or self.role == Role.CSO
+        return sees_every_facility(
+            is_admin=self.is_admin, facility_id=self.facility_id)
+
+    @property
+    def can_write_entries(self) -> bool:
+        return may_write_entries(facility_id=self.facility_id)
 
 
 @dataclass(frozen=True)
@@ -65,7 +73,7 @@ class RefreshResult:
 # ---- pydantic models: auth ----
 
 class LoginRequest(BaseModel):
-    # None/absent = global account (CSO or admin with no facility).
+    # None/absent = a global account (no facility).
     facility_code: Optional[str] = Field(default=None, max_length=32)
     officer_code: str = Field(min_length=1, max_length=32)
     # Only a length cap here: the PIN *policy* applies to new PINs, not login.
@@ -77,10 +85,10 @@ class OfficerProfile(BaseModel):
     id: uuid.UUID
     officer_code: str
     full_name: str
-    role: Role
+    role: str  # a free-form label, nothing checks it
     is_admin: bool
-    is_super_admin: bool
     sees_all_facilities: bool
+    can_write_entries: bool
     must_change_pin: bool
     facility_id: uuid.UUID | None
     facility_code: str | None
@@ -94,8 +102,8 @@ class OfficerProfile(BaseModel):
             full_name=officer.full_name,
             role=officer.role,
             is_admin=officer.is_admin,
-            is_super_admin=officer.is_super_admin,
             sees_all_facilities=officer.sees_all_facilities,
+            can_write_entries=officer.can_write_entries,
             must_change_pin=officer.must_change_pin,
             facility_id=officer.facility_id,
             facility_code=facility.code if facility else None,
@@ -155,15 +163,12 @@ class FacilityOut(BaseModel):
 class CreateOfficerRequest(BaseModel):
     facility_code: str = Field(min_length=2, max_length=32)
     full_name: str = Field(min_length=2, max_length=150)
-    role: Role = Role.OFFICER
+    role: str = DEFAULT_ROLE
 
     @field_validator("role")
     @classmethod
-    def _facility_role_only(cls, v: Role) -> Role:
-        if v not in FACILITY_ROLES:
-            raise ValueError(
-                "Admins can only create facility officers or managers.")
-        return v
+    def _role(cls, v: str) -> str:
+        return clean_role(v)
 
 
 class CreateOfficerResponse(BaseModel):
@@ -185,39 +190,6 @@ class AdminOfficerOut(OfficerProfile):
     def from_row(cls, officer: Officer, facility: Facility | None) -> AdminOfficerOut:
         base = OfficerProfile.build(officer, facility)
         return cls(**base.model_dump(), is_active=officer.is_active)
-
-# ---- super admin ----
-
-
-class CreateAdminRequest(BaseModel):
-    full_name: str = Field(min_length=2, max_length=150)
-    role: Role
-    facility_code: Optional[str] = Field(default=None, max_length=32)
-
-    @model_validator(mode="after")
-    def _facility_matches_role(self) -> "CreateAdminRequest":
-        needs = self.role in FACILITY_ROLES
-        has = bool(self.facility_code and self.facility_code.strip())
-        if needs and not has:
-            raise ValueError("facility_code is required for this role.")
-        if not needs and has:
-            raise ValueError("This role is global; leave facility_code empty.")
-        return self
-
-
-class AdminSummary(OfficerProfile):
-    is_active: bool
-
-    @classmethod
-    def from_officer(cls, officer: Officer, facility: Facility | None) -> "AdminSummary":
-        base = OfficerProfile.build(officer, facility)
-        return cls(**base.model_dump(), is_active=officer.is_active)
-
-
-class TempPinResponse(BaseModel):
-    officer: AdminSummary
-    temp_pin: str  # shown ONCE. Hand it over in person.
-
 
 # ----- trucks schema -----
 

@@ -3,9 +3,8 @@
 import { useRef } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { useOfficer, useAuth } from "@/auth/AuthContext";
-import { canWriteEntries, isAdmin, isSuperAdmin } from "@/auth/permissions";
-import { initials } from "@/lib/format";
-import { ROLE_LABEL } from "@/models";
+import { canWriteEntries, isAdmin } from "@/auth/permissions";
+import { initials, roleLabel } from "@/lib/format";
 
 export function AppShell() {
   const profile = useOfficer();
@@ -17,7 +16,6 @@ export function AppShell() {
     { to: "/inside", label: "Inside" },
     { to: "/log", label: "Log" },
     isAdmin(profile) && { to: "/admin", label: "Admin" },
-    isSuperAdmin(profile) && { to: "/super-admin", label: "Admins" },
   ].filter((l): l is { to: string; label: string } => Boolean(l));
 
   const closeMenu = () => menu.current?.removeAttribute("open");
@@ -53,7 +51,7 @@ export function AppShell() {
               <strong>{profile.full_name}</strong>
             </p>
             <p className="account__line">
-              {ROLE_LABEL[profile.role]}, {profile.officer_code}
+              {roleLabel(profile.role)}, {profile.officer_code}
             </p>
             {profile.facility_name && <p className="account__line">{profile.facility_name}</p>}
             <Link to="/change-pin" className="account__action" onClick={closeMenu}>

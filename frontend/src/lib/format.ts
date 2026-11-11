@@ -15,3 +15,9 @@ export function initials(fullName: string): string {
   const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
   return (first + last).toUpperCase();
 }
+
+/** "facility_manager" -> "Facility manager". Display only: the role is a free-form label. */
+export function roleLabel(role: string): string {
+  const text = role.replace(/[_-]+/g, " ").trim();
+  return text ? text[0].toUpperCase() + text.slice(1) : "";
+}

@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 
 from backend.src.api import truck_service
-from backend.src.api.deps import get_facility_scope, require_gate_officer
+from backend.src.api.deps import get_facility_scope, require_entry_writer
 from backend.src.api.schemas import (
     CurrentOfficer,
     TruckEntryOut,
@@ -27,12 +27,12 @@ from backend.src.exceptions.errors import NotFoundError
 router = APIRouter(prefix="/trucks", tags=["trucks"])
 
 
-# ---- writes: facility officers only ----
+# ---- writes: accounts that belong to a facility ----
 
 @router.get("/lookup", response_model=Optional[TruckLookupOut])
 def lookup(
     plate: str = Query(min_length=2, max_length=40),
-    officer: CurrentOfficer = Depends(require_gate_officer),
+    officer: CurrentOfficer = Depends(require_entry_writer),
     db: Session = Depends(get_db),
 ) -> Optional[TruckLookupOut]:
     """null = new truck. Otherwise stored driver details to CONFIRM, plus
@@ -45,7 +45,7 @@ def lookup(
 def sign_in(
     body: TruckSignInRequest,
     response: Response,
-    officer: CurrentOfficer = Depends(require_gate_officer),
+    officer: CurrentOfficer = Depends(require_entry_writer),
     db: Session = Depends(get_db),
 ) -> TruckEntryOut:
     entry, created = truck_service.sign_in(db, officer=officer, data=body)
@@ -58,13 +58,13 @@ def sign_in(
 def sign_out(
     entry_id: uuid.UUID,
     body: Optional[TruckSignOutRequest] = None,
-    officer: CurrentOfficer = Depends(require_gate_officer),
+    officer: CurrentOfficer = Depends(require_entry_writer),
     db: Session = Depends(get_db),
 ) -> TruckEntryOut:
     return truck_service.sign_out(db, officer=officer, entry_id=entry_id, data=body)
 
 
-# ---- reads: every role, scoped by get_facility_scope ----
+# ---- reads: everyone, scoped by get_facility_scope ----
 
 @router.get("/entries", response_model=list[TruckEntryOut])
 def list_entries(

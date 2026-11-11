@@ -3,7 +3,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "@/auth/AuthContext";
 import { RequireAccess, RequireAuth } from "@/auth/guards";
-import { canWriteEntries, homePathFor, isAdmin, isSuperAdmin } from "@/auth/permissions";
+import { canWriteEntries, homePathFor, isAdmin } from "@/auth/permissions";
 import { AppShell } from "@/components/layout/AppShell";
 import AdminPage from "@/pages/admin/AdminPage";
 import ChangePinPage from "@/pages/ChangePinPage";
@@ -12,7 +12,6 @@ import InsidePage from "@/pages/inside/InsidePage";
 import LoginPage from "@/pages/LoginPage";
 import LogPage from "@/pages/log/LogPage";
 import NotFoundPage from "@/pages/NotFoundPage";
-import SuperAdminPage from "@/pages/superadmin/SuperAdminPage";
 
 function HomeRedirect() {
   const { profile } = useAuth();
@@ -39,9 +38,6 @@ export default function App() {
 
           <Route element={<RequireAccess allow={isAdmin} />}>
             <Route path="admin" element={<AdminPage />} />
-          </Route>
-          <Route element={<RequireAccess allow={isSuperAdmin} />}>
-            <Route path="super-admin" element={<SuperAdminPage />} />
           </Route>
         </Route>
       </Route>

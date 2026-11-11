@@ -1,12 +1,9 @@
 // frontend/src/pages/admin/OfficersPanel.tsx
-// Facility accounts (officers and facility managers). Admins can't see or touch other
-// admins or the CSO here; the server enforces that, the UI just never offers it.
+// Every account that is not an admin. Admins can't see or touch other admins here: they are
+// set and dropped from the admin CLI only (scripts/admin_manager.py), never from the UI.
 import { useState, type FormEvent } from "react";
 import * as adminApi from "@/api/admin";
 import type { Facility, OfficerSummary } from "@/api/schemas";
-import * as superAdminApi from "@/api/superAdmin";
-import { useOfficer } from "@/auth/AuthContext";
-import { isSuperAdmin } from "@/auth/permissions";
 import { TempPinDialog } from "@/components/admin/TempPinDialog";
 import { Badge } from "@/components/ui/Badge";
 import { Banner } from "@/components/ui/Banner";
@@ -17,16 +14,15 @@ import { SelectField, TextField } from "@/components/ui/TextField";
 import { Spinner } from "@/components/ui/Spinner";
 import { errorMessage } from "@/exceptions/errors";
 import { useAsync } from "@/hooks/useAsync";
-import { ROLE_LABEL, type Role } from "@/models";
+import { roleLabel } from "@/lib/format";
+import { DEFAULT_ROLE, ROLE_MAX_LENGTH } from "@/models";
 import * as adminService from "@/services/adminService";
 
-type PendingKind = "reset" | "disable" | "revoke" | "grant";
+type PendingKind = "reset" | "disable" | "revoke";
 interface Pending {
   kind: PendingKind;
   officer: OfficerSummary;
 }
-
-const CREATABLE: Role[] = ["officer", "facility_manager"];
 
 const CONFIRM_COPY: Record<PendingKind, { title: string; label: string; danger: boolean; body: (o: OfficerSummary) => string }> = {
   reset: {
@@ -48,18 +44,9 @@ const CONFIRM_COPY: Record<PendingKind, { title: string; label: string; danger: 
     danger: true,
     body: (o) => `Every phone ${o.full_name} is logged in on is signed out. The account stays enabled.`,
   },
-  grant: {
-    title: "Make admin",
-    label: "Make admin",
-    danger: true,
-    body: (o) =>
-      `${o.full_name} gets admin powers: all facilities, plus creating accounts and resetting PINs. Only do this for someone you trust.`,
-  },
 };
 
 export function OfficersPanel({ facilities }: { facilities: Facility[] }) {
-  const me = useOfficer();
-  const superAdmin = isSuperAdmin(me);
   const activeFacilities = facilities.filter((f) => f.is_active);
 
   const [filter, setFilter] = useState("");
@@ -68,8 +55,8 @@ export function OfficersPanel({ facilities }: { facilities: Facility[] }) {
   // create form
   const [facility, setFacility] = useState("");
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState<Role>("officer");
-  const [errors, setErrors] = useState<{ fullName?: string; facility?: string }>({});
+  const [role, setRole] = useState(DEFAULT_ROLE);
+  const [errors, setErrors] = useState<{ fullName?: string; role?: string; facility?: string }>({});
   const [createError, setCreateError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
@@ -85,7 +72,7 @@ export function OfficersPanel({ facilities }: { facilities: Facility[] }) {
     setCreating(true);
     setCreateError(null);
     try {
-      setReveal(await adminService.createOfficer({ facility_code: facility, full_name: fullName.trim(), role }));
+      setReveal(await adminService.createOfficer({ facility_code: facility, full_name: fullName.trim(), role: role.trim() }));
       setFullName("");
       officers.reload();
     } catch (err) {
@@ -100,8 +87,7 @@ export function OfficersPanel({ facilities }: { facilities: Facility[] }) {
     const { kind, officer } = pending;
     if (kind === "reset") setReveal(await adminService.resetOfficerPin(officer.id, officer.facility_code));
     else if (kind === "disable") await adminApi.disableOfficer(officer.id);
-    else if (kind === "revoke") await adminApi.revokeSessions(officer.id);
-    else await superAdminApi.grantAdmin(officer.id);
+    else await adminApi.revokeSessions(officer.id);
     setPending(null);
     officers.reload();
   }
@@ -117,12 +103,13 @@ export function OfficersPanel({ facilities }: { facilities: Facility[] }) {
   }
 
   const rows = officers.data ?? [];
+  const knownRoles = [...new Set([DEFAULT_ROLE, ...rows.map((o) => o.role)])];
   const copy = pending ? CONFIRM_COPY[pending.kind] : null;
 
   return (
     <div className="stack stack--lg">
       <form className="card stack" onSubmit={create} noValidate>
-        <h2>Add an officer or manager</h2>
+        <h2>Add an account</h2>
         {activeFacilities.length === 0 && (
           <Banner tone="warn">Add a facility first. Every officer belongs to one.</Banner>
         )}
@@ -148,13 +135,21 @@ export function OfficersPanel({ facilities }: { facilities: Facility[] }) {
             error={errors.fullName}
             autoComplete="off"
           />
-          <SelectField label="Role" value={role} onChange={(e) => setRole(e.target.value as Role)}>
-            {CREATABLE.map((r) => (
-              <option key={r} value={r}>
-                {ROLE_LABEL[r]}
-              </option>
+          <TextField
+            label="Role"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            error={errors.role}
+            hint="A label only, it doesn't change what the person can do."
+            maxLength={ROLE_MAX_LENGTH}
+            list="known-roles"
+            autoComplete="off"
+          />
+          <datalist id="known-roles">
+            {knownRoles.map((r) => (
+              <option key={r} value={r} />
             ))}
-          </SelectField>
+          </datalist>
         </div>
         <p className="muted">The system issues the officer code and a temporary PIN. You'll see the PIN once.</p>
         <div>
@@ -206,7 +201,7 @@ export function OfficersPanel({ facilities }: { facilities: Facility[] }) {
                   </td>
                   <td data-label="Name">{o.full_name}</td>
                   <td data-label="Facility">{o.facility_code ?? "None"}</td>
-                  <td data-label="Role">{ROLE_LABEL[o.role]}</td>
+                  <td data-label="Role">{roleLabel(o.role)}</td>
                   <td data-label="Status">
                     <div className="row">
                       <Badge tone={o.is_active ? "green" : "red"}>{o.is_active ? "Active" : "Disabled"}</Badge>
@@ -228,11 +223,6 @@ export function OfficersPanel({ facilities }: { facilities: Facility[] }) {
                       ) : (
                         <Button variant="secondary" size="sm" onClick={() => void enable(o)}>
                           Enable
-                        </Button>
-                      )}
-                      {superAdmin && o.is_active && (
-                        <Button variant="secondary" size="sm" onClick={() => setPending({ kind: "grant", officer: o })}>
-                          Make admin
                         </Button>
                       )}
                     </div>

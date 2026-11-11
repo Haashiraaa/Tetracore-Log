@@ -1,20 +1,17 @@
 // frontend/src/auth/permissions.ts
-// Role gates for the UI. Counterpart of the gates in backend/src/api/deps.py.
+// Access gates for the UI. Counterpart of the gates in backend/src/api/deps.py.
 // These only decide what to SHOW. The backend re-checks every request.
+// The role is just a label: access comes from the facts the server puts on the profile.
 
 import type { OfficerProfile } from "@/api/schemas";
 
-/** Writes log entries: a facility officer (CSO is read-only, managers read-only). */
+/** Writes log entries: any account that belongs to a facility. */
 export function canWriteEntries(p: OfficerProfile): boolean {
-  return p.role === "officer" && p.facility_id !== null;
+  return p.can_write_entries;
 }
 
 export function isAdmin(p: OfficerProfile): boolean {
   return p.is_admin;
-}
-
-export function isSuperAdmin(p: OfficerProfile): boolean {
-  return p.is_super_admin;
 }
 
 export function seesAllFacilities(p: OfficerProfile): boolean {

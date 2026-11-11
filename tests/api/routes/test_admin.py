@@ -2,7 +2,9 @@
 
 # tests/api/routes/test_admin.py
 
-from tests._helpers import PIN, login, login_response
+import pytest
+
+from tests._helpers import PIN, login, login_response, make_actor
 
 
 def mkfac(client, who, code="CNG-N"):
@@ -31,7 +33,7 @@ def test_facilities(client, admin):
 
 def test_create_officers_auto_codes(client, admin):
     mkfac(client, admin)
-    codes = []
+    made = []
     for name, role in [("Guard One", "officer"), ("Guard Two", "officer"),
                        ("Manager One", "facility_manager")]:
         r = client.post("/api/admin/officers", headers=admin.headers,
@@ -41,19 +43,54 @@ def test_create_officers_auto_codes(client, admin):
         body = r.json()
         assert len(body["temp_pin"]) == 6 and body["temp_pin"].isdigit()
         assert body["officer"]["must_change_pin"] is True
-        codes.append(body["officer"]["officer_code"])
-    assert codes == ["OFF-001", "OFF-002", "MGR-001"]
+        made.append((body["officer"]["officer_code"], body["officer"]["role"]))
+    # one code series per facility, whatever the role label is
+    assert made == [("OFF-001", "officer"), ("OFF-002", "officer"),
+                    ("OFF-003", "facility_manager")]
 
 
-def test_create_officer_validation(client, admin):
+def test_role_is_a_free_label(client, admin):
     mkfac(client, admin)
     r = client.post("/api/admin/officers", headers=admin.headers,
-                    json={"facility_code": "CNG-N", "full_name": "Sneaky", "role": "cso"})
-    # global roles: not here
+                    json={"facility_code": "CNG-N", "full_name": "Shift Boss",
+                          "role": "  Shift Supervisor "})
+    assert r.status_code == 201, r.text
+    assert r.json()["officer"]["role"] == "Shift Supervisor"
+    # even a label that used to mean something is just a label now
+    r = client.post("/api/admin/officers", headers=admin.headers,
+                    json={"facility_code": "CNG-N", "full_name": "Not Special", "role": "cso"})
+    assert r.status_code == 201
+    assert r.json()["officer"]["facility_code"] == "CNG-N"
+    assert r.json()["officer"]["sees_all_facilities"] is False
+    # left out: the default label
+    r = client.post("/api/admin/officers", headers=admin.headers,
+                    json={"facility_code": "CNG-N", "full_name": "Default Role"})
+    assert r.json()["officer"]["role"] == "officer"
+
+
+@pytest.mark.parametrize("bad", ["", "   ", "x" * 33])
+def test_blank_or_overlong_role_is_rejected(client, admin, bad):
+    mkfac(client, admin)
+    r = client.post("/api/admin/officers", headers=admin.headers,
+                    json={"facility_code": "CNG-N", "full_name": "Bad Role", "role": bad})
     assert r.status_code == 422
+
+
+def test_create_officer_unknown_facility(client, admin):
     r = client.post("/api/admin/officers", headers=admin.headers,
                     json={"facility_code": "NOPE-1", "full_name": "Ghost"})
     assert r.status_code == 404
+
+
+def test_the_api_can_never_make_an_admin(client, admin):
+    mkfac(client, admin)
+    r = client.post("/api/admin/officers", headers=admin.headers,
+                    json={"facility_code": "CNG-N", "full_name": "Sneaky",
+                          "role": "admin", "is_admin": True})
+    assert r.status_code == 201
+    assert r.json()["officer"]["is_admin"] is False
+    h = login(client, r.json()["officer"]["officer_code"], "CNG-N", r.json()["temp_pin"])
+    assert client.get("/api/admin/facilities", headers=h).status_code == 403
 
 
 def test_temp_pin_flow(client, admin):
@@ -76,11 +113,12 @@ def test_temp_pin_flow(client, admin):
     assert ok.status_code == 200
 
 
-def test_list_officers_only_shows_facility_accounts(
-        client, admin, super_admin, cso, officer_a, manager_a, officer_b):
+def test_list_officers_hides_admins(
+        client, admin, cso, officer_a, manager_a, officer_b):
     rows = client.get("/api/admin/officers", headers=admin.headers).json()
     assert {(o["facility_code"], o["officer_code"]) for o in rows} == {
-        ("CNG-A", "OFF-001"), ("CNG-A", "MGR-001"), ("CNG-B", "OFF-001")}
+        ("CNG-A", "OFF-001"), ("CNG-A", "MGR-001"), ("CNG-B", "OFF-001"),
+        (None, "CSO-001")}  # a global non-admin account is manageable too
     only_b = client.get("/api/admin/officers", params={"facility_code": "cng-b"},
                         headers=admin.headers).json()
     assert [(o["facility_code"], o["officer_code"])
@@ -122,13 +160,26 @@ def test_disable_enable_revoke(client, admin, officer_a):
     assert login_response(client, "OFF-001", "CNG-A").status_code == 200
 
 
-def test_admin_cannot_touch_admins_csos_or_super_admins(
-        client, admin, cso, super_admin):
-    for target in (admin.id, cso.id, super_admin.id):
-        for action in ("reset-pin", "disable", "enable", "revoke-sessions"):
+ACTIONS = ("reset-pin", "disable", "enable", "revoke-sessions")
+
+
+def test_admin_cannot_touch_any_admin(client, admin):
+    other = make_actor(client, code="ADM-002", role="admin", is_admin=True)
+    for target in (admin.id, other.id):  # another admin, and itself
+        for action in ACTIONS:
             r = client.post(
                 f"/api/admin/officers/{target}/{action}", headers=admin.headers)
             assert r.status_code == 404, (target, action)
+
+
+def test_admin_manages_global_accounts_too(client, admin, cso):
+    r = client.post(f"/api/admin/officers/{cso.id}/reset-pin", headers=admin.headers)
+    assert r.status_code == 200 and r.json()["officer_code"] == "CSO-001"
+    assert client.post(f"/api/admin/officers/{cso.id}/disable",
+                       headers=admin.headers).status_code == 204
+    assert login_response(client, "CSO-001").status_code == 401
+    assert client.post(f"/api/admin/officers/{cso.id}/enable",
+                       headers=admin.headers).status_code == 204
 
 
 def test_unknown_officer_is_404(client, admin):

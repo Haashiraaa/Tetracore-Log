@@ -32,7 +32,6 @@ from sqlalchemy import text  # noqa: E402
 from alembic import command  # noqa: E402
 from backend.src.db.session import engine  # noqa: E402
 from backend.src.main import app  # noqa: E402
-from backend.src.models import Role  # noqa: E402
 from tests._helpers import Actor, make_actor  # noqa: E402
 
 
@@ -76,21 +75,17 @@ def officer_b(client: TestClient) -> Actor:
 
 @pytest.fixture
 def manager_a(client: TestClient) -> Actor:
-    return make_actor(client, code="MGR-001", facility="CNG-A",
-                      role=Role.FACILITY_MANAGER)
+    # A different role LABEL, but the same facts as officer_a: it belongs to CNG-A.
+    return make_actor(client, code="MGR-001", facility="CNG-A", role="facility_manager")
 
 
 @pytest.fixture
 def cso(client: TestClient) -> Actor:
-    return make_actor(client, code="CSO-001", role=Role.CSO)
+    # Global (no facility), not an admin: reads every facility, writes none.
+    return make_actor(client, code="CSO-001", role="cso")
 
 
 @pytest.fixture
 def admin(client: TestClient) -> Actor:
-    return make_actor(client, code="ADM-001", role=Role.CSO, is_admin=True)
-
-
-@pytest.fixture
-def super_admin(client: TestClient) -> Actor:
-    return make_actor(client, code="SA-01", role=Role.CSO, is_admin=True,
-                      is_super_admin=True)
+    # Global admin: reads every facility, runs the admin API, writes no entries.
+    return make_actor(client, code="ADM-001", role="admin", is_admin=True)

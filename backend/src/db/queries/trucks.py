@@ -154,7 +154,7 @@ def list_entries(
     open_only: bool, plate: Optional[str], date_from: Optional[datetime],
     date_to: Optional[datetime], limit: int, offset: int,
 ) -> list[Any]:
-    """scope=None means the caller sees every facility (CSO/admin); only then
+    """scope=None means the caller sees every facility (an admin or a global account); only then
     is facility_code honoured. date_to is exclusive."""
     stmt = _entry_select()
     if scope is not None:

@@ -12,8 +12,8 @@ export interface OfficerProfile {
   full_name: string;
   role: Role;
   is_admin: boolean;
-  is_super_admin: boolean;
   sees_all_facilities: boolean;
+  can_write_entries: boolean;
   must_change_pin: boolean;
   facility_id: string | null;
   facility_code: string | null;
@@ -57,7 +57,7 @@ export interface CreateFacilityRequest {
   name: string;
 }
 
-/** AdminOfficerOut and AdminSummary share this shape. */
+/** AdminOfficerOut: an account plus whether it is enabled. */
 export interface OfficerSummary extends OfficerProfile {
   is_active: boolean;
 }
@@ -76,19 +76,6 @@ export interface CreateOfficerResponse {
 export interface ResetPinResponse {
   officer_code: string;
   full_name: string;
-  temp_pin: string;
-}
-
-// ---- super admin ----
-
-export interface CreateAdminRequest {
-  full_name: string;
-  role: Role;
-  facility_code?: string | null;
-}
-
-export interface TempPinResponse {
-  officer: OfficerSummary;
   temp_pin: string;
 }
 

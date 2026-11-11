@@ -1,16 +1,14 @@
 // frontend/src/services/adminService.ts
-// Admin rules. Mirrors backend/src/api/admin_service.py and super_admin_service.py.
+// Admin rules. Mirrors backend/src/api/admin_service.py.
 // Temp PINs are returned once by the server; nothing here stores them.
 
 import * as adminApi from "@/api/admin";
-import * as superAdminApi from "@/api/superAdmin";
 import type {
-  CreateAdminRequest,
   CreateFacilityRequest,
   CreateOfficerRequest,
   Facility,
 } from "@/api/schemas";
-import { isFacilityRole, type Role } from "@/models";
+import { ROLE_MAX_LENGTH } from "@/models";
 
 export type FieldErrors<K extends string> = Partial<Record<K, string>>;
 
@@ -50,12 +48,14 @@ export function createFacility(body: CreateFacilityRequest): Promise<Facility> {
 
 export function validateNewAccount(
   fullName: string,
-  role: Role,
+  role: string,
   facilityCode: string,
-): FieldErrors<"fullName" | "facility"> {
-  const errors: FieldErrors<"fullName" | "facility"> = {};
+): FieldErrors<"fullName" | "role" | "facility"> {
+  const errors: FieldErrors<"fullName" | "role" | "facility"> = {};
+  const r = role.trim();
   if (fullName.trim().length < 2) errors.fullName = "Enter the person's full name.";
-  if (isFacilityRole(role) && !facilityCode.trim()) errors.facility = "Choose a facility.";
+  if (r.length === 0 || r.length > ROLE_MAX_LENGTH) errors.role = `Enter a role of 1-${ROLE_MAX_LENGTH} characters.`;
+  if (!facilityCode.trim()) errors.facility = "Choose a facility.";
   return errors;
 }
 
@@ -77,30 +77,6 @@ export async function resetOfficerPin(officerId: string, facilityCode: string | 
     officerCode: res.officer_code,
     fullName: res.full_name,
     facilityCode,
-    tempPin: res.temp_pin,
-  };
-}
-
-// ---- admins (super admin only) ----
-
-export async function createAdmin(body: CreateAdminRequest): Promise<PinReveal> {
-  const res = await superAdminApi.createAdmin(body);
-  return {
-    title: "Admin account created",
-    officerCode: res.officer.officer_code,
-    fullName: res.officer.full_name,
-    facilityCode: res.officer.facility_code,
-    tempPin: res.temp_pin,
-  };
-}
-
-export async function resetAdminPin(officerId: string): Promise<PinReveal> {
-  const res = await superAdminApi.resetAdminPin(officerId);
-  return {
-    title: "PIN reset",
-    officerCode: res.officer.officer_code,
-    fullName: res.officer.full_name,
-    facilityCode: res.officer.facility_code,
     tempPin: res.temp_pin,
   };
 }
