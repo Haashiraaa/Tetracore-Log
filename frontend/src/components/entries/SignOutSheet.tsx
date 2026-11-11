@@ -61,7 +61,7 @@ export function SignOutSheet({ target, onClose, onDone }: SignOutSheetProps) {
     const signatureProblem = "error" in read ? read.error : entryService.signatureError(read.png);
     setScmError("error" in parsed ? parsed.error : null);
     setSigError(signatureProblem);
-    if ("error" in parsed || "error" in read || signatureProblem) return;
+    if ("error" in parsed || "error" in read || signatureProblem || !read.png) return;
 
     setError(null);
     setBusy(true);

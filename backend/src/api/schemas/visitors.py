@@ -9,7 +9,14 @@ from typing import Any, Optional
 
 from pydantic import Field, field_validator
 
-from backend.src.api.schemas.common import EntryOut, EntrySignInRequest, blank_to_none
+from backend.src.api.schemas.common import (
+    EntryOut,
+    EntrySignInRequest,
+    LookupOut,
+    blank_to_none,
+    full_name_field,
+    phone_field,
+)
 
 
 class VisitorSignInRequest(EntrySignInRequest):
@@ -17,9 +24,15 @@ class VisitorSignInRequest(EntrySignInRequest):
     company: Optional[str] = Field(default=None, max_length=200)
     purpose: Optional[str] = Field(default=None, max_length=300)
     items_received: Optional[str] = Field(default=None, max_length=500)
-    phone: Optional[str] = Field(default=None, max_length=32)
+    phone: str = Field(min_length=1, max_length=32)
 
-    _blank = field_validator("company", "purpose", "items_received", "phone")(blank_to_none)
+    _blank = field_validator("company", "purpose", "items_received")(blank_to_none)
+    _name = field_validator("full_name")(full_name_field)
+    _phone = field_validator("phone")(phone_field)
+
+
+class VisitorLookupOut(LookupOut):
+    company: Optional[str]
 
 
 class VisitorEntryOut(EntryOut):

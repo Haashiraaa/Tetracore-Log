@@ -24,7 +24,7 @@ def test_create_global_and_facility_accounts():
     with create_session() as db:
         glob = create(db, "G-1")
         member = create(db, "M-1", facility_code="cng-a", role="  Manager ")
-        assert glob.facility_id is None and glob.role == "officer"
+        assert glob.facility_id is None and glob.role == "Officer"
         assert member.facility_id is not None and member.role == "Manager"
         assert member.officer_code == "M-1" and not member.is_admin
 

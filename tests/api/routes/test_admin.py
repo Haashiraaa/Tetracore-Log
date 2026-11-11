@@ -71,7 +71,7 @@ def test_states_list(client, admin, officer_a):
 def test_create_officers_auto_codes(client, admin):
     mkfac(client, admin)
     made = []
-    for name, role in [("Guard One", "officer"), ("Guard Two", "officer"),
+    for name, role in [("Guard One", "Officer"), ("Guard Two", "Officer"),
                        ("Manager One", "facility_manager")]:
         r = client.post("/api/admin/officers", headers=admin.headers,
                         json={"facility_code": FAC.lower(), "full_name": name, "role": role})
@@ -82,8 +82,16 @@ def test_create_officers_auto_codes(client, admin):
         assert body["officer"]["must_change_pin"] is True
         made.append((body["officer"]["officer_code"], body["officer"]["role"]))
     # one code series per facility, whatever the role label is
-    assert made == [("OFF-001", "officer"), ("OFF-002", "officer"),
+    assert made == [("OFF-001", "Officer"), ("OFF-002", "Officer"),
                     ("OFF-003", "facility_manager")]
+
+
+def test_an_officer_needs_a_full_name(client, admin):
+    mkfac(client, admin)
+    for bad in ("Madu", " ", ""):
+        r = client.post("/api/admin/officers", headers=admin.headers,
+                        json={"facility_code": FAC, "full_name": bad})
+        assert r.status_code == 422
 
 
 def test_role_is_a_free_label(client, admin):
@@ -102,7 +110,7 @@ def test_role_is_a_free_label(client, admin):
     # left out: the default label
     r = client.post("/api/admin/officers", headers=admin.headers,
                     json={"facility_code": FAC, "full_name": "Default Role"})
-    assert r.json()["officer"]["role"] == "officer"
+    assert r.json()["officer"]["role"] == "Officer"
 
 
 @pytest.mark.parametrize("bad", ["", "   ", "x" * 33])
@@ -115,14 +123,14 @@ def test_blank_or_overlong_role_is_rejected(client, admin, bad):
 
 def test_create_officer_unknown_facility(client, admin):
     r = client.post("/api/admin/officers", headers=admin.headers,
-                    json={"facility_code": "NOPE-1", "full_name": "Ghost"})
+                    json={"facility_code": "NOPE-1", "full_name": "Ghost Rider"})
     assert r.status_code == 404
 
 
 def test_the_api_can_never_make_an_admin(client, admin):
     mkfac(client, admin)
     r = client.post("/api/admin/officers", headers=admin.headers,
-                    json={"facility_code": FAC, "full_name": "Sneaky",
+                    json={"facility_code": FAC, "full_name": "Sneaky Pete",
                           "role": "admin", "is_admin": True})
     assert r.status_code == 201
     assert r.json()["officer"]["is_admin"] is False

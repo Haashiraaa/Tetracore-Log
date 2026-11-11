@@ -306,7 +306,8 @@ class TruckEntry(EntryMixin, TimestampMixin, Base):
 
 class VisitorEntry(EntryMixin, TimestampMixin, Base):
     """One visit, like a line on the paper gate log: who, where from, why, what was
-    received, phone, time in + signature, time out + signature."""
+    received, phone, time in + signature, time out + signature. A returning visitor is
+    found by phone."""
 
     __tablename__ = "visitor_entries"
 
@@ -320,6 +321,7 @@ class VisitorEntry(EntryMixin, TimestampMixin, Base):
     phone: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
 
     __table_args__ = (
+        Index("ix_visitor_entries_facility_phone", "facility_id", "phone"),
         Index("ix_visitor_entries_facility_signed_in",
               "facility_id", "signed_in_at"),
         Index("ix_visitor_entries_facility_updated",
@@ -338,16 +340,22 @@ class VisitorEntry(EntryMixin, TimestampMixin, Base):
 
 
 class StaffEntry(EntryMixin, TimestampMixin, Base):
-    """One staff attendance line: name, time in + signature, time out + signature.
-    The name is typed per entry; there is no staff register (yet)."""
+    """One staff attendance line: full name, capacity, phone, time in + signature, time out
+    + signature. Typed per entry; a returning person is found by phone (no register yet)."""
 
     __tablename__ = "staff_entries"
 
     id: Mapped[uuid.UUID] = mapped_column(
         Uuid, primary_key=True, default=uuid.uuid4)
     full_name: Mapped[str] = mapped_column(String(150), nullable=False)
+    # The capacity they work in, free text ("Cashier", "Attendant", "Driver"...).
+    # Empty only on lines written before this column existed.
+    capacity: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    # Canonical form (models.clean_phone); how a returning person is found again.
+    phone: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
 
     __table_args__ = (
+        Index("ix_staff_entries_facility_phone", "facility_id", "phone"),
         Index("ix_staff_entries_facility_signed_in",
               "facility_id", "signed_in_at"),
         Index("ix_staff_entries_facility_updated",

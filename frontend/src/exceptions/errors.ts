@@ -15,6 +15,7 @@ export const ErrorCode = {
   NotFound: "not_found",
   Conflict: "conflict",
   TruckAlreadyInside: "truck_already_inside",
+  AlreadyInside: "already_inside",
   InvalidSignature: "invalid_signature",
   // raised by this app
   Network: "network_error",

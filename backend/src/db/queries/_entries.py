@@ -114,6 +114,28 @@ def sign_out_entry(
     return db.execute(stmt).scalar_one_or_none() is not None
 
 
+def latest_by_phone(
+    db: Session, model: Model, facility_id: uuid.UUID, phone: str
+) -> Any | None:
+    """The most recent entry in this facility for a (canonical) phone number."""
+    return db.scalar(
+        select(model)
+        .where(model.facility_id == facility_id, model.phone == phone)
+        .order_by(model.signed_in_at.desc(), model.id)
+        .limit(1))
+
+
+def open_id_by_phone(
+    db: Session, model: Model, facility_id: uuid.UUID, phone: str
+) -> uuid.UUID | None:
+    """The entry id if this phone number is inside right now (not signed out yet)."""
+    return db.scalar(
+        select(model.id)
+        .where(model.facility_id == facility_id, model.phone == phone,
+               model.signed_out_at.is_(None))
+        .limit(1))
+
+
 def list_entries(
     db: Session,
     model: Model,

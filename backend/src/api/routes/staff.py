@@ -12,17 +12,34 @@ from sqlalchemy.orm import Session
 
 from backend.src.api import staff_service
 from backend.src.api.deps import get_facility_scope, require_entry_writer
-from backend.src.api.routes._entries import EntryFilters, SignatureSide, signature_response
+from backend.src.api.routes._entries import (
+    EntryFilters,
+    PhoneQuery,
+    SignatureSide,
+    signature_response,
+)
 from backend.src.api.schemas import (
     CurrentOfficer,
     EntrySignOutRequest,
     StaffEntryOut,
+    StaffLookupOut,
     StaffSignInRequest,
 )
 from backend.src.db.queries import staff as q
 from backend.src.db.session import get_db
 
 router = APIRouter(prefix="/staff", tags=["staff"])
+
+
+@router.get("/lookup", response_model=Optional[StaffLookupOut])
+def lookup(
+    phone: PhoneQuery,
+    officer: CurrentOfficer = Depends(require_entry_writer),
+    db: Session = Depends(get_db),
+) -> Optional[StaffLookupOut]:
+    """null = new here. Otherwise what was written last time, to CONFIRM, plus
+    open_entry_id if they are inside now."""
+    return staff_service.lookup(db, officer=officer, phone=phone)
 
 
 @router.post("/entries", response_model=StaffEntryOut, status_code=status.HTTP_201_CREATED)
@@ -41,7 +58,7 @@ def sign_in(
 @router.post("/entries/{entry_id}/sign-out", response_model=StaffEntryOut)
 def sign_out(
     entry_id: uuid.UUID,
-    body: Optional[EntrySignOutRequest] = None,
+    body: EntrySignOutRequest,
     officer: CurrentOfficer = Depends(require_entry_writer),
     db: Session = Depends(get_db),
 ) -> StaffEntryOut:

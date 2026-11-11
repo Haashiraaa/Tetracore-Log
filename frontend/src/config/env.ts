@@ -9,10 +9,6 @@ export const DISPLAY_TZ = "Africa/Lagos";
 /** Nigeria has no daylight saving, so a fixed offset is safe for day boundaries. */
 export const DISPLAY_UTC_OFFSET = "+01:00";
 
-/** A security log without a signature defeats the point; flip to false to make it optional. */
-export const REQUIRE_SIGNATURE = true;
-/** The paper log has a signature on the way out too; flip to false to make it optional. */
-export const REQUIRE_SIGN_OUT_SIGNATURE = true;
 /** Backend rejects signatures over 200 KB; stay comfortably under. */
 export const SIGNATURE_MAX_BYTES = 180 * 1024;
 

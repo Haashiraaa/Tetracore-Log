@@ -74,9 +74,9 @@ function OwnFacts({ entry }: { entry: AnyEntry }) {
   if (isTruck(entry)) {
     return (
       <>
-        <dt>Driver</dt>
+        <dt>Full name</dt>
         <dd>{entry.driver_name}</dd>
-        <dt>Phone</dt>
+        <dt>Phone number</dt>
         <dd>{entry.driver_phone ?? "—"}</dd>
         <dt>Company</dt>
         <dd>{entry.company ?? "—"}</dd>
@@ -88,6 +88,8 @@ function OwnFacts({ entry }: { entry: AnyEntry }) {
   if (isVisitor(entry)) {
     return (
       <>
+        <dt>Full name</dt>
+        <dd>{entry.full_name}</dd>
         <dt>Company name</dt>
         <dd>{entry.company ?? "—"}</dd>
         <dt>Purpose of visit</dt>
@@ -99,7 +101,16 @@ function OwnFacts({ entry }: { entry: AnyEntry }) {
       </>
     );
   }
-  return null;
+  return (
+    <>
+      <dt>Full name</dt>
+      <dd>{entry.full_name}</dd>
+      <dt>Capacity</dt>
+      <dd>{entry.capacity ?? "—"}</dd>
+      <dt>Phone number</dt>
+      <dd>{entry.phone ?? "—"}</dd>
+    </>
+  );
 }
 
 interface EntryDetailDialogProps {

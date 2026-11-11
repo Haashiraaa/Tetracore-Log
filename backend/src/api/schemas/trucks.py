@@ -13,6 +13,7 @@ from backend.src.api.schemas.common import (
     EntrySignInRequest,
     EntrySignOutRequest,
     blank_to_none,
+    full_name_field,
 )
 from backend.src.db.orm._helpers import normalize_plate
 
@@ -44,6 +45,7 @@ class TruckSignInRequest(EntrySignInRequest):
         return plate
 
     _blank = field_validator("driver_phone", "company")(blank_to_none)
+    _name = field_validator("driver_name")(full_name_field)
 
 
 class TruckSignOutRequest(EntrySignOutRequest):

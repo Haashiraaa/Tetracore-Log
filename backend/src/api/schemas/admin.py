@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from backend.src.api.schemas.auth import OfficerProfile
 from backend.src.db.orm.tables import Facility, Officer
 from backend.src.facility_codes import canonical_state
-from backend.src.models import DEFAULT_ROLE, clean_role
+from backend.src.models import DEFAULT_ROLE, clean_full_name, clean_role
 
 
 class CreateFacilityRequest(BaseModel):
@@ -46,6 +46,8 @@ class CreateOfficerRequest(BaseModel):
     facility_code: str = Field(min_length=2, max_length=32)
     full_name: str = Field(min_length=2, max_length=150)
     role: str = DEFAULT_ROLE
+
+    _name = field_validator("full_name")(clean_full_name)
 
     @field_validator("role")
     @classmethod

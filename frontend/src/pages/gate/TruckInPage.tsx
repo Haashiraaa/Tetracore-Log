@@ -100,7 +100,7 @@ export default function TruckInPage() {
   }
 
   return (
-    <div className="page page--narrow stack stack--lg">
+    <div className="page page--form stack stack--lg">
       <PageHeader title="Truck in" back={{ to: "/gate", label: "Back to gate" }} />
 
       {outcome && (

@@ -16,8 +16,6 @@ interface EntryTableProps {
   onOpen: (entry: AnyEntry) => void;
 }
 
-const WHO: Record<LogKind, string> = { trucks: "Truck", visitors: "Visitor", staff: "Name" };
-
 function insideFor(e: AnyEntry): string {
   return formatDuration(e.signed_in_at, e.signed_out_at ? new Date(e.signed_out_at) : new Date());
 }
@@ -28,7 +26,8 @@ export function EntryTable({ kind, entries, showFacility, onOpen }: EntryTablePr
       <table className="table">
         <thead>
           <tr>
-            <th scope="col">{WHO[kind]}</th>
+            {kind === "trucks" && <th scope="col">Plate</th>}
+            <th scope="col">Full name</th>
             {showFacility && <th scope="col">Facility</th>}
             <th scope="col">In</th>
             <th scope="col">Out</th>
@@ -45,10 +44,15 @@ export function EntryTable({ kind, entries, showFacility, onOpen }: EntryTablePr
             const face = faceOf(e);
             return (
               <tr key={e.id}>
-                <td data-label={WHO[kind]}>
-                  {face.plate && <PlateChip plate={face.plate} />}
+                {face.plate && (
+                  <td data-label="Plate">
+                    <PlateChip plate={face.plate} />
+                  </td>
+                )}
+                <td data-label="Full name">
                   <span className="cell-main">{face.name}</span>
                   {face.sub && <span className="cell-sub">{face.sub}</span>}
+                  {face.phone && <span className="cell-sub mono">{face.phone}</span>}
                 </td>
                 {showFacility && (
                   <td data-label="Facility" className="mono">

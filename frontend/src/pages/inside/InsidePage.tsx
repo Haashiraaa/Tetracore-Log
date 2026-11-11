@@ -110,29 +110,29 @@ export default function InsidePage() {
         <EmptyState title="No match">Nothing inside matches "{query}".</EmptyState>
       )}
 
-      <ul className="cards">
+      <ul className="lines">
         {rows.map((e) => {
           const face = entryService.faceOf(e);
           return (
-            <li key={e.id} className="card entry-card">
-              <div className="entry-card__main">
-                <div className="row row--between">
-                  {face.plate ? <PlateChip plate={face.plate} /> : <span className="entry-name">{face.name}</span>}
-                  {showFacility && <Badge tone="ink">{e.facility_code}</Badge>}
-                </div>
-                {face.plate && <span className="cell-main">{face.name}</span>}
+            <li key={e.id} className="line">
+              <div className="line__who">
+                {face.plate && <PlateChip plate={face.plate} />}
+                <span className="cell-main">{face.name}</span>
                 {face.sub && <span className="cell-sub">{face.sub}</span>}
+              </div>
+              <div className="line__meta">
                 {face.phone && (
-                  <a className="cell-sub" href={`tel:${face.phone}`}>
+                  <a className="mono" href={`tel:${face.phone}`}>
                     {face.phone}
                   </a>
                 )}
-                <p className="entry-card__time">
-                  <span className="mono">in {formatTime(e.signed_in_at)}</span>
-                  <Badge tone={isLongStay(e) ? "amber" : "grey"}>{formatDuration(e.signed_in_at)}</Badge>
-                </p>
+                {showFacility && <Badge tone="ink">{e.facility_code}</Badge>}
               </div>
-              <div className="row">
+              <div className="line__time">
+                <span className="mono">in {formatTime(e.signed_in_at)}</span>
+                <Badge tone={isLongStay(e) ? "amber" : "grey"}>{formatDuration(e.signed_in_at)}</Badge>
+              </div>
+              <div className="line__actions">
                 {canWrite && (
                   <Button variant="secondary" size="sm" onClick={() => setOutTarget(signOutTargetOf(kind, e))}>
                     Sign out

@@ -17,7 +17,7 @@ PIN = "483920"
 
 
 def make_account(
-    *, code: str, facility: Optional[str] = None, role: str = "officer",
+    *, code: str, facility: Optional[str] = None, role: str = "Officer",
     is_admin: bool = False, must_change_pin: bool = False, pin: str = PIN,
 ) -> uuid.UUID:
     with create_session() as db:
@@ -45,7 +45,7 @@ def login(client: TestClient, code: str, facility: Optional[str] = None,
 
 
 def make_actor(client: TestClient, *, code: str, facility: Optional[str] = None,
-               role: str = "officer", is_admin: bool = False,
+               role: str = "Officer", is_admin: bool = False,
                must_change_pin: bool = False) -> Actor:
     oid = make_account(code=code, facility=facility, role=role, is_admin=is_admin,
                        must_change_pin=must_change_pin)
