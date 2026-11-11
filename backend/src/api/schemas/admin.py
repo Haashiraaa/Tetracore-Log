@@ -8,14 +8,28 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from backend.src.api.schemas.auth import OfficerProfile
 from backend.src.db.orm.tables import Facility, Officer
+from backend.src.facility_codes import canonical_state
 from backend.src.models import DEFAULT_ROLE, clean_role
-
-_CODE_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9-]*$"
 
 
 class CreateFacilityRequest(BaseModel):
-    code: str = Field(min_length=2, max_length=32, pattern=_CODE_PATTERN)
+    """No code here: the server issues it from the state (CNG-LAG-01)."""
+
+    state: str = Field(min_length=2, max_length=40)
     name: str = Field(min_length=2, max_length=200)
+
+    @field_validator("state")
+    @classmethod
+    def _known_state(cls, value: str) -> str:
+        state = canonical_state(value)
+        if state is None:
+            raise ValueError("Choose one of the listed states.")
+        return state
+
+
+class StateOut(BaseModel):
+    name: str
+    abbrev: str
 
 
 class FacilityOut(BaseModel):
@@ -23,6 +37,7 @@ class FacilityOut(BaseModel):
 
     id: uuid.UUID
     code: str
+    state: str | None
     name: str
     is_active: bool
 

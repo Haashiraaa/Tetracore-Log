@@ -10,6 +10,7 @@ from backend.src.api.schemas.admin import (
     CreateOfficerResponse,
     FacilityOut,
     ResetPinResponse,
+    StateOut,
 )
 from backend.src.api.schemas.auth import (
     ChangePinRequest,
@@ -34,7 +35,7 @@ from backend.src.api.schemas.trucks import (
 from backend.src.api.schemas.visitors import VisitorEntryOut, VisitorSignInRequest
 
 __all__ = [
-    "AdminOfficerOut", "ChangePinRequest", "CreateFacilityRequest",
+    "AdminOfficerOut", "StateOut", "ChangePinRequest", "CreateFacilityRequest",
     "CreateOfficerRequest", "CreateOfficerResponse", "CurrentOfficer",
     "EntryOut", "EntrySignInRequest", "EntrySignOutRequest", "FacilityOut",
     "LoginRequest", "LoginResponse", "LoginResult", "LogoutRequest",

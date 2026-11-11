@@ -5,7 +5,7 @@
 """The ONLY place admins are set or dropped. No API route can do it.
 
     python -m scripts.admin_manager create --code ADM-01 --name "Ada Obi"
-    python -m scripts.admin_manager grant  --code OFF-003 --facility CNG-A
+    python -m scripts.admin_manager grant  --code OFF-003 --facility CNG-LAG-01
     python -m scripts.admin_manager revoke --code ADM-01
     python -m scripts.admin_manager reset-pin --code ADM-01
     python -m scripts.admin_manager list          # admins only

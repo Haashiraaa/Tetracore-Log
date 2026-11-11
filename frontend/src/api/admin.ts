@@ -8,10 +8,15 @@ import type {
   Facility,
   OfficerSummary,
   ResetPinResponse,
+  StateOption,
 } from "./schemas";
 
 export function listFacilities(signal?: AbortSignal): Promise<Facility[]> {
   return request<Facility[]>("/admin/facilities", { signal });
+}
+
+export function listStates(signal?: AbortSignal): Promise<StateOption[]> {
+  return request<StateOption[]>("/admin/states", { signal });
 }
 
 export function createFacility(body: CreateFacilityRequest): Promise<Facility> {

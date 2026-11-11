@@ -48,13 +48,21 @@ export interface RefreshResponse {
 export interface Facility {
   id: string;
   code: string;
+  /** Empty only for a facility made before codes were issued from a state. */
+  state: string | null;
   name: string;
   is_active: boolean;
 }
 
+/** No code: the server issues it from the state, e.g. CNG-LAG-01. */
 export interface CreateFacilityRequest {
-  code: string;
+  state: string;
   name: string;
+}
+
+export interface StateOption {
+  name: string;
+  abbrev: string;
 }
 
 /** AdminOfficerOut: an account plus whether it is enabled. */
