@@ -26,12 +26,10 @@ from typing import Any, Optional
 
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.src.api.schemas import CurrentOfficer
-from backend.src.api.service import assert_session_usable
-from backend.src.db.orm.tables import Facility, Officer, OfficerSession
+from backend.src.db.orm.tables import Officer, OfficerSession
 from backend.src.db.session import get_db
 from backend.src.exceptions.errors import (
     InvalidTokenError,
@@ -39,9 +37,25 @@ from backend.src.exceptions.errors import (
     PermissionDeniedError,
     SessionRevokedError,
 )
+from backend.src.security.sessions import (
+    SessionRow,
+    assert_session_usable,
+    load_session_row,
+)
 from backend.src.security.tokens import decode_access_token, utcnow
 
 _bearer = HTTPBearer(auto_error=False)
+
+
+def _profile_of(row: SessionRow) -> CurrentOfficer:
+    session, officer, _ = row
+    return CurrentOfficer(
+        officer_id=officer.id,
+        session_id=session.id,
+        facility_id=officer.facility_id,
+        is_admin=officer.is_admin,
+        must_change_pin=officer.must_change_pin,
+    )
 
 
 def get_session_officer(
@@ -51,28 +65,15 @@ def get_session_officer(
     if creds is None:
         raise InvalidTokenError()
     claims = decode_access_token(creds.credentials)  # raises Expired / Invalid
-
-    row = db.execute(
-        select(OfficerSession, Officer, Facility.is_active)
-        .join(Officer, Officer.id == OfficerSession.officer_id)
-        .outerjoin(Facility, Facility.id == Officer.facility_id)
-        .where(
-            OfficerSession.id == claims.session_id,
-            Officer.id == claims.officer_id,
-        )
-    ).first()
+    row = load_session_row(
+        db,
+        OfficerSession.id == claims.session_id,
+        Officer.id == claims.officer_id,
+    )
     if row is None:
         raise SessionRevokedError()
-
-    session, officer, facility_active = row
-    assert_session_usable(session, officer, facility_active, utcnow())
-    return CurrentOfficer(
-        officer_id=officer.id,
-        session_id=session.id,
-        facility_id=officer.facility_id,
-        is_admin=officer.is_admin,
-        must_change_pin=officer.must_change_pin,
-    )
+    assert_session_usable(row, utcnow())
+    return _profile_of(row)
 
 
 def get_current_officer(

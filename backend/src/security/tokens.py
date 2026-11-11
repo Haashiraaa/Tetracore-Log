@@ -52,9 +52,9 @@ def create_access_token(
     return token, expires_at
 
 
-def decode_access_token(token: str) -> AccessClaims:
+def _decode_payload(token: str) -> dict:
     try:
-        payload = jwt.decode(
+        return jwt.decode(
             token,
             Settings.require_jwt_secret(),
             # pin the alg: never trust the header
@@ -67,6 +67,8 @@ def decode_access_token(token: str) -> AccessClaims:
     except jwt.PyJWTError as exc:
         raise InvalidTokenError() from exc
 
+
+def _claims_from(payload: dict) -> AccessClaims:
     if payload.get("typ") != _ACCESS_TYPE:
         raise InvalidTokenError()
     try:
@@ -77,6 +79,10 @@ def decode_access_token(token: str) -> AccessClaims:
         )
     except (ValueError, TypeError) as exc:
         raise InvalidTokenError() from exc
+
+
+def decode_access_token(token: str) -> AccessClaims:
+    return _claims_from(_decode_payload(token))
 
 
 def new_refresh_token() -> str:
