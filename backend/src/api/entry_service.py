@@ -55,6 +55,14 @@ def lookup_by_phone(
     return last, _entries.open_id_by_phone(db, model, facility_id, phone)
 
 
+def search_by_phone(
+    db: Session, *, officer: CurrentOfficer, model: Any, digits: str, limit: int = 8
+) -> list[tuple[Any, uuid.UUID | None]]:
+    """Search-as-you-type over phones already seen in this facility.
+    `digits` comes from models.phone_search_digits."""
+    return _entries.search_by_phone(db, model, facility_of(officer), digits, limit)
+
+
 def refuse_if_inside(
     db: Session, *, facility_id: uuid.UUID, model: Any, phone: str, entry_id: uuid.UUID
 ) -> None:

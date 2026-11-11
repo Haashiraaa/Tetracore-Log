@@ -12,6 +12,7 @@ from backend.src.models import (
     clean_phone,
     clean_role,
     may_write_entries,
+    phone_search_digits,
     sees_every_facility,
 )
 
@@ -84,3 +85,17 @@ def test_clean_phone_gives_one_form(raw, expected):
 def test_clean_phone_rejects_non_numbers(raw):
     with pytest.raises(ValueError):
         clean_phone(raw)
+
+
+@pytest.mark.parametrize("raw,expected", [
+    ("080", "080"), ("0803-111", "0803111"), ("+234 803 11", "080311"), ("234803", "0803"),
+    ("803", "803"),
+])
+def test_phone_search_digits_is_the_number_so_far(raw, expected):
+    assert phone_search_digits(raw) == expected
+
+
+@pytest.mark.parametrize("raw", ["", "08", "ab", "+2"])
+def test_phone_search_digits_needs_three_digits(raw):
+    with pytest.raises(ValueError):
+        phone_search_digits(raw)

@@ -24,6 +24,10 @@ export function formFromLookup(found: VisitorLookup): VisitorForm {
   return { ...BLANK_VISITOR, fullName: found.full_name, company: found.company ?? "" };
 }
 
+export function search(typed: string): Promise<VisitorLookup[]> {
+  return visitorsApi.search(typed);
+}
+
 export function lookup(phone: string): Promise<VisitorLookup | null> {
   return visitorsApi.lookup(phone);
 }

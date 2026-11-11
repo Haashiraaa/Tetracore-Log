@@ -19,12 +19,19 @@ A phone number is the closest thing to an ID we have, so it is how we recognise 
 It is stored as digits only: `+234 803 123 4567` and `2348031234567` both become `08031234567`.
 Valid numbers are 7 to 15 digits after cleaning.
 
-There is no register of people. **Look up** (on the sign-in screens) finds the most recent entry
-for that phone **in the same facility** and prefills the name (and the capacity for staff).
-No match is fine: fill the form in and sign them in as new.
+There is no register of people. The sign-in screens **search as you type**: from 3 digits on, the
+people in the same facility whose number contains what was typed are listed under the box (up to 8,
+numbers that start with the digits first, then the most recent), each with an **Inside** badge if they
+have not signed out. Tap one to prefill their name (and capacity for staff), or go straight to
+sign-out if they are inside. No match is fine: finish the number, press **Look up**, and sign them in
+as new.
 
-- `GET /visitors/lookup?phone=...` and `GET /staff/lookup?phone=...`
-- The answer says whether the person is **already inside**, so the guard sees it before signing in.
+- `GET /visitors/search?q=0803` and `GET /staff/search?q=0803`: the matches, `[]` for none. 422
+  under 3 digits. A leading `234` is read as `0`, as when a number is saved.
+- `GET /visitors/lookup?phone=...` and `GET /staff/lookup?phone=...`: the one person with exactly
+  this number (what **Look up** calls). Their latest entry is used and `open_entry_id` says whether
+  they are inside.
+- Each person appears once per number, with the details from their latest entry.
 
 ## One sign-in at a time
 

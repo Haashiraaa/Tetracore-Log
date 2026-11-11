@@ -8,6 +8,10 @@ export function signIn(body: StaffSignInRequest): Promise<StaffEntry> {
   return entriesApi.signIn<StaffEntry>("staff", body);
 }
 
+export function search(typed: string): Promise<StaffLookup[]> {
+  return entriesApi.searchByPhone<StaffLookup>("staff", typed);
+}
+
 export function lookup(phone: string): Promise<StaffLookup | null> {
   return entriesApi.lookupByPhone<StaffLookup>("staff", phone);
 }

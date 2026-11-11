@@ -594,6 +594,49 @@ form.card {
   }
 }
 
+/* Phone matches under the lookup box: one long tappable line each. */
+.matches {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--surface);
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius, 0.5rem);
+  overflow: hidden;
+}
+
+.matches li + li {
+  border-top: 1px solid var(--line);
+}
+
+.match {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  min-height: 3.5rem;
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: 0;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.match:hover,
+.match:focus-visible {
+  background: var(--line);
+}
+
+.match__name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));

@@ -19,6 +19,16 @@ export function cleanPhone(raw: string): string | null {
   return digits.length >= 7 && digits.length <= 15 ? digits : null;
 }
 
+/** How many digits must be typed before we search, same as the API. */
+export const PHONE_SEARCH_MIN = 3;
+
+/** The number typed so far, in the stored form (digits, a leading 234 as 0). Null if too short to search. */
+export function phoneSearchDigits(raw: string): string | null {
+  let digits = raw.replace(/\D/g, "");
+  if (digits.startsWith("234")) digits = `0${digits.slice(3)}`;
+  return digits.length >= PHONE_SEARCH_MIN ? digits : null;
+}
+
 export const PHONE_ERROR = "Enter a valid phone number, for example 0803 123 4567.";
 
 export function fullNameError(raw: string, whose = "their"): string | null {

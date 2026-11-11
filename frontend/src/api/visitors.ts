@@ -8,6 +8,10 @@ export function signIn(body: VisitorSignInRequest): Promise<VisitorEntry> {
   return entriesApi.signIn<VisitorEntry>("visitors", body);
 }
 
+export function search(typed: string): Promise<VisitorLookup[]> {
+  return entriesApi.searchByPhone<VisitorLookup>("visitors", typed);
+}
+
 export function lookup(phone: string): Promise<VisitorLookup | null> {
   return entriesApi.lookupByPhone<VisitorLookup>("visitors", phone);
 }
