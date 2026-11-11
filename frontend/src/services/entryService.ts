@@ -3,8 +3,8 @@
 // A log's own service (truckService, visitorService, staffService) adds what is specific to it.
 
 import * as entriesApi from "@/api/entries";
-import type { AnyEntry, EntryFilters, TruckEntry, VisitorEntry } from "@/api/schemas";
-import { EXPORT_ROW_CAP, PAGE_SIZE, REQUIRE_SIGN_OUT_SIGNATURE } from "@/config/env";
+import type { AnyEntry, EntryFilters, StaffEntry, TruckEntry, VisitorEntry } from "@/api/schemas";
+import { EXPORT_ROW_CAP, PAGE_SIZE } from "@/config/env";
 import { toCsv } from "@/lib/csv";
 import { formatDateTime } from "@/lib/dates";
 import type { LogKind } from "@/models";
@@ -19,6 +19,10 @@ export function isTruck(e: AnyEntry): e is TruckEntry {
 
 export function isVisitor(e: AnyEntry): e is VisitorEntry {
   return "purpose" in e;
+}
+
+export function isStaff(e: AnyEntry): e is StaffEntry {
+  return "capacity" in e;
 }
 
 /** How any entry is shown in a list: a plate (trucks only), a name, and one line under it. */
@@ -37,13 +41,13 @@ export function faceOf(e: AnyEntry): EntryFace {
     const sub = [e.company, e.purpose].filter(Boolean).join(", ");
     return { plate: null, name: e.full_name, sub: sub || null, phone: e.phone };
   }
-  return { plate: null, name: e.full_name, sub: null, phone: null };
+  return { plate: null, name: e.full_name, sub: e.capacity, phone: e.phone };
 }
 
 /** The words a search box matches against. */
 export function searchText(e: AnyEntry): string {
   const face = faceOf(e);
-  return [face.plate, face.name, face.sub].filter(Boolean).join(" ").toUpperCase();
+  return [face.plate, face.name, face.sub, face.phone].filter(Boolean).join(" ").toUpperCase();
 }
 
 // ---- sign-out ----
@@ -59,13 +63,13 @@ export function parseScm(text: string): { value: string | null } | { error: stri
 }
 
 export function signatureError(png: string | null): string | null {
-  return REQUIRE_SIGN_OUT_SIGNATURE && !png ? "Ask them to sign before they leave." : null;
+  return png ? null : "Ask them to sign before they leave.";
 }
 
 export function signOut(
   kind: LogKind,
   entryId: string,
-  opts: { signature: string | null; scm?: string | null },
+  opts: { signature: string; scm?: string | null },
 ): Promise<AnyEntry> {
   return entriesApi.signOut<AnyEntry>(kind, entryId, {
     signature: opts.signature,
@@ -121,7 +125,7 @@ type Column = [header: string, cell: (e: AnyEntry) => string];
 const OWN_COLUMNS: Record<LogKind, Column[]> = {
   trucks: [
     ["Plate", (e) => (isTruck(e) ? e.plate_number : "")],
-    ["Driver", (e) => (isTruck(e) ? e.driver_name : "")],
+    ["Full name", (e) => (isTruck(e) ? e.driver_name : "")],
     ["Phone", (e) => (isTruck(e) ? (e.driver_phone ?? "") : "")],
     ["Company", (e) => (isTruck(e) ? (e.company ?? "") : "")],
     ["SCM purchased", (e) => (isTruck(e) ? (e.scm_purchased ?? "") : "")],
@@ -133,7 +137,11 @@ const OWN_COLUMNS: Record<LogKind, Column[]> = {
     ["Items received", (e) => (isVisitor(e) ? (e.items_received ?? "") : "")],
     ["Phone number", (e) => (isVisitor(e) ? (e.phone ?? "") : "")],
   ],
-  staff: [["Name", (e) => faceOf(e).name]],
+  staff: [
+    ["Full name", (e) => (isStaff(e) ? e.full_name : "")],
+    ["Capacity", (e) => (isStaff(e) ? (e.capacity ?? "") : "")],
+    ["Phone number", (e) => (isStaff(e) ? (e.phone ?? "") : "")],
+  ],
 };
 
 const SHARED_COLUMNS: Column[] = [

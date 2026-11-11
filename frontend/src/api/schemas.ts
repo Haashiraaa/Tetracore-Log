@@ -112,13 +112,13 @@ export interface EntrySignInBase {
   id: string; // generated here, once per form open; makes retries idempotent
   /** Omit while online: the server stamps its own clock, so phone drift cannot skew the log. */
   signed_in_at?: string | null;
-  signature?: string | null; // PNG data URL
+  signature: string; // PNG data URL. Always required: nobody is signed in without it
   device_id?: string | null;
 }
 
 export interface EntrySignOutRequest {
   signed_out_at?: string | null;
-  signature?: string | null; // PNG data URL
+  signature: string; // PNG data URL. Always required: nobody is signed out without it
 }
 
 export type SignatureSide = "in" | "out";
@@ -172,12 +172,24 @@ export interface TruckEntry extends EntryBase {
 
 // ---- visitors ----
 
+/** What the gate sees when a returning person's phone is typed (visitors and staff). */
+export interface PersonLookup {
+  full_name: string;
+  phone: string;
+  /** Set when they are inside right now. */
+  open_entry_id: string | null;
+}
+
+export interface VisitorLookup extends PersonLookup {
+  company: string | null;
+}
+
 export interface VisitorSignInRequest extends EntrySignInBase {
   full_name: string;
   company?: string | null;
   purpose?: string | null;
   items_received?: string | null;
-  phone?: string | null;
+  phone: string; // identifies a returning visitor
 }
 
 export interface VisitorEntry extends EntryBase {
@@ -190,12 +202,20 @@ export interface VisitorEntry extends EntryBase {
 
 // ---- staff ----
 
+export interface StaffLookup extends PersonLookup {
+  capacity: string | null;
+}
+
 export interface StaffSignInRequest extends EntrySignInBase {
   full_name: string;
+  capacity: string; // the capacity they work in, free text
+  phone: string; // identifies a returning staff member
 }
 
 export interface StaffEntry extends EntryBase {
   full_name: string;
+  capacity: string | null;
+  phone: string | null;
 }
 
 export type AnyEntry = TruckEntry | VisitorEntry | StaffEntry;

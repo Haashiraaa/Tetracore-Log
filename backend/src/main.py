@@ -49,7 +49,7 @@ STATUS_RULES: tuple[tuple[type[DomainError], int], ...] = (
     (AccountLockedError, 429),
     (AuthError, 401),
     (NotFoundError, 404),
-    (ConflictError, 409),          # also covers TruckAlreadyInsideError
+    (ConflictError, 409),          # also covers the AlreadyInside errors
     (WeakPinError, 422),
     (InvalidSignatureError, 422),
 )

@@ -31,6 +31,26 @@
   max-width: 34rem;
 }
 
+/* sign-in pages: wide enough to put fields side by side */
+.page--form {
+  max-width: 52rem;
+}
+
+/* gate home: sign-in tiles on the left, what just happened on the right */
+.gate-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 34rem) minmax(0, 1fr);
+  gap: 1.75rem 2rem;
+  align-items: start;
+}
+
+@media (max-width: 64rem) {
+  .gate-grid {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 34rem;
+  }
+}
+
 /* ---------- brand ---------- */
 
 .brand {

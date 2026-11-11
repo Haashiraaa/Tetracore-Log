@@ -15,7 +15,12 @@ from sqlalchemy.orm import Session
 from backend.src.api.schemas import CurrentOfficer
 from backend.src.api.signature import decode_signature_png
 from backend.src.db.queries import _entries
-from backend.src.exceptions.errors import ConflictError, NotFoundError, PermissionDeniedError
+from backend.src.exceptions.errors import (
+    AlreadyInsideError,
+    ConflictError,
+    NotFoundError,
+    PermissionDeniedError,
+)
 from backend.src.security.tokens import utcnow
 
 
@@ -37,6 +42,29 @@ def stored_entry(
     return existing
 
 
+def lookup_by_phone(
+    db: Session, *, officer: CurrentOfficer, model: Any, phone: str
+) -> tuple[Any, uuid.UUID | None] | None:
+    """For logs that identify a person by phone (visitors, staff). None = never seen here.
+    Otherwise (their latest entry, the id of the entry they are inside on, if any).
+    `phone` is already canonical."""
+    facility_id = facility_of(officer)
+    last = _entries.latest_by_phone(db, model, facility_id, phone)
+    if last is None:
+        return None
+    return last, _entries.open_id_by_phone(db, model, facility_id, phone)
+
+
+def refuse_if_inside(
+    db: Session, *, facility_id: uuid.UUID, model: Any, phone: str, entry_id: uuid.UUID
+) -> None:
+    """One sign-in at a time: someone inside must sign out before signing in again.
+    A retry of the same entry (same id) is not refused: it replays."""
+    open_id = _entries.open_id_by_phone(db, model, facility_id, phone)
+    if open_id is not None and open_id != entry_id:
+        raise AlreadyInsideError()
+
+
 def create_entry(
     db: Session,
     *,
@@ -52,6 +80,9 @@ def create_entry(
     stored = stored_entry(db, model, data.id, facility_id)
     if stored is not None:
         return stored, False
+    if fields.get("phone"):  # people are found by phone: only one open sign-in each
+        refuse_if_inside(db, facility_id=facility_id, model=model,
+                         phone=fields["phone"], entry_id=data.id)
     created = _entries.insert_entry(
         db, model, id=data.id, facility_id=facility_id,
         signed_in_at=data.signed_in_at or utcnow(), signature_in=signature,

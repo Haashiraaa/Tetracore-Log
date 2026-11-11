@@ -10,8 +10,13 @@ PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
 PNG_B64 = base64.b64encode(PNG).decode()
 
 
+def fresh_phone():
+    return "0803" + str(uuid.uuid4().int)[:7]
+
+
 def payload(**over):
-    return {"id": str(uuid.uuid4()), "full_name": "Ada Okoro", **over}
+    return {"id": str(uuid.uuid4()), "full_name": "Ada Okoro", "capacity": "Cashier",
+            "phone": fresh_phone(), "signature": PNG_B64, **over}
 
 
 def sign_in(client, who, **over):
@@ -19,7 +24,8 @@ def sign_in(client, who, **over):
 
 
 def sign_out(client, who, entry_id, body=None):
-    return client.post(f"{URL}/{entry_id}/sign-out", json=body or {}, headers=who.headers)
+    return client.post(f"{URL}/{entry_id}/sign-out",
+                       json={"signature": PNG_B64, **(body or {})}, headers=who.headers)
 
 
 def test_requires_login(client):
@@ -31,10 +37,11 @@ def test_sign_in_records_the_fields(client, officer_a):
     r = sign_in(client, officer_a)
     assert r.status_code == 201
     e = r.json()
-    assert e["full_name"] == "Ada Okoro"
+    assert (e["full_name"], e["capacity"]) == ("Ada Okoro", "Cashier")
+    assert e["phone"].startswith("0803")
     assert e["facility_code"] == "CNG-A" and e["signed_in_by_name"]
     assert e["signed_out_at"] is None
-    assert e["has_signature"] is False and e["has_signature_out"] is False
+    assert e["has_signature"] is True and e["has_signature_out"] is False
 
 
 def test_sign_in_is_idempotent(client, officer_a):
@@ -125,3 +132,52 @@ def test_open_filter_and_paging(client, officer_a):
     assert [e["id"] for e in still] == [inside]
     assert client.get(URL, params={"limit": 0}, headers=officer_a.headers).status_code == 422
     assert len(client.get(URL, params={"limit": 1}, headers=officer_a.headers).json()) == 1
+
+
+# ---- capacity, full names, phone, finding a returning person ----
+
+def test_capacity_is_free_text_and_required(client, officer_a):
+    assert sign_in(client, officer_a, capacity="Weekend relief attendant").json()[
+        "capacity"] == "Weekend relief attendant"
+    body = payload()
+    del body["capacity"]
+    assert client.post(URL, json=body, headers=officer_a.headers).status_code == 422
+    assert sign_in(client, officer_a, capacity="").status_code == 422
+
+
+def test_full_name_phone_and_signature_are_required(client, officer_a):
+    assert sign_in(client, officer_a, full_name="Ada").status_code == 422
+    assert sign_in(client, officer_a, phone="").status_code == 422
+    for missing in ("full_name", "phone", "signature"):
+        body = payload()
+        del body[missing]
+        assert client.post(URL, json=body, headers=officer_a.headers).status_code == 422
+
+
+def test_lookup_finds_a_returning_staff_member(client, officer_a, officer_b):
+    def look(who, phone="+234 803 111 2222"):
+        return client.get("/api/staff/lookup", params={"phone": phone}, headers=who.headers)
+
+    assert look(officer_a).json() is None
+    e = sign_in(client, officer_a, phone="08031112222", capacity="Cashier").json()
+    found = look(officer_a).json()
+    assert (found["full_name"], found["capacity"], found["phone"]) == (
+        "Ada Okoro", "Cashier", "08031112222")
+    assert found["open_entry_id"] == e["id"]
+    assert look(officer_b).json() is None  # another facility has never seen them
+    sign_out(client, officer_a, e["id"])
+    assert look(officer_a).json()["open_entry_id"] is None
+
+
+def test_one_sign_in_at_a_time(client, officer_a):
+    first = sign_in(client, officer_a, phone="08031112222").json()
+    again = sign_in(client, officer_a, phone="08031112222")
+    assert again.status_code == 409 and again.json()["detail"]["code"] == "already_inside"
+    sign_out(client, officer_a, first["id"])
+    assert sign_in(client, officer_a, phone="08031112222").status_code == 201
+
+
+def test_signatures_are_required_both_ways(client, officer_a):
+    eid = sign_in(client, officer_a).json()["id"]
+    out = f"{URL}/{eid}/sign-out"
+    assert client.post(out, json={}, headers=officer_a.headers).status_code == 422

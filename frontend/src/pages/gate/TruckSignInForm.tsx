@@ -49,11 +49,7 @@ export function TruckSignInForm({ plate, mode, entryId, initial, onDone, onCance
       return;
     }
 
-    const built = truckService.buildSignInRequest(
-      entryId,
-      { plate, driverName, driverPhone, company },
-      read.png,
-    );
+    const built = truckService.buildSignInRequest(entryId, { plate, driverName, driverPhone, company }, read.png);
     if (!built.ok) {
       setErrors(built.errors);
       return;
@@ -95,29 +91,31 @@ export function TruckSignInForm({ plate, mode, entryId, initial, onDone, onCance
 
       {error && <Banner tone="error">{error}</Banner>}
 
-      <TextField
-        label="Driver's full name"
-        value={driverName}
-        onChange={(e) => setDriverName(e.target.value)}
-        error={errors.driverName}
-        autoComplete="off"
-        disabled={busy}
-      />
-      <TextField
-        label="Driver's phone"
-        inputMode="tel"
-        value={driverPhone}
-        onChange={(e) => setDriverPhone(e.target.value)}
-        autoComplete="off"
-        disabled={busy}
-      />
-      <TextField
-        label="Company"
-        value={company}
-        onChange={(e) => setCompany(e.target.value)}
-        autoComplete="off"
-        disabled={busy}
-      />
+      <div className="form-grid">
+        <TextField
+          label="Full name"
+          value={driverName}
+          onChange={(e) => setDriverName(e.target.value)}
+          error={errors.driverName}
+          autoComplete="off"
+          disabled={busy}
+        />
+        <TextField
+          label="Phone number"
+          inputMode="tel"
+          value={driverPhone}
+          onChange={(e) => setDriverPhone(e.target.value)}
+          autoComplete="off"
+          disabled={busy}
+        />
+        <TextField
+          label="Company"
+          value={company}
+          onChange={(e) => setCompany(e.target.value)}
+          autoComplete="off"
+          disabled={busy}
+        />
+      </div>
 
       <div className="field">
         <span className="field__label">Driver's signature</span>

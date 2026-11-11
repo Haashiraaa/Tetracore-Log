@@ -32,7 +32,7 @@ python -m scripts.admin_manager reset-pin --code ADM-01
 |---|---|---|
 | `--code CODE` | create, grant, revoke, reset-pin | The officer code (any case) |
 | `--facility CODE` | create, grant, revoke, reset-pin | The facility code as issued, e.g. `CNG-LAG-01` (see [facility-codes.md](../facility-codes.md)). Leave it out for a global account. The same officer code can exist in two facilities, so a scoped account needs this to be found |
-| `--name "Full Name"` | create | Required |
+| `--name "Full Name"` | create | Required. First and last name (at least two words) |
 | `--role LABEL` | create | Free-text label, up to 32 characters. Default `admin`. Nothing checks it, see [How access works](#how-access-works) |
 | `--force` | revoke | Allow dropping the **last active** admin |
 | `--all` | list | Include accounts that are not admins |
@@ -43,7 +43,7 @@ One line per account:
 
 ```
 ADM-01     Ada Obi                      role=admin            facility=-            admin  active
-OFF-001    Musa Bello                   role=officer          facility=CNG-LAG-01    -      active
+OFF-001    Musa Bello                   role=Officer          facility=CNG-LAG-01    -      active
 ```
 
 | Column | Meaning |
@@ -78,7 +78,7 @@ Three things decide what an account can do. The `role` label is not one of them.
 | Facility empty (global) | Reads every facility, writes no entries |
 | Admin | Can use the admin API and Accounts page. An admin that belongs to a facility can also write entries there |
 
-So `role` is a label for people ("Supervisor", "Gate officer"). Use any text you like.
+So `role` is a label for people ("Supervisor", "Officer"). Use any text you like.
 
 ## Safety
 

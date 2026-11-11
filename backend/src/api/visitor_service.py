@@ -14,6 +14,7 @@ from backend.src.api.schemas import (
     CurrentOfficer,
     EntrySignOutRequest,
     VisitorEntryOut,
+    VisitorLookupOut,
     VisitorSignInRequest,
 )
 from backend.src.db.orm.tables import VisitorEntry
@@ -30,11 +31,20 @@ def sign_in(
     return VisitorEntryOut.from_row(row), created
 
 
+def lookup(db: Session, *, officer: CurrentOfficer, phone: str) -> VisitorLookupOut | None:
+    """null = never signed in here. Otherwise what was written last time, to CONFIRM."""
+    found = entry_service.lookup_by_phone(db, officer=officer, model=VisitorEntry, phone=phone)
+    if found is None:
+        return None
+    last, open_entry_id = found
+    return VisitorLookupOut(full_name=last.full_name, company=last.company,
+                            phone=phone, open_entry_id=open_entry_id)
+
+
 def sign_out(
     db: Session, *, officer: CurrentOfficer, entry_id: uuid.UUID,
-    data: EntrySignOutRequest | None,
+    data: EntrySignOutRequest,
 ) -> VisitorEntryOut:
-    data = data or EntrySignOutRequest()
     row = entry_service.close_entry(
         db, officer=officer, model=VisitorEntry, entry_id=entry_id,
         signed_out_at=data.signed_out_at, signature=data.signature,

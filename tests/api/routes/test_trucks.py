@@ -15,7 +15,7 @@ PNG_B64 = base64.b64encode(PNG).decode()
 def payload(**over):
     base = {"id": str(uuid.uuid4()), "plate_number": "abc-123 xy",
             "driver_name": "Musa Ibrahim", "driver_phone": "08030000000",
-            "company": "Haulage Ltd"}
+            "company": "Haulage Ltd", "signature": PNG_B64}
     return {**base, **over}
 
 
@@ -25,7 +25,7 @@ def sign_in(client, who, **over):
 
 def sign_out(client, who, entry_id, body=None):
     return client.post(f"/api/trucks/entries/{entry_id}/sign-out",
-                       json=body or {}, headers=who.headers)
+                       json={"signature": PNG_B64, **(body or {})}, headers=who.headers)
 
 
 def lookup(client, who, plate="ABC-123 xy"):
@@ -46,7 +46,7 @@ def test_sign_in_creates_entry(client, officer_a):
     assert e["facility_code"] == "CNG-A"
     assert e["signed_in_by"] == str(officer_a.id)
     assert e["signed_in_by_name"] == "Test OFF-001"
-    assert e["signed_out_at"] is None and e["has_signature"] is False
+    assert e["signed_out_at"] is None and e["has_signature"] is True
 
 
 def test_sign_in_ignores_facility_id_in_body(client, officer_a):
@@ -175,16 +175,30 @@ def test_signature_round_trip_and_scoping(client, officer_a, officer_b, cso):
 def test_sign_out_signature_round_trip(client, officer_a):
     eid = sign_in(client, officer_a).json()["id"]
     r = sign_out(client, officer_a, eid, {"signature": PNG_B64})
-    assert r.json()["has_signature_out"] is True and r.json()["has_signature"] is False
+    assert r.json()["has_signature_out"] is True and r.json()["has_signature"] is True
     got = client.get(f"/api/trucks/entries/{eid}/signature", params={"side": "out"},
                      headers=officer_a.headers)
     assert got.status_code == 200 and got.content == PNG
 
 
-def test_missing_signature_is_404(client, officer_a):
+def test_signatures_are_required_both_ways(client, officer_a):
+    body = payload()
+    del body["signature"]
+    assert client.post("/api/trucks/entries", json=body,
+                       headers=officer_a.headers).status_code == 422
     eid = sign_in(client, officer_a).json()["id"]
-    assert client.get(f"/api/trucks/entries/{eid}/signature",
-                      headers=officer_a.headers).status_code == 404
+    assert client.post(f"/api/trucks/entries/{eid}/sign-out", json={},
+                       headers=officer_a.headers).status_code == 422
+    assert client.post(f"/api/trucks/entries/{eid}/sign-out", json={"signature": ""},
+                       headers=officer_a.headers).status_code == 422
+    assert client.get("/api/trucks/entries", params={"open": True},
+                      headers=officer_a.headers).json()[0]["signed_out_at"] is None
+
+
+def test_the_driver_needs_a_full_name(client, officer_a):
+    assert sign_in(client, officer_a, driver_name="Musa").status_code == 422
+    assert sign_in(client, officer_a, driver_name="  Musa   Ibrahim ").json()[
+        "driver_name"] == "Musa Ibrahim"
 
 
 def test_bad_signatures_rejected(client, officer_a):

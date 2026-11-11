@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from backend.src.db.orm._helpers import normalize_code
 from backend.src.db.orm.tables import Facility, Officer
-from backend.src.models import DEFAULT_ROLE
+from backend.src.models import DEFAULT_ROLE, clean_full_name
 from backend.src.security.passwords import hash_pin, validate_pin_policy
 from backend.src.security.sessions import revoke_sessions
 
@@ -89,7 +89,7 @@ def create_officer(
     code = normalize_code(officer_code)
     _assert_code_free(db, code, facility_id)
     officer = Officer(
-        facility_id=facility_id, officer_code=code, full_name=full_name.strip(),
+        facility_id=facility_id, officer_code=code, full_name=clean_full_name(full_name),
         pin_hash=hash_pin(pin), role=role, is_admin=is_admin)
     db.add(officer)
     db.flush()

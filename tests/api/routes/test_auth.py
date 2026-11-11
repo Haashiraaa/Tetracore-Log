@@ -23,7 +23,7 @@ def test_login_ok_and_case_insensitive(client, officer_a):
     assert body["token_type"] == "bearer"
     assert body["officer"]["officer_code"] == "OFF-001"
     assert body["officer"]["facility_code"] == "CNG-A"
-    assert body["officer"]["role"] == "officer"
+    assert body["officer"]["role"] == "Officer"
 
 
 def test_profile_says_what_the_account_can_do(client, officer_a, cso, admin):

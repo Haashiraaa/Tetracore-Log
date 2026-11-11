@@ -9,8 +9,13 @@ from datetime import datetime
 from typing import Annotated, Any, Literal, Optional
 
 from fastapi import Query, Response
+from pydantic import AfterValidator
 
 from backend.src.exceptions.errors import NotFoundError
+from backend.src.models import clean_phone
+
+# ?phone=... however it is typed: 422 if it is not a phone number, canonical form inside.
+PhoneQuery = Annotated[str, Query(min_length=5, max_length=32), AfterValidator(clean_phone)]
 
 SignatureSide = Annotated[Literal["in", "out"], Query(description="Which signature")]
 

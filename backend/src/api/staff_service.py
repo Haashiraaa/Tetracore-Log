@@ -14,6 +14,7 @@ from backend.src.api.schemas import (
     CurrentOfficer,
     EntrySignOutRequest,
     StaffEntryOut,
+    StaffLookupOut,
     StaffSignInRequest,
 )
 from backend.src.db.orm.tables import StaffEntry
@@ -25,15 +26,24 @@ def sign_in(
     """Returns (entry, created). A retry with the same id returns the stored entry."""
     row, created = entry_service.create_entry(
         db, officer=officer, model=StaffEntry, data=data,
-        fields=data.model_dump(include={"full_name"}))
+        fields=data.model_dump(include={"full_name", "capacity", "phone"}))
     return StaffEntryOut.from_row(row), created
+
+
+def lookup(db: Session, *, officer: CurrentOfficer, phone: str) -> StaffLookupOut | None:
+    """null = never signed in here. Otherwise what was written last time, to CONFIRM."""
+    found = entry_service.lookup_by_phone(db, officer=officer, model=StaffEntry, phone=phone)
+    if found is None:
+        return None
+    last, open_entry_id = found
+    return StaffLookupOut(full_name=last.full_name, capacity=last.capacity,
+                          phone=phone, open_entry_id=open_entry_id)
 
 
 def sign_out(
     db: Session, *, officer: CurrentOfficer, entry_id: uuid.UUID,
-    data: EntrySignOutRequest | None,
+    data: EntrySignOutRequest,
 ) -> StaffEntryOut:
-    data = data or EntrySignOutRequest()
     row = entry_service.close_entry(
         db, officer=officer, model=StaffEntry, entry_id=entry_id,
         signed_out_at=data.signed_out_at, signature=data.signature,

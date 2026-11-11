@@ -2,6 +2,7 @@
 // Admin rules. Mirrors backend/src/api/admin_service.py.
 // Temp PINs are returned once by the server; nothing here stores them.
 
+import { fullNameError } from "@/lib/people";
 import * as adminApi from "@/api/admin";
 import type {
   CreateFacilityRequest,
@@ -54,7 +55,8 @@ export function validateNewAccount(
 ): FieldErrors<"fullName" | "role" | "facility"> {
   const errors: FieldErrors<"fullName" | "role" | "facility"> = {};
   const r = role.trim();
-  if (fullName.trim().length < 2) errors.fullName = "Enter the person's full name.";
+  const nameProblem = fullNameError(fullName, "the person's");
+  if (nameProblem) errors.fullName = nameProblem;
   if (r.length === 0 || r.length > ROLE_MAX_LENGTH) errors.role = `Enter a role of 1-${ROLE_MAX_LENGTH} characters.`;
   if (!facilityCode.trim()) errors.facility = "Choose a facility.";
   return errors;

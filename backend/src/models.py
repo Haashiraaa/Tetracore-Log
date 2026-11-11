@@ -8,7 +8,7 @@ Rules:
 * Route-specific request/response schemas live in the api package, not here.
 * Keep this file free of imports from backend.src.db and backend.src.api.
 
-`role` is a free-form label, a short string such as "officer". Nothing checks it.
+`role` is a free-form label, a short string such as "Officer". Nothing checks it.
 What an account may do comes from two facts about it instead:
 
 * facility_id: set, and it belongs to that facility, reads only that facility and
@@ -24,7 +24,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime
 
-DEFAULT_ROLE = "officer"
+DEFAULT_ROLE = "Officer"
 ROLE_MAX_LENGTH = 32
 
 # Auto-issued account codes: OFF-001, OFF-002 ... (counted per facility).
@@ -39,6 +39,27 @@ def clean_role(raw: str) -> str:
     if len(role) > ROLE_MAX_LENGTH:
         raise ValueError(f"Role must be at most {ROLE_MAX_LENGTH} characters.")
     return role
+
+
+def clean_full_name(raw: str) -> str:
+    """A person's full name: at least two words (first and last name), spaces tidied.
+    Used everywhere a person is named, so the column is always a *full* name."""
+    name = " ".join(raw.split())
+    if len(name.split(" ")) < 2:
+        raise ValueError("Enter the full name: first name and last name.")
+    return name
+
+
+def clean_phone(raw: str) -> str:
+    """One canonical form for a phone number, so the same person is found again however
+    it was typed: digits only, and +234 / 234 written as a leading 0
+    ("+234 803 123 4567" and "0803-123-4567" both become "08031234567")."""
+    digits = "".join(ch for ch in raw if ch.isdigit())
+    if digits.startswith("234") and len(digits) == 13:
+        digits = "0" + digits[3:]
+    if not 7 <= len(digits) <= 15:
+        raise ValueError("Enter a valid phone number.")
+    return digits
 
 
 def sees_every_facility(*, is_admin: bool, facility_id: uuid.UUID | None) -> bool:

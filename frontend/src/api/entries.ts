@@ -10,10 +10,15 @@ export function signIn<T extends AnyEntry>(kind: LogKind, body: object): Promise
   return request<T>(`/${kind}/entries`, { method: "POST", body });
 }
 
+/** Visitors and staff: who has this phone number signed in before? null = nobody. */
+export function lookupByPhone<T>(kind: "visitors" | "staff", phone: string): Promise<T | null> {
+  return request<T | null>(`/${kind}/lookup`, { query: { phone } });
+}
+
 export function signOut<T extends AnyEntry>(
   kind: LogKind,
   entryId: string,
-  body: EntrySignOutRequest & { scm_purchased?: string | null } = {},
+  body: EntrySignOutRequest & { scm_purchased?: string | null },
 ): Promise<T> {
   return request<T>(`/${kind}/entries/${entryId}/sign-out`, { method: "POST", body });
 }

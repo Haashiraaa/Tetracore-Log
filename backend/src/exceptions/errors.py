@@ -99,6 +99,11 @@ class TruckAlreadyInsideError(ConflictError):
     message = "That truck is already inside. Sign it out first."
 
 
+class AlreadyInsideError(ConflictError):
+    code = "already_inside"
+    message = "That person is already inside. Sign them out first."
+
+
 class InvalidSignatureError(DomainError):
     code = "invalid_signature"
     message = "Signature image is invalid."

@@ -96,10 +96,9 @@ def sign_in(
 
 def sign_out(
     db: Session, *, officer: CurrentOfficer, entry_id: uuid.UUID,
-    data: TruckSignOutRequest | None,
+    data: TruckSignOutRequest,
 ) -> TruckEntryOut:
     """Idempotent: a repeat returns the stored entry, first sign-out wins."""
-    data = data or TruckSignOutRequest()
     extra = {} if data.scm_purchased is None else {"scm_purchased": data.scm_purchased}
     row = close_entry(
         db, officer=officer, model=TruckEntry, entry_id=entry_id,

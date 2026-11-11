@@ -56,7 +56,7 @@ def sign_in(
 @router.post("/entries/{entry_id}/sign-out", response_model=TruckEntryOut)
 def sign_out(
     entry_id: uuid.UUID,
-    body: Optional[TruckSignOutRequest] = None,
+    body: TruckSignOutRequest,
     officer: CurrentOfficer = Depends(require_entry_writer),
     db: Session = Depends(get_db),
 ) -> TruckEntryOut:

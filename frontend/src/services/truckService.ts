@@ -5,7 +5,7 @@
 
 import type { TruckEntry, TruckLookup, TruckSignInRequest } from "@/api/schemas";
 import * as trucksApi from "@/api/trucks";
-import { REQUIRE_SIGNATURE } from "@/config/env";
+import { cleanFullName, fullNameError } from "@/lib/people";
 import { deviceId } from "@/lib/ids";
 import { isValidPlate, normalizePlate } from "@/lib/plate";
 import type { FieldErrors } from "./entryService";
@@ -47,16 +47,17 @@ export function buildSignInRequest(
 ): { ok: true; value: TruckSignInRequest } | { ok: false; errors: FieldErrors<SignInField> } {
   const errors: FieldErrors<SignInField> = {};
   const driverName = form.driverName.trim();
-  if (driverName.length < 2) errors.driverName = "Enter the driver's full name.";
-  if (REQUIRE_SIGNATURE && !signaturePng) errors.signature = "Ask the driver to sign.";
-  if (Object.keys(errors).length > 0) return { ok: false, errors };
+  const nameProblem = fullNameError(driverName, "the driver's");
+  if (nameProblem) errors.driverName = nameProblem;
+  if (!signaturePng) errors.signature = "Ask the driver to sign.";
+  if (Object.keys(errors).length > 0 || !signaturePng) return { ok: false, errors };
 
   return {
     ok: true,
     value: {
       id: entryId,
       plate_number: normalizePlate(form.plate),
-      driver_name: driverName,
+      driver_name: cleanFullName(driverName),
       driver_phone: form.driverPhone.trim() || null,
       company: form.company.trim() || null,
       signature: signaturePng,
