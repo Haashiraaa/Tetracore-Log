@@ -4,6 +4,13 @@ All notable changes to Tetracore Log. Entries above the baseline are written aut
 release-please from commit messages when a release pull request is merged (see
 [docs/releasing.md](docs/releasing.md)), so do not edit them by hand.
 
+## [0.8.0](https://github.com/Haashiraaa/Tetracore-Log/compare/v0.7.0...v0.8.0) (2026-11-11)
+
+
+### Features
+
+* **notifications:** live admin feed of every event, warnings and browser push ([#19](https://github.com/Haashiraaa/Tetracore-Log/issues/19)) ([024b57e](https://github.com/Haashiraaa/Tetracore-Log/commit/024b57e10e5bea202860f925f38e8c84067373b7))
+
 ## [0.7.0](https://github.com/Haashiraaa/Tetracore-Log/compare/v0.6.0...v0.7.0) (2026-11-11)
 
 
