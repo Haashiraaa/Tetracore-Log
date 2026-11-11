@@ -11,7 +11,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
-from backend.src.api import service
+from backend.src.api import auth_service as service
 from backend.src.api.deps import get_session_officer
 from backend.src.api.schemas import (
     ChangePinRequest,

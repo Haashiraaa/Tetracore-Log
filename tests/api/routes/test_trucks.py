@@ -191,10 +191,14 @@ def test_bad_signatures_rejected(client, officer_a):
 
 # ---- permissions ----
 
-def test_only_facility_officers_write(client, officer_a, manager_a, cso, admin):
+def test_only_accounts_with_a_facility_write(client, manager_a, cso, admin):
     assert client.post("/api/trucks/entries",
                        json=payload()).status_code == 401
-    for who in (manager_a, cso, admin):
+    # The role label does not matter: a "facility_manager" that belongs to a
+    # facility writes exactly like an officer.
+    assert sign_in(client, manager_a).status_code == 201
+    # Global accounts have no facility to write into.
+    for who in (cso, admin):
         assert sign_in(client, who).status_code == 403
         assert lookup(client, who).status_code == 403
         assert sign_out(client, who, str(uuid.uuid4())).status_code == 403

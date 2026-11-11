@@ -19,7 +19,7 @@ Other scripts: `npm run typecheck`, `npm run build` (typechecks, then writes `di
 
 ## First run, end to end
 
-1. Create a super admin: `python -m scripts.super_admin_manager create --code SA-01 --name "Your Name"`.
+1. Create an admin: `python -m scripts.admin_manager create --code AD-01 --name "Your Name"`. Admins are added and dropped from this script only (`grant`, `revoke`, `reset-pin`, `list`).
 2. Log in with the facility field **blank**, officer code `SA-01` and your PIN.
 3. **Admin > Facilities**: add a station (e.g. `CNG-BEN-01`).
 4. **Admin > Officers**: add an officer. The temporary PIN is shown once; hand it over in person.
@@ -47,7 +47,7 @@ Rule of thumb: `api/*` never contains a decision, `services/*` never touches the
 
 ## Behaviour worth knowing
 
-- **Who sees what.** Gate officers get Gate, Inside, Log. Facility managers and the CSO get Inside and Log (read-only). Admins add Admin. Super admins add Admins. The backend re-checks every request; the UI only hides what you can't use.
+- **Who sees what.** The role is a free-form label and changes nothing. Accounts with a facility get Gate, Inside, Log and can write entries. Accounts without a facility get Inside and Log (read-only, all facilities). Admins add Admin. The backend re-checks every request; the UI only hides what you can't use.
 - **Sessions.** Access token in memory, refresh token in `localStorage`. An expired token is refreshed once and the request retried. Only `session_revoked` logs you out; a wrong current PIN on Change PIN does not.
 - **Retries are safe.** The sign-in entry id is generated once when the form opens and reused on retry, so a lost response can't create a duplicate.
 - **Times.** The server stamps sign-in and sign-out times while the app is online. Everything is displayed in Lagos time (`config/env.ts`).

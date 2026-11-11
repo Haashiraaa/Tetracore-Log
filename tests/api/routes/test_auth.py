@@ -5,7 +5,7 @@
 import pytest
 
 from backend.src.config.settings import Settings
-from tests._helpers import PIN, login, login_response
+from tests._helpers import PIN, login, login_response, make_actor
 
 
 def me(client, headers):
@@ -24,6 +24,22 @@ def test_login_ok_and_case_insensitive(client, officer_a):
     assert body["officer"]["officer_code"] == "OFF-001"
     assert body["officer"]["facility_code"] == "CNG-A"
     assert body["officer"]["role"] == "officer"
+
+
+def test_profile_says_what_the_account_can_do(client, officer_a, cso, admin):
+    admin_at_a = make_actor(client, code="ADM-002", facility="CNG-A",
+                            role="admin", is_admin=True)
+    expected = [  # who, can_write_entries, sees_all_facilities, is_admin
+        (officer_a, True, False, False),
+        (cso, False, True, False),            # global: reads all, writes none
+        (admin, False, True, True),           # global admin
+        (admin_at_a, True, True, True),       # admin that also belongs to a facility
+    ]
+    for who, writes, sees_all, is_admin in expected:
+        profile = me(client, who.headers).json()
+        assert (profile["can_write_entries"], profile["sees_all_facilities"],
+                profile["is_admin"]) == (writes, sees_all, is_admin), who.code
+        assert "is_super_admin" not in profile
 
 
 def test_login_failures_look_identical(client, officer_a):

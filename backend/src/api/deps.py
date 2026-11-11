@@ -13,7 +13,7 @@ except /auth/me and /auth/change-pin should depend on THIS one, directly or
 through the gates below.
 
 Entry endpoints:
-    officer: CurrentOfficer = Depends(require_gate_officer)   # writes
+    officer: CurrentOfficer = Depends(require_entry_writer)   # writes
     scope: Optional[UUID]   = Depends(get_facility_scope)     # reads
 and filter with scoped(stmt, Model.facility_id, scope).
 facility_id for a write is officer.facility_id, never the request body.
@@ -26,12 +26,10 @@ from typing import Any, Optional
 
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.src.api.schemas import CurrentOfficer
-from backend.src.api.service import assert_session_usable
-from backend.src.db.orm.tables import Facility, Officer, OfficerSession
+from backend.src.db.orm.tables import Officer, OfficerSession
 from backend.src.db.session import get_db
 from backend.src.exceptions.errors import (
     InvalidTokenError,
@@ -39,10 +37,25 @@ from backend.src.exceptions.errors import (
     PermissionDeniedError,
     SessionRevokedError,
 )
-from backend.src.models import Role
+from backend.src.security.sessions import (
+    SessionRow,
+    assert_session_usable,
+    load_session_row,
+)
 from backend.src.security.tokens import decode_access_token, utcnow
 
 _bearer = HTTPBearer(auto_error=False)
+
+
+def _profile_of(row: SessionRow) -> CurrentOfficer:
+    session, officer, _ = row
+    return CurrentOfficer(
+        officer_id=officer.id,
+        session_id=session.id,
+        facility_id=officer.facility_id,
+        is_admin=officer.is_admin,
+        must_change_pin=officer.must_change_pin,
+    )
 
 
 def get_session_officer(
@@ -52,30 +65,15 @@ def get_session_officer(
     if creds is None:
         raise InvalidTokenError()
     claims = decode_access_token(creds.credentials)  # raises Expired / Invalid
-
-    row = db.execute(
-        select(OfficerSession, Officer, Facility.is_active)
-        .join(Officer, Officer.id == OfficerSession.officer_id)
-        .outerjoin(Facility, Facility.id == Officer.facility_id)
-        .where(
-            OfficerSession.id == claims.session_id,
-            Officer.id == claims.officer_id,
-        )
-    ).first()
+    row = load_session_row(
+        db,
+        OfficerSession.id == claims.session_id,
+        Officer.id == claims.officer_id,
+    )
     if row is None:
         raise SessionRevokedError()
-
-    session, officer, facility_active = row
-    assert_session_usable(session, officer, facility_active, utcnow())
-    return CurrentOfficer(
-        officer_id=officer.id,
-        session_id=session.id,
-        facility_id=officer.facility_id,
-        role=officer.role,
-        is_admin=officer.is_admin,
-        is_super_admin=officer.is_super_admin,
-        must_change_pin=officer.must_change_pin,
-    )
+    assert_session_usable(row, utcnow())
+    return _profile_of(row)
 
 
 def get_current_officer(
@@ -96,23 +94,16 @@ def require_admin(
     return current
 
 
-def require_gate_officer(
+def require_entry_writer(
     current: CurrentOfficer = Depends(get_current_officer),
 ) -> CurrentOfficer:
-    """For endpoints that WRITE log entries: a facility officer only.
-    CSO is read-only, and a global admin has no facility to write into."""
-    if current.role != Role.OFFICER or current.facility_id is None:
+    """For endpoints that WRITE log entries: an account that belongs to a
+    facility. A global account has no facility to write into."""
+    if not current.can_write_entries:
         raise PermissionDeniedError(
-            "Only facility officers can write log entries.")
+            "Only accounts that belong to a facility can write log entries.")
     return current
 
-
-def require_super_admin(
-    current: CurrentOfficer = Depends(get_current_officer),
-) -> CurrentOfficer:
-    if not current.is_super_admin:
-        raise PermissionDeniedError()
-    return current
 
 # ---- facility scoping (reads) ----
 
@@ -120,7 +111,7 @@ def require_super_admin(
 def get_facility_scope(
     current: CurrentOfficer = Depends(get_current_officer),
 ) -> Optional[uuid.UUID]:
-    """None = all facilities (CSO / admin); otherwise the officer's own."""
+    """None = all facilities (admin / global account); otherwise the officer's own."""
     return None if current.sees_all_facilities else current.facility_id
 
 

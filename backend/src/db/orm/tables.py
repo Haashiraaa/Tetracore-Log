@@ -21,14 +21,15 @@ Design rules baked in here:
   facility_id, so the database itself refuses an entry that points at another
   facility's truck or staff member.
 
-Access model (officers table):
+Access model (officers table), see backend/src/models.py:
 
-* role      -> Role.OFFICER (scoped to one facility) or Role.CSO (read-only,
-               all facilities).
-* is_admin  -> additive flag. Admins see all facilities like the CSO AND get
-               admin-only features (manage facilities/officers, reset PINs,
-               revoke sessions). Set it ONLY from a seed script / CLI, never
-               from an API request body.
+* role        -> a free-form label. Nothing checks it.
+* facility_id -> set: scoped to that facility, may write entries there.
+                 NULL: a global account, reads every facility, writes none.
+* is_admin    -> adds the admin API (manage facilities/officers, reset PINs,
+                 revoke sessions) and reads every facility. Set it ONLY from
+                 the admin CLI (scripts/admin_manager.py), never from an API
+                 request body.
 """
 
 import uuid
@@ -50,21 +51,18 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy import (
-    Enum as SAEnum,
-)
 from sqlalchemy.orm import Mapped, mapped_column, validates
 
-from backend.src.db.orm._helpers import enum_values, normalize_code, normalize_plate
+from backend.src.db.orm._helpers import normalize_code, normalize_plate
 from backend.src.db.orm._mixins import EntryMixin, TimestampMixin
 from backend.src.db.orm.base import Base
-from backend.src.models import GLOBAL_ROLES, Role
-
-_ROLE_VALUES_SQL = ", ".join(f"'{r.value}'" for r in Role)
-_GLOBAL_ROLE_VALUES_SQL = ", ".join(
-    f"'{r.value}'" for r in sorted(GLOBAL_ROLES, key=lambda r: r.value)
+from backend.src.models import (
+    DEFAULT_ROLE,
+    ROLE_MAX_LENGTH,
+    clean_role,
+    may_write_entries,
+    sees_every_facility,
 )
-
 
 # --------------------------------------------------------------------------
 # Facilities, officers, sessions
@@ -78,9 +76,6 @@ class Facility(TimestampMixin, Base):
         Uuid, primary_key=True, default=uuid.uuid4)
     code: Mapped[str] = mapped_column(
         String(32), nullable=False)  # e.g. CNG-BEN-01
-    next_officer_seq: Mapped[int] = mapped_column(
-        Integer, default=1, server_default=text("1"), nullable=False
-    )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     is_active: Mapped[bool] = mapped_column(
         default=True, server_default=text("true"), nullable=False
@@ -94,14 +89,12 @@ class Facility(TimestampMixin, Base):
 
 
 class Officer(TimestampMixin, Base):
-    """A security officer, the CSO, or an admin.
+    """Anyone who logs in: a gate officer, a manager, an admin, anybody.
 
     Login = (facility.code, officer_code, PIN). The pair (facility_id,
     officer_code) is unique, so an officer code only means something inside
-    its own facility.
-
-    CSO and admin rows may have facility_id NULL ("global" accounts). A plain
-    officer must belong to a facility (enforced by a CHECK constraint).
+    its own facility. A row with facility_id NULL is a "global" account; its
+    code is unique among the other global accounts.
     """
 
     __tablename__ = "officers"
@@ -115,25 +108,15 @@ class Officer(TimestampMixin, Base):
         String(32), nullable=False)  # e.g. OFF-014
     full_name: Mapped[str] = mapped_column(String(150), nullable=False)
     pin_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    role: Mapped[Role] = mapped_column(
-        SAEnum(
-            Role,
-            name="officer_role",
-            native_enum=False,
-            length=32,                      # was 16
-            values_callable=enum_values,
-            validate_strings=True,
-        ),
-        default=Role.OFFICER,
-        server_default=Role.OFFICER.value,
+    role: Mapped[str] = mapped_column(
+        String(ROLE_MAX_LENGTH),
+        default=DEFAULT_ROLE,
+        server_default=DEFAULT_ROLE,
         nullable=False,
     )
+    # Only ever set from the CLI (scripts/admin_manager.py). No API route may
+    # set or clear it, and admin routes never act on an account where it is true.
     is_admin: Mapped[bool] = mapped_column(
-        default=False, server_default=text("false"), nullable=False
-    )
-    # Only ever set from the CLI (scripts/super_admin_manager.py). No API route
-    # may set, clear, or act on an account where this is true.
-    is_super_admin: Mapped[bool] = mapped_column(
         default=False, server_default=text("false"), nullable=False
     )
     must_change_pin: Mapped[bool] = mapped_column(
@@ -159,26 +142,25 @@ class Officer(TimestampMixin, Base):
             unique=True,
             postgresql_where=text("facility_id IS NULL"),
         ),
-        CheckConstraint(f"role IN ({_ROLE_VALUES_SQL})", name="role_valid"),
-        # Depends on ROLE only, never on is_admin, so removing admin powers can
-        # never leave a row that violates this.
-        CheckConstraint(
-            f"role IN ({_GLOBAL_ROLE_VALUES_SQL}) OR facility_id IS NOT NULL",
-            name="facility_required_unless_global",
-        ),
-        CheckConstraint(
-            "NOT is_super_admin OR is_admin", name="super_admin_requires_admin"
-        ),
+        CheckConstraint("length(btrim(role)) > 0", name="role_not_blank"),
     )
 
     @validates("officer_code")
     def _normalize_code(self, _key: str, value: str) -> str:
         return normalize_code(value)
 
+    @validates("role")
+    def _clean_role(self, _key: str, value: str) -> str:
+        return clean_role(value)
+
     @property
     def sees_all_facilities(self) -> bool:
-        """CSO and admins are not scoped to a single facility."""
-        return self.is_admin or self.role == Role.CSO
+        return sees_every_facility(
+            is_admin=self.is_admin, facility_id=self.facility_id)
+
+    @property
+    def can_write_entries(self) -> bool:
+        return may_write_entries(facility_id=self.facility_id)
 
 
 class OfficerSession(Base):
@@ -218,8 +200,8 @@ class OfficerSession(Base):
 
 
 class Counter(Base):
-    """Locked-row sequences for codes that have no facility to count under
-    (e.g. 'officer_code:CSO'). Row is locked FOR UPDATE while issuing."""
+    """Locked-row sequences for issuing account codes, one row per facility
+    ('officer_code:<facility id>:OFF'). Row is locked FOR UPDATE while issuing."""
 
     __tablename__ = "counters"
 

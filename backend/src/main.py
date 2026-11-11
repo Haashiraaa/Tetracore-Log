@@ -8,7 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from backend.src.api.routes import admin, auth, super_admin, trucks
+from backend.src.api.routes import ROUTERS
 from backend.src.config.settings import Settings
 from backend.src.exceptions.errors import (
     AccountLockedError,
@@ -40,10 +40,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth.router, prefix="/api")
-app.include_router(admin.router, prefix="/api")
-app.include_router(super_admin.router, prefix="/api")
-app.include_router(trucks.router, prefix="/api")
+for _router in ROUTERS:
+    app.include_router(_router, prefix="/api")
 
 STATUS_RULES: tuple[tuple[type[DomainError], int], ...] = (
     (PermissionDeniedError, 403),
