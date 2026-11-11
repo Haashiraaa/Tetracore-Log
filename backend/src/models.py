@@ -50,6 +50,17 @@ def clean_full_name(raw: str) -> str:
     return name
 
 
+def phone_search_digits(raw: str) -> str:
+    """A phone number typed so far, for search-as-you-type: digits only (at least 3), and a
+    leading 234 written as 0 so it matches the stored form. Not a full-number check."""
+    digits = "".join(ch for ch in raw if ch.isdigit())
+    if digits.startswith("234"):
+        digits = "0" + digits[3:]
+    if len(digits) < 3:
+        raise ValueError("Type at least 3 digits of the phone number.")
+    return digits
+
+
 def clean_phone(raw: str) -> str:
     """One canonical form for a phone number, so the same person is found again however
     it was typed: digits only, and +234 / 234 written as a leading 0

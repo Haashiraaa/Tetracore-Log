@@ -12,10 +12,14 @@ from fastapi import Query, Response
 from pydantic import AfterValidator
 
 from backend.src.exceptions.errors import NotFoundError
-from backend.src.models import clean_phone
+from backend.src.models import clean_phone, phone_search_digits
 
 # ?phone=... however it is typed: 422 if it is not a phone number, canonical form inside.
 PhoneQuery = Annotated[str, Query(min_length=5, max_length=32), AfterValidator(clean_phone)]
+
+# ?q=0803... the part of a number typed so far: 422 under 3 digits.
+PhoneSearchQuery = Annotated[
+    str, Query(alias="q", min_length=1, max_length=32), AfterValidator(phone_search_digits)]
 
 SignatureSide = Annotated[Literal["in", "out"], Query(description="Which signature")]
 

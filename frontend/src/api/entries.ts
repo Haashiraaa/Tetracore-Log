@@ -15,6 +15,11 @@ export function lookupByPhone<T>(kind: "visitors" | "staff", phone: string): Pro
   return request<T | null>(`/${kind}/lookup`, { query: { phone } });
 }
 
+/** The part of a number typed so far (3+ digits): matching people, best match first. */
+export function searchByPhone<T>(kind: "visitors" | "staff", typed: string): Promise<T[]> {
+  return request<T[]>(`/${kind}/search`, { query: { q: typed } });
+}
+
 export function signOut<T extends AnyEntry>(
   kind: LogKind,
   entryId: string,

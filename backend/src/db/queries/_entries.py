@@ -125,6 +125,37 @@ def latest_by_phone(
         .limit(1))
 
 
+def search_by_phone(
+    db: Session, model: Model, facility_id: uuid.UUID, digits: str, limit: int
+) -> list[tuple[Any, uuid.UUID | None]]:
+    """People in this facility whose phone contains `digits`: one row per phone (their
+    latest entry), numbers that START with the digits first, then the most recent.
+    Each comes with the id of the entry they are inside on, or None."""
+    latest = (
+        select(model)
+        .where(model.facility_id == facility_id, model.phone.is_not(None),
+               model.phone.contains(digits, autoescape=True))
+        .distinct(model.phone)
+        .order_by(model.phone, model.signed_in_at.desc(), model.id)
+        .subquery())
+    row = aliased(model, latest)
+    rows = list(db.scalars(
+        select(row)
+        .order_by(row.phone.startswith(digits, autoescape=True).desc(),
+                  row.signed_in_at.desc(), row.id)
+        .limit(limit)))
+    if not rows:
+        return []
+    inside: dict[str, uuid.UUID] = {}
+    for phone, entry_id in db.execute(
+        select(model.phone, model.id)
+        .where(model.facility_id == facility_id,
+               model.phone.in_([r.phone for r in rows]),
+               model.signed_out_at.is_(None))):
+        inside[phone] = entry_id
+    return [(r, inside.get(r.phone)) for r in rows]
+
+
 def open_id_by_phone(
     db: Session, model: Model, facility_id: uuid.UUID, phone: str
 ) -> uuid.UUID | None:

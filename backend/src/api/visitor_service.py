@@ -41,6 +41,13 @@ def lookup(db: Session, *, officer: CurrentOfficer, phone: str) -> VisitorLookup
                             phone=phone, open_entry_id=open_entry_id)
 
 
+def search(db: Session, *, officer: CurrentOfficer, digits: str) -> list[VisitorLookupOut]:
+    """Up to 8 people whose phone contains what was typed, for the gate's suggestions."""
+    found = entry_service.search_by_phone(db, officer=officer, model=VisitorEntry, digits=digits)
+    return [VisitorLookupOut(full_name=last.full_name, company=last.company, phone=last.phone,
+                  open_entry_id=open_id) for last, open_id in found]
+
+
 def sign_out(
     db: Session, *, officer: CurrentOfficer, entry_id: uuid.UUID,
     data: EntrySignOutRequest,

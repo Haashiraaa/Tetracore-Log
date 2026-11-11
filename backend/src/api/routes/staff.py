@@ -15,6 +15,7 @@ from backend.src.api.deps import get_facility_scope, require_entry_writer
 from backend.src.api.routes._entries import (
     EntryFilters,
     PhoneQuery,
+    PhoneSearchQuery,
     SignatureSide,
     signature_response,
 )
@@ -40,6 +41,16 @@ def lookup(
     """null = new here. Otherwise what was written last time, to CONFIRM, plus
     open_entry_id if they are inside now."""
     return staff_service.lookup(db, officer=officer, phone=phone)
+
+
+@router.get("/search", response_model=list[StaffLookupOut])
+def search(
+    typed: PhoneSearchQuery,
+    officer: CurrentOfficer = Depends(require_entry_writer),
+    db: Session = Depends(get_db),
+) -> list[StaffLookupOut]:
+    """Matches for the digits typed so far (3 or more), best match first. [] = no one yet."""
+    return staff_service.search(db, officer=officer, digits=typed)
 
 
 @router.post("/entries", response_model=StaffEntryOut, status_code=status.HTTP_201_CREATED)

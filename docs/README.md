@@ -6,7 +6,7 @@ Start with the [project README](../README.md). This folder holds the detail.
 |---|---|
 | [releasing.md](releasing.md) | Automated changelog, versions and tags. Squash-merge only, and why |
 | [facility-codes.md](facility-codes.md) | How facility codes (`CNG-LAG-01`) are issued and why they never repeat |
-| [people-logs.md](people-logs.md) | Visitors and staff: full names, phone lookup, capacity, signatures, one sign-in at a time |
+| [people-logs.md](people-logs.md) | Visitors and staff: full names, phone search as you type, capacity, signatures, one sign-in at a time |
 | [scripts/README.md](scripts/README.md) | The operator scripts and the rules they follow |
 | [scripts/admin_manager.md](scripts/admin_manager.md) | List accounts, create or drop admins, reset an admin's PIN |
 

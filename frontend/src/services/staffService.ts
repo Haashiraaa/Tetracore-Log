@@ -19,6 +19,10 @@ export function formFromLookup(found: StaffLookup): StaffForm {
   return { fullName: found.full_name, capacity: found.capacity ?? "" };
 }
 
+export function search(typed: string): Promise<StaffLookup[]> {
+  return staffApi.search(typed);
+}
+
 export function lookup(phone: string): Promise<StaffLookup | null> {
   return staffApi.lookup(phone);
 }

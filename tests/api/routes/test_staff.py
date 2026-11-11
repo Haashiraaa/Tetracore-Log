@@ -181,3 +181,41 @@ def test_signatures_are_required_both_ways(client, officer_a):
     eid = sign_in(client, officer_a).json()["id"]
     out = f"{URL}/{eid}/sign-out"
     assert client.post(out, json={}, headers=officer_a.headers).status_code == 422
+
+
+def test_search_finds_people_as_the_number_is_typed(client, officer_a, officer_b):
+    def search(typed, who=officer_a):
+        return client.get("/api/staff/search", params={"q": typed}, headers=who.headers)
+
+    a = sign_in(client, officer_a, phone="08031112222", full_name="Ada Okoro").json()
+    sign_out(client, officer_a, a["id"])
+    sign_in(client, officer_a, phone="08039990000", full_name="Musa Bello")
+    sign_in(client, officer_b, phone="08031113333", full_name="Other Place")
+
+    assert search("080").status_code == 200
+    assert [p["full_name"] for p in search("0803").json()] == ["Musa Bello", "Ada Okoro"]
+    only = search("1112").json()  # the middle of a number matches too
+    assert [(p["full_name"], p["phone"]) for p in only] == [("Ada Okoro", "08031112222")]
+    assert only[0]["open_entry_id"] is None
+    inside = search("0803999").json()
+    assert [p["full_name"] for p in inside] == ["Musa Bello"] and inside[0]["open_entry_id"]
+    assert search("+234 803 111").json()[0]["phone"] == "08031112222"  # 234 reads as 0
+    assert search("0803111", officer_b).json()[0]["full_name"] == "Other Place"
+    assert [p["full_name"] for p in search("0803111").json()] == ["Ada Okoro"]  # not theirs
+    assert search("0999").json() == []
+
+
+def test_search_lists_each_person_once_with_their_latest_details(client, officer_a):
+    for who in ("Old Name", "New Name"):
+        e = sign_in(client, officer_a, phone="08031112222", full_name=f"{who} Okoro").json()
+        sign_out(client, officer_a, e["id"])
+    found = client.get("/api/staff/search", params={"q": "0803111"},
+                       headers=officer_a.headers).json()
+    assert [p["full_name"] for p in found] == ["New Name Okoro"]
+
+
+def test_search_needs_three_digits_and_a_facility(client, officer_a, cso):
+    url = "/api/staff/search"
+    assert client.get(url, params={"q": "08"}, headers=officer_a.headers).status_code == 422
+    assert client.get(url, params={"q": "abc"}, headers=officer_a.headers).status_code == 422
+    assert client.get(url, params={"q": "0803"}, headers=cso.headers).status_code == 403

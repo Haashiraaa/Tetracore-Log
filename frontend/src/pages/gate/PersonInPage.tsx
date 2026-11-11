@@ -1,12 +1,13 @@
 // frontend/src/pages/gate/PersonInPage.tsx
 // Sign a visitor or a staff member in. Same steps as a truck, with the phone number
-// where the plate is:
+// where the plate is. Matches appear under the box while the number is typed (3+ digits);
+// tapping one is the same as looking it up:
 //   type the phone  -> never seen here: blank form
 //                   -> seen before: name (and company / capacity) filled in, to CONFIRM
 //                   -> inside right now: offer sign-out instead
 // `entryId` is made once per form open and reused on retry, so a retry after a lost reply
 // returns the stored entry instead of creating a duplicate.
-import { useCallback, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import type { AnyEntry, StaffLookup, VisitorLookup } from "@/api/schemas";
 import { SignOutSheet, type SignOutTarget } from "@/components/entries/SignOutSheet";
@@ -20,7 +21,7 @@ import { SIGNATURE_MAX_BYTES } from "@/config/env";
 import { ErrorCode, errorMessage, hasCode } from "@/exceptions/errors";
 import { formatTime } from "@/lib/dates";
 import { uuid } from "@/lib/ids";
-import { PHONE_ERROR, cleanPhone } from "@/lib/people";
+import { PHONE_ERROR, cleanPhone, phoneSearchDigits } from "@/lib/people";
 import * as staffService from "@/services/staffService";
 import * as visitorService from "@/services/visitorService";
 import { PURPOSE_PICKS } from "@/services/visitorService";
@@ -43,6 +44,9 @@ type Stage =
   | { kind: "form"; returning: boolean; phone: string; entryId: string }
   | { kind: "inside"; phone: string; name: string; entryId: string };
 
+/** Wait this long after the last keystroke before asking the server. */
+const SEARCH_DELAY_MS = 200;
+
 const COPY = {
   visitors: { title: "Visitor in", who: "visitor", button: "Sign visitor in", signs: "Visitor signs in" },
   staff: { title: "Staff in", who: "staff member", button: "Sign staff in", signs: "Staff member signs in" },
@@ -58,6 +62,7 @@ export default function PersonInPage({ kind }: { kind: PersonKind }) {
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [stage, setStage] = useState<Stage>({ kind: "idle" });
+  const [matches, setMatches] = useState<(VisitorLookup | StaffLookup)[]>([]);
   const [fields, setFields] = useState<Fields>(BLANK);
   const [errors, setErrors] = useState<{ fullName?: string; capacity?: string; signature?: string }>({});
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +73,26 @@ export default function PersonInPage({ kind }: { kind: PersonKind }) {
   const pad = useRef<SignaturePadHandle>(null);
 
   const set = (patch: Partial<Fields>) => setFields((f) => ({ ...f, ...patch }));
+
+  /** Show what is known about `phone`: sign-out if inside, else the form (filled in if seen before). */
+  const openFound = useCallback((phone: string, found: VisitorLookup | StaffLookup | null) => {
+    setMatches([]);
+    if (found?.open_entry_id) {
+      setStage({ kind: "inside", phone, name: found.full_name, entryId: found.open_entry_id });
+      return;
+    }
+    setFields(
+      found
+        ? {
+            ...BLANK,
+            fullName: found.full_name,
+            company: "company" in found ? (found.company ?? "") : "",
+            capacity: "capacity" in found ? (found.capacity ?? "") : "",
+          }
+        : BLANK,
+    );
+    setStage({ kind: "form", returning: found !== null, phone, entryId: uuid() });
+  }, []);
 
   const runLookup = useCallback(
     async (raw: string) => {
@@ -82,29 +107,42 @@ export default function PersonInPage({ kind }: { kind: PersonKind }) {
       setErrors({});
       setStage({ kind: "looking" });
       try {
-        const found = await lookUp(kind, phone);
-        if (found?.open_entry_id) {
-          setStage({ kind: "inside", phone, name: found.full_name, entryId: found.open_entry_id });
-          return;
-        }
-        setFields(
-          found
-            ? {
-                ...BLANK,
-                fullName: found.full_name,
-                company: "company" in found ? (found.company ?? "") : "",
-                capacity: "capacity" in found ? (found.capacity ?? "") : "",
-              }
-            : BLANK,
-        );
-        setStage({ kind: "form", returning: found !== null, phone, entryId: uuid() });
+        openFound(phone, await lookUp(kind, phone));
       } catch (e) {
         setStage({ kind: "idle" });
         setLookupError(errorMessage(e));
       }
     },
-    [kind],
+    [kind, openFound],
   );
+
+  // Search as the number is typed. Only the newest answer is used.
+  useEffect(() => {
+    const digits = phoneSearchDigits(phoneInput);
+    if (stage.kind !== "idle" || !digits) {
+      setMatches([]);
+      return;
+    }
+    let current = true;
+    const timer = window.setTimeout(() => {
+      const search = kind === "visitors" ? visitorService.search : staffService.search;
+      search(digits)
+        .then((found) => current && setMatches(found))
+        .catch(() => current && setMatches([])); // the Look up button still works and shows errors
+    }, SEARCH_DELAY_MS);
+    return () => {
+      current = false;
+      window.clearTimeout(timer);
+    };
+  }, [phoneInput, stage.kind, kind]);
+
+  function pick(found: VisitorLookup | StaffLookup) {
+    setOutcome(null);
+    setPhoneError(null);
+    setLookupError(null);
+    setPhoneInput(found.phone);
+    openFound(found.phone, found);
+  }
 
   function reset(message: string | null) {
     setStage({ kind: "idle" });
@@ -197,7 +235,22 @@ export default function PersonInPage({ kind }: { kind: PersonKind }) {
             Look up {copy.who}
           </Button>
         </div>
-        <p className="muted">We use the phone number to find a {copy.who} who has been here before.</p>
+        {matches.length > 0 && (
+          <ul className="matches" aria-label={`Matching ${copy.who}s`}>
+            {matches.map((m) => (
+              <li key={m.phone}>
+                <button type="button" className="match" onClick={() => pick(m)}>
+                  <span className="match__name">{m.full_name}</span>
+                  <span className="mono match__phone">{m.phone}</span>
+                  {m.open_entry_id && <Badge tone="amber">Inside</Badge>}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="muted">
+          Start typing the phone number to find a {copy.who} who has been here before.
+        </p>
         {lookupError && <Banner tone="error">{lookupError}</Banner>}
       </form>
 
