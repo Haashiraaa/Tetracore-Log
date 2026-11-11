@@ -66,6 +66,13 @@ If that ever happens, delete the `bootstrap-sha` line (or point it at a commit t
 title, for example `feat(trucks): add visitor sign-in`, because that title becomes the
 changelog line.
 
+**After that first merge, never use "Create a merge commit".** release-please reads only the
+commit on `main`, and a merge commit's message ("Merge pull request #4 from ...") is not a
+conventional commit, so everything inside it is invisible: the Release workflow logs
+`commit could not be parsed` and then `No user facing commits found - skipping`, and no release
+pull request appears. Squash-merge every pull request. Turn off "Allow merge commits" and
+"Allow rebase merging" in the repository settings so this cannot happen by accident.
+
 ## Deploying a release
 
 ```bash
@@ -85,6 +92,10 @@ person merged it, so a failing test can never produce a tag.
 - **The Release workflow fails with a permissions error:** setup step 1 or 2 was missed.
 - **A change is missing from the changelog:** its commit message was not in conventional form,
   or its type is hidden (`chore`, `test`, ...).
+- **The Release workflow succeeds but opens no release pull request:** open the
+  `release-please` step log. `commit could not be parsed` on a "Merge pull request" line means a
+  merge commit hid the real commits. Squash-merge a pull request that carries a
+  `BEGIN_COMMIT_OVERRIDE` block (below) listing the hidden changes.
 - **A squash-merged pull request had a non-conventional title:** edit the merged pull request's
   description and add the block below, then push anything to `main` so release-please re-reads it:
 
