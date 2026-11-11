@@ -53,19 +53,23 @@ export default function LoginPage() {
 
   return (
     <main className="auth">
-      <form className="auth__card stack" onSubmit={submit} noValidate>
-        <div className="brand brand--static">
-          <span className="brand__mark" aria-hidden="true" />
-          <span className="brand__name">Tetracore Log</span>
-        </div>
-        <h1>Log in</h1>
-
+      <div className="auth__hero">
+        <p className="auth__eyebrow mono">Gate log / CNG stations</p>
+        <h1 className="auth__wordmark">
+          Tetra
+          <br />
+          core
+          <br />
+          <span>Log</span>
+        </h1>
+      </div>
+      <form className="auth__card stack" onSubmit={submit} noValidate aria-label="Log in">
         {notice && <Banner tone="info">{notice}</Banner>}
         {error && <Banner tone="error">{error}</Banner>}
 
         <TextField
           label="Facility code"
-          hint="Leave blank for CSO and admin accounts."
+          hint="Blank if your account has no facility."
           value={facility}
           onChange={(e) => setFacility(e.target.value.toUpperCase())}
           autoCapitalize="characters"
@@ -75,7 +79,7 @@ export default function LoginPage() {
           className="input--code"
         />
         <TextField
-          label="Officer code"
+          label="Your code"
           value={officer}
           onChange={(e) => setOfficer(e.target.value.toUpperCase())}
           error={fieldErrors.officerCode}
@@ -95,9 +99,12 @@ export default function LoginPage() {
           autoComplete="current-password"
         />
 
-        <Button type="submit" block loading={busy}>
-          Log in
+        <Button type="submit" block className="btn--lead" loading={busy}>
+          Start shift
         </Button>
+        <p className="auth__foot">
+          Forgot your PIN? An admin can give you a temporary one. You choose a new PIN the first time you log in.
+        </p>
       </form>
     </main>
   );

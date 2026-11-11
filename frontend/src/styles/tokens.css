@@ -1,85 +1,62 @@
 /* frontend/src/styles/tokens.css
-   Design tokens. The palette comes from the gate house itself: road-sign ink,
-   CNG-station blue, and a hazard amber for "still inside". Light by default
-   (gates are outdoors in daylight); dark follows the device. */
+   Design tokens. The look is "hi-vis": black ink on off-white, one hi-vis yellow for
+   the thing to tap next, and orange kept for "still inside". Hazard tape is the only
+   decoration. Light only for now: gates are outdoors in daylight. */
 
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 
-  --ink: #0f1f2e;
-  --ink-soft: #40566b;
-  --ink-faint: #61758a;
-  --paper: #eef2f5;
+  --ink: #0f1113;
+  --ink-soft: #4a5057;
+  --ink-faint: #5b6168;
+  --paper: #f2f3ef;
   --surface: #ffffff;
-  --surface-sunk: #e5ebf0;
-  --line: #d0dae3;
-  --line-strong: #8fa2b3;
+  --surface-sunk: #e6e8e2;
+  --line: #d9dcd5;
+  --line-strong: #8a9098;
 
-  --bar: #0b2540;
+  /* the black chrome: sidebar, hero, login */
+  --bar: #0f1113;
+  --bar-raised: #23272c;
+  --bar-line: #3a4047;
+  --on-bar: #f2f3ef;
+  --on-bar-soft: #b9bec4;
 
-  --blue: #0a5ea8;
-  --blue-hover: #084b88;
-  --on-blue: #ffffff;
-  --blue-soft: #dcebf8;
-  --blue-ink: #073e70;
+  /* hi-vis yellow: the next action. Always with black text. */
+  --hi: #dfff3a;
+  --hi-soft: #f4ffc2;
+  --on-hi: #0f1113;
 
-  --amber: #e8a000;
-  --amber-soft: #fff1c7;
-  --amber-ink: #5e3f00;
+  /* orange: someone is inside */
+  --hot: #ff7a1a;
+  --hot-soft: #ffe3cc;
+  --hot-ink: #7a3000;
+  --amber: var(--hot);
+  --amber-soft: var(--hot-soft);
+  --amber-ink: var(--hot-ink);
 
-  --green: #1b8a4b;
-  --green-soft: #d9f2e2;
-  --green-ink: #0d5530;
+  /* blue is for focus rings and plain information only */
+  --blue: #1f4fd8;
+  --blue-soft: #e1e8fb;
+  --blue-ink: #173a9e;
+
+  --green: #1b7a43;
+  --green-soft: #ddf3e4;
+  --green-ink: #0d4f2b;
 
   --red: #c0392b;
   --on-red: #ffffff;
   --red-soft: #fbe3df;
   --red-ink: #7a170c;
 
-  /* number plates are white in every theme */
-  --plate-face: #ffffff;
-  --plate-ink: #0f1f2e;
-  --plate-band: #0a5ea8;
+  --tape: repeating-linear-gradient(135deg, var(--hi) 0 10px, var(--bar) 10px 20px);
 
   --font-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
   --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
-  --radius: 10px;
+  --radius: 8px;
   --radius-sm: 6px;
   --tap: 3rem; /* minimum touch target, comfortable with gloves */
-  --shadow-pop: 0 14px 40px rgb(8 18 28 / 0.28);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --ink: #e7eef5;
-    --ink-soft: #aebfcf;
-    --ink-faint: #8497aa;
-    --paper: #0b1620;
-    --surface: #12212d;
-    --surface-sunk: #0e1b25;
-    --line: #243847;
-    --line-strong: #4a6275;
-
-    --bar: #08131d;
-
-    --blue: #5aaaf0;
-    --blue-hover: #7bbcf4;
-    --on-blue: #06121c;
-    --blue-soft: #12354f;
-    --blue-ink: #bfe0fb;
-
-    --amber: #f2b123;
-    --amber-soft: #3a2c07;
-    --amber-ink: #ffd877;
-
-    --green: #3fbf78;
-    --green-soft: #0f3322;
-    --green-ink: #a6ecc3;
-
-    --red: #ef6b5b;
-    --on-red: #1a0705;
-    --red-soft: #3f1713;
-    --red-ink: #ffb7ae;
-  }
+  --shadow-pop: 0 14px 40px rgb(15 17 19 / 0.3);
 }

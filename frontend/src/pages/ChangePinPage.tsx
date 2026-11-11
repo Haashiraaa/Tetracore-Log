@@ -46,10 +46,7 @@ export default function ChangePinPage() {
   return (
     <main className="auth">
       <form className="auth__card stack" onSubmit={submit} noValidate>
-        <div className="brand brand--static">
-          <span className="brand__mark" aria-hidden="true" />
-          <span className="brand__name">Tetracore Log</span>
-        </div>
+        <p className="auth__eyebrow mono">Tetracore Log</p>
 
         <h1>{forced ? "Set your new PIN" : "Change PIN"}</h1>
 

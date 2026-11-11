@@ -4,7 +4,7 @@ import { cx } from "@/lib/cx";
 import { Spinner } from "./Spinner";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "danger" | "ghost";
+  variant?: "primary" | "secondary" | "danger" | "ghost" | "dark";
   size?: "md" | "sm";
   block?: boolean;
   loading?: boolean;

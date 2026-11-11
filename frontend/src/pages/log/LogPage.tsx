@@ -3,11 +3,12 @@
 // only offered to people who see all facilities; for everyone else the server
 // ignores it anyway.
 import { useState, type FormEvent } from "react";
-import type { TruckEntry, TruckEntryFilters } from "@/api/schemas";
+import type { AnyEntry, EntryFilters } from "@/api/schemas";
 import { useOfficer } from "@/auth/AuthContext";
 import { seesAllFacilities } from "@/auth/permissions";
-import { EntryDetailDialog } from "@/components/trucks/EntryDetailDialog";
-import { EntryTable } from "@/components/trucks/EntryTable";
+import { EntryDetailDialog } from "@/components/entries/EntryDetailDialog";
+import { EntryTable } from "@/components/entries/EntryTable";
+import { KindTabs } from "@/components/entries/KindTabs";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -19,7 +20,8 @@ import { errorMessage } from "@/exceptions/errors";
 import { useAsync } from "@/hooks/useAsync";
 import { downloadCsv } from "@/lib/csv";
 import { startOfDayIso, startOfNextDayIso } from "@/lib/dates";
-import * as truckService from "@/services/truckService";
+import { LOG_LABEL, type LogKind } from "@/models";
+import * as entryService from "@/services/entryService";
 
 interface Draft {
   openOnly: boolean;
@@ -31,7 +33,7 @@ interface Draft {
 
 const EMPTY: Draft = { openOnly: false, plate: "", facility: "", from: "", to: "" };
 
-function toFilters(d: Draft): TruckEntryFilters {
+function toFilters(d: Draft): EntryFilters {
   return {
     open: d.openOnly || undefined,
     plate: d.plate.trim() || undefined,
@@ -46,17 +48,18 @@ export default function LogPage() {
   const profile = useOfficer();
   const showFacility = seesAllFacilities(profile);
 
+  const [kind, setKind] = useState<LogKind>("trucks");
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [applied, setApplied] = useState<Draft>(EMPTY);
   const [page, setPage] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
-  const [detail, setDetail] = useState<TruckEntry | null>(null);
+  const [detail, setDetail] = useState<AnyEntry | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportNote, setExportNote] = useState<{ tone: "success" | "warn" | "error"; text: string } | null>(null);
 
   const { data, error, loading } = useAsync(
-    (signal) => truckService.fetchPage(toFilters(applied), page, signal),
-    [applied, page],
+    (signal) => entryService.fetchPage(kind, toFilters(applied), page, signal),
+    [kind, applied, page],
   );
 
   function apply(e: FormEvent) {
@@ -70,6 +73,12 @@ export default function LogPage() {
     setApplied({ ...draft });
   }
 
+  function pick(next: LogKind) {
+    setKind(next);
+    setPage(0);
+    setExportNote(null);
+  }
+
   function clearFilters() {
     setFormError(null);
     setDraft(EMPTY);
@@ -81,13 +90,13 @@ export default function LogPage() {
     setExporting(true);
     setExportNote(null);
     try {
-      const { rows, capped } = await truckService.fetchAll(toFilters(applied));
+      const { rows, capped } = await entryService.fetchAll(kind, toFilters(applied));
       if (rows.length === 0) {
         setExportNote({ tone: "warn", text: "Nothing to export for these filters." });
         return;
       }
       const stamp = new Date().toISOString().slice(0, 10);
-      downloadCsv(`truck-log-${stamp}.csv`, truckService.entriesToCsv(rows, showFacility));
+      downloadCsv(`${kind}-log-${stamp}.csv`, entryService.entriesToCsv(kind, rows, showFacility));
       setExportNote({
         tone: capped ? "warn" : "success",
         text: capped
@@ -107,23 +116,27 @@ export default function LogPage() {
   return (
     <div className="page stack stack--lg">
       <PageHeader
-        title="Log"
+        title="The log"
         actions={
           <Button variant="secondary" size="sm" onClick={() => void exportCsv()} loading={exporting}>
-            Export CSV
+            Download CSV
           </Button>
         }
       />
 
+      <KindTabs value={kind} onChange={pick} />
+
       <form className="card filters" onSubmit={apply} noValidate>
-        <TextField
-          label="Plate"
-          value={draft.plate}
-          onChange={(e) => setDraft({ ...draft, plate: e.target.value.toUpperCase() })}
-          autoComplete="off"
-          autoCapitalize="characters"
-          spellCheck={false}
-        />
+        {kind === "trucks" && (
+          <TextField
+            label="Plate"
+            value={draft.plate}
+            onChange={(e) => setDraft({ ...draft, plate: e.target.value.toUpperCase() })}
+            autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+          />
+        )}
         {showFacility && (
           <TextField
             label="Facility code"
@@ -152,7 +165,7 @@ export default function LogPage() {
             checked={draft.openOnly}
             onChange={(e) => setDraft({ ...draft, openOnly: e.target.checked })}
           />
-          Only trucks still inside
+          Still inside only
         </label>
         <div className="row filters__actions">
           <Button type="submit">Apply filters</Button>
@@ -169,13 +182,13 @@ export default function LogPage() {
 
       {data !== null && rows.length === 0 && (
         <EmptyState title="No entries found">
-          {page > 0 ? "That page is empty." : "Nothing matches these filters yet."}
+          {page > 0 ? "That page is empty." : `No ${LOG_LABEL[kind].many.toLowerCase()} entries match these filters yet.`}
         </EmptyState>
       )}
 
       {rows.length > 0 && (
         <>
-          <EntryTable entries={rows} showFacility={showFacility} onOpen={setDetail} />
+          <EntryTable kind={kind} entries={rows} showFacility={showFacility} onOpen={setDetail} />
           <div className="row row--between">
             <span className="muted">
               Showing {first} to {first + rows.length - 1}
@@ -197,7 +210,7 @@ export default function LogPage() {
         </>
       )}
 
-      <EntryDetailDialog entry={detail} onClose={() => setDetail(null)} />
+      <EntryDetailDialog kind={kind} entry={detail} onClose={() => setDetail(null)} />
     </div>
   );
 }

@@ -1,13 +1,12 @@
-// frontend/src/pages/gate/GatePage.tsx
-// The gate officer's screen: look up a plate, then sign the truck in (or out).
+// frontend/src/pages/gate/TruckInPage.tsx
+// Look up a plate, then sign the truck in (or out).
 //   new plate        -> blank form
 //   known plate      -> form prefilled to CONFIRM
 //   already inside   -> offer sign-out instead (the server would refuse a second sign-in)
 import { useCallback, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import type { TruckEntry, TruckLookup } from "@/api/schemas";
-import { useOfficer } from "@/auth/AuthContext";
-import { SignOutDialog, type SignOutTarget } from "@/components/trucks/SignOutDialog";
+import type { AnyEntry, TruckEntry, TruckLookup } from "@/api/schemas";
+import { SignOutSheet, type SignOutTarget } from "@/components/entries/SignOutSheet";
 import { Badge } from "@/components/ui/Badge";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
@@ -17,7 +16,7 @@ import { errorMessage } from "@/exceptions/errors";
 import { formatTime } from "@/lib/dates";
 import { uuid } from "@/lib/ids";
 import * as truckService from "@/services/truckService";
-import { SignInForm, type SignInInitial } from "./SignInForm";
+import { TruckSignInForm, type SignInInitial } from "./TruckSignInForm";
 
 type Stage =
   | { kind: "idle" }
@@ -48,8 +47,7 @@ function stageFor(result: truckService.LookupResult): Stage {
   }
 }
 
-export default function GatePage() {
-  const profile = useOfficer();
+export default function TruckInPage() {
   const [plateInput, setPlateInput] = useState("");
   const [plateError, setPlateError] = useState<string | null>(null);
   const [lookupError, setLookupError] = useState<string | null>(null);
@@ -88,10 +86,11 @@ export default function GatePage() {
     reset(`${entry.plate_number} signed in at ${formatTime(entry.signed_in_at)}.`);
   }
 
-  function onSignedOut(entry: TruckEntry) {
+  function onSignedOut(entry: AnyEntry) {
+    const plate = signOutTarget?.plate ?? "Truck";
     setSignOutTarget(null);
     const at = entry.signed_out_at ? ` at ${formatTime(entry.signed_out_at)}` : "";
-    reset(`${entry.plate_number} signed out${at}.`);
+    reset(`${plate} signed out${at}.`);
   }
 
   function submitLookup(e: FormEvent) {
@@ -102,7 +101,7 @@ export default function GatePage() {
 
   return (
     <div className="page page--narrow stack stack--lg">
-      <PageHeader title="Gate" subtitle={profile.facility_name ?? profile.facility_code} />
+      <PageHeader title="Truck in" back={{ to: "/gate", label: "Back to gate" }} />
 
       {outcome && (
         <Banner tone="success">
@@ -137,13 +136,13 @@ export default function GatePage() {
           )}
         </div>
         {lookupError && <Banner tone="error">{lookupError}</Banner>}
-        <Button type="submit" block loading={stage.kind === "looking"}>
+        <Button type="submit" block variant="dark" loading={stage.kind === "looking"}>
           Look up truck
         </Button>
       </form>
 
       {stage.kind === "form" && (
-        <SignInForm
+        <TruckSignInForm
           key={stage.entryId}
           plate={stage.plate}
           mode={stage.mode}
@@ -169,7 +168,13 @@ export default function GatePage() {
           <div className="row">
             <Button
               onClick={() =>
-                setSignOutTarget({ entryId: stage.truck.open_entry_id as string, plate: stage.truck.plate_number })
+                setSignOutTarget({
+                  kind: "trucks",
+                  entryId: stage.truck.open_entry_id as string,
+                  plate: stage.truck.plate_number,
+                  name: stage.truck.driver_name,
+                  signedInAt: null,
+                })
               }
             >
               Sign out truck
@@ -181,7 +186,7 @@ export default function GatePage() {
         </section>
       )}
 
-      <SignOutDialog target={signOutTarget} onClose={() => setSignOutTarget(null)} onDone={onSignedOut} />
+      <SignOutSheet target={signOutTarget} onClose={() => setSignOutTarget(null)} onDone={onSignedOut} />
     </div>
   );
 }

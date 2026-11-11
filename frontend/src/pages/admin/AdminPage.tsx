@@ -17,7 +17,7 @@ export default function AdminPage() {
 
   return (
     <div className="page stack stack--lg">
-      <PageHeader title="Admin" subtitle="Facilities and the people who log at them." />
+      <PageHeader title="Accounts" subtitle="Facilities and the people who log at them." />
 
       <div className="segmented" role="tablist" aria-label="Admin sections">
         {(["officers", "facilities"] as const).map((t) => (
@@ -29,7 +29,7 @@ export default function AdminPage() {
             className="segmented__tab"
             onClick={() => setTab(t)}
           >
-            {t === "officers" ? "Officers" : "Facilities"}
+            {t === "officers" ? "Accounts" : "Facilities"}
           </button>
         ))}
       </div>
