@@ -70,12 +70,13 @@ def insert_entry(
 def sign_out_entry(
     db: Session, *, entry_id: uuid.UUID, facility_id: uuid.UUID,
     officer_id: uuid.UUID, signed_out_at: datetime,
-    scm_purchased: Optional[Decimal],
+    scm_purchased: Optional[Decimal], signature: Optional[bytes] = None,
 ) -> bool:
     extra = {} if scm_purchased is None else {"scm_purchased": scm_purchased}
     return _entries.sign_out_entry(
         db, TruckEntry, entry_id=entry_id, facility_id=facility_id,
-        officer_id=officer_id, signed_out_at=signed_out_at, extra=extra)
+        officer_id=officer_id, signed_out_at=signed_out_at,
+        signature=signature, extra=extra)
 
 
 def get_entry(db: Session, entry_id: uuid.UUID, scope: uuid.UUID | None) -> Any | None:
@@ -83,9 +84,10 @@ def get_entry(db: Session, entry_id: uuid.UUID, scope: uuid.UUID | None) -> Any 
 
 
 def get_signature(
-    db: Session, entry_id: uuid.UUID, scope: uuid.UUID | None
+    db: Session, entry_id: uuid.UUID, scope: uuid.UUID | None,
+    which: _entries.Which = "in",
 ) -> Any | None:
-    return _entries.get_signature(db, TruckEntry, entry_id, scope)
+    return _entries.get_signature(db, TruckEntry, entry_id, scope, which)
 
 
 def list_entries(

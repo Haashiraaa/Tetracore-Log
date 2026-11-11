@@ -6,11 +6,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Optional
+from typing import Annotated, Any, Literal, Optional
 
 from fastapi import Query, Response
 
 from backend.src.exceptions.errors import NotFoundError
+
+SignatureSide = Annotated[Literal["in", "out"], Query(description="Which signature")]
 
 
 @dataclass

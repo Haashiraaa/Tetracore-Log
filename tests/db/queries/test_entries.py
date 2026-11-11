@@ -117,3 +117,16 @@ def test_signature_is_only_visible_in_scope(client):
         assert mine is not None and mine[0] == b"png-bytes"
         assert _entries.get_signature(db, VisitorEntry, eid, uuid.uuid4()) is None
         assert _get(db, eid, None)[2] is True  # has_signature, without loading the blob
+
+
+def test_sign_out_signature_is_stored_and_read_by_side(client):
+    who = make_actor(client, code="OFF-001", facility="CNG-A")
+    with create_session() as db:
+        fid, eid = _facility_id(db, "CNG-A"), _add(db, who, signature=b"in-png")
+        assert _entries.sign_out_entry(
+            db, VisitorEntry, entry_id=eid, facility_id=fid, officer_id=who.id,
+            signed_out_at=T0, signature=b"out-png")
+        db.commit()
+        out = _entries.get_signature(db, VisitorEntry, eid, fid, "out")
+        assert out is not None and out[0] == b"out-png"
+        assert _get(db, eid, fid)[5] is True  # has_signature_out

@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from backend.src.api import truck_service
 from backend.src.api.deps import get_facility_scope, require_entry_writer
-from backend.src.api.routes._entries import EntryFilters, signature_response
+from backend.src.api.routes._entries import EntryFilters, SignatureSide, signature_response
 from backend.src.api.schemas import (
     CurrentOfficer,
     TruckEntryOut,
@@ -79,7 +79,9 @@ def list_entries(
 @router.get("/entries/{entry_id}/signature")
 def get_signature(
     entry_id: uuid.UUID,
+    side: SignatureSide = "in",
     scope: Optional[uuid.UUID] = Depends(get_facility_scope),
     db: Session = Depends(get_db),
 ) -> Response:
-    return signature_response(q.get_signature(db, entry_id, scope))
+    """The PNG signed on the way in (`?side=in`, default) or out (`?side=out`)."""
+    return signature_response(q.get_signature(db, entry_id, scope, side))

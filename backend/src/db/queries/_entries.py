@@ -4,14 +4,15 @@
 SQL only: no commits, no business rules. A log's own module (trucks.py, ...) adds
 what is specific to it and passes its model in here.
 
-Rows come back as (entry, facility_code, has_signature, signed_in_by_name,
-signed_out_by_name). The signature blob stays deferred: we only ask if it exists."""
+Rows come back as (entry, facility_code, has_signature_in, signed_in_by_name,
+signed_out_by_name, has_signature_out). The signature blobs stay deferred: we only ask
+whether they exist."""
 
 from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any, Optional, Sequence
+from typing import Any, Literal, Optional, Sequence
 
 from sqlalchemy import ColumnElement, Select, func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -21,6 +22,7 @@ from backend.src.db.orm._helpers import normalize_code
 from backend.src.db.orm.tables import Facility, Officer
 
 Model = Any  # TruckEntry, VisitorEntry or StaffEntry
+Which = Literal["in", "out"]  # which signature: coming in or going out
 
 
 def entry_select(model: Model) -> Select[Any]:
@@ -32,6 +34,7 @@ def entry_select(model: Model) -> Select[Any]:
             model.signature_in.is_not(None),
             signed_in.full_name,
             signed_out.full_name,
+            model.signature_out.is_not(None),
         )
         .join(Facility, Facility.id == model.facility_id)
         .join(signed_in, signed_in.id == model.signed_in_by)
@@ -53,10 +56,15 @@ def get_entry(
 
 
 def get_signature(
-    db: Session, model: Model, entry_id: uuid.UUID, scope: uuid.UUID | None
+    db: Session,
+    model: Model,
+    entry_id: uuid.UUID,
+    scope: uuid.UUID | None,
+    which: Which = "in",
 ) -> Any | None:
     """Row (bytes | None,) or None if the entry is not visible."""
-    stmt = select(model.signature_in).where(model.id == entry_id)
+    column = model.signature_in if which == "in" else model.signature_out
+    stmt = select(column).where(model.id == entry_id)
     return db.execute(_in_scope(stmt, model, scope)).first()
 
 
@@ -80,6 +88,7 @@ def sign_out_entry(
     facility_id: uuid.UUID,
     officer_id: uuid.UUID,
     signed_out_at: datetime,
+    signature: Optional[bytes] = None,
     extra: Optional[dict[str, Any]] = None,
 ) -> bool:
     """True if this call closed the entry. False = not found OR already out.
@@ -87,6 +96,7 @@ def sign_out_entry(
     values: dict[str, Any] = {
         "signed_out_at": signed_out_at,
         "signed_out_by": officer_id,
+        "signature_out": signature,
         "updated_at": func.now(),
         **(extra or {}),
     }
