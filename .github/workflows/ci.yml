@@ -1,0 +1,129 @@
+name: CI
+
+# Runs on every push to any branch (so a branch is checked before it is ever merged) and can
+# be started by hand. It does not run on tags. The single job `ci-ok` at the bottom is the
+# one to mark as required in GitHub's branch protection: it is green only if everything
+# above it is green.
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+# A new push to the same branch cancels the run that is still going for the old one.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (lint, types, migrations, tests)
+    runs-on: ubuntu-24.04      # ships Python 3.12
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: tetracore
+          POSTGRES_PASSWORD: ci_only_password
+          # The test suite refuses any database whose name lacks "test" (it DROPS the schema
+          # and rebuilds it from the migrations), and it does not create the database itself.
+          # So CI has one throwaway database and points both URLs at it.
+          POSTGRES_DB: tetracore_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tetracore"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Throwaway values for the throwaway database above. Nothing here is a real secret.
+      # JWT_SECRET and PIN_PEPPER are set by tests/conftest.py itself.
+      DATABASE_URL: postgresql+psycopg://tetracore:ci_only_password@localhost:5432/tetracore_test
+      TEST_DATABASE_URL: postgresql+psycopg://tetracore:ci_only_password@localhost:5432/tetracore_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install (pinned versions from pyproject.toml)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Types (pyright)
+        run: pyright
+
+      - name: Migrations apply to an empty database
+        run: alembic upgrade head
+
+      - name: Migrations match the models (no forgotten migration)
+        run: alembic check
+
+      - name: Tests
+        run: pytest -q --cov=backend --cov-report=term:skip-covered
+
+  frontend:
+    name: Frontend (types, build)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install (exact versions from package-lock.json)
+        run: npm ci
+
+      - name: Types
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+  commit-style:
+    # Advisory only: it warns, it never fails. The changelog is written from commit messages,
+    # and a message that is not in the usual `type: summary` form is silently left out of it.
+    name: Commit messages (advisory)
+    if: github.ref != 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: python3 .github/scripts/check_commit_messages.py origin/main
+
+  ci-ok:
+    name: ci-ok
+    needs: [backend, frontend]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Everything required passed
+        run: |
+          echo "backend:  ${{ needs.backend.result }}"
+          echo "frontend: ${{ needs.frontend.result }}"
+          test "${{ needs.backend.result }}" = "success"
+          test "${{ needs.frontend.result }}" = "success"

@@ -1,0 +1,85 @@
+/* frontend/src/styles/tokens.css
+   Design tokens. The palette comes from the gate house itself: road-sign ink,
+   CNG-station blue, and a hazard amber for "still inside". Light by default
+   (gates are outdoors in daylight); dark follows the device. */
+
+:root {
+  color-scheme: light dark;
+
+  --ink: #0f1f2e;
+  --ink-soft: #40566b;
+  --ink-faint: #61758a;
+  --paper: #eef2f5;
+  --surface: #ffffff;
+  --surface-sunk: #e5ebf0;
+  --line: #d0dae3;
+  --line-strong: #8fa2b3;
+
+  --bar: #0b2540;
+
+  --blue: #0a5ea8;
+  --blue-hover: #084b88;
+  --on-blue: #ffffff;
+  --blue-soft: #dcebf8;
+  --blue-ink: #073e70;
+
+  --amber: #e8a000;
+  --amber-soft: #fff1c7;
+  --amber-ink: #5e3f00;
+
+  --green: #1b8a4b;
+  --green-soft: #d9f2e2;
+  --green-ink: #0d5530;
+
+  --red: #c0392b;
+  --on-red: #ffffff;
+  --red-soft: #fbe3df;
+  --red-ink: #7a170c;
+
+  /* number plates are white in every theme */
+  --plate-face: #ffffff;
+  --plate-ink: #0f1f2e;
+  --plate-band: #0a5ea8;
+
+  --font-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --radius: 10px;
+  --radius-sm: 6px;
+  --tap: 3rem; /* minimum touch target, comfortable with gloves */
+  --shadow-pop: 0 14px 40px rgb(8 18 28 / 0.28);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #e7eef5;
+    --ink-soft: #aebfcf;
+    --ink-faint: #8497aa;
+    --paper: #0b1620;
+    --surface: #12212d;
+    --surface-sunk: #0e1b25;
+    --line: #243847;
+    --line-strong: #4a6275;
+
+    --bar: #08131d;
+
+    --blue: #5aaaf0;
+    --blue-hover: #7bbcf4;
+    --on-blue: #06121c;
+    --blue-soft: #12354f;
+    --blue-ink: #bfe0fb;
+
+    --amber: #f2b123;
+    --amber-soft: #3a2c07;
+    --amber-ink: #ffd877;
+
+    --green: #3fbf78;
+    --green-soft: #0f3322;
+    --green-ink: #a6ecc3;
+
+    --red: #ef6b5b;
+    --on-red: #1a0705;
+    --red-soft: #3f1713;
+    --red-ink: #ffb7ae;
+  }
+}
