@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "tetracore-log"
 # The version below is managed by release-please (see docs/releasing.md). Never edit it by hand.
-version = "0.7.0"
+version = "0.8.0"
 description = "Digital gate log for CNG stations"
 readme = "README.md"
 requires-python = ">=3.10"
