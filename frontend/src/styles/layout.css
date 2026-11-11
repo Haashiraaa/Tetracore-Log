@@ -1,108 +1,109 @@
 /* frontend/src/styles/layout.css : app shell, navigation, page frames, auth screens */
 
-/* ---------- shell ---------- */
+/* ---------- shell: black sidebar on a desktop ---------- */
 
 .shell {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
   min-height: 100dvh;
 }
 
-.shell__bar {
+.side {
   position: sticky;
   top: 0;
   z-index: 20;
   display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.6rem 1rem;
-  padding-top: calc(0.6rem + env(safe-area-inset-top));
+  flex-direction: column;
+  gap: 1.75rem;
+  height: 100dvh;
+  padding: 1.5rem 1rem;
   background: var(--bar);
-  color: #ffffff;
+  color: var(--on-bar);
 }
 
 .main {
-  flex: 1;
   width: 100%;
-  max-width: 72rem;
-  margin: 0 auto;
-  padding: 1.25rem 1rem 2.5rem;
+  max-width: 78rem;
+  padding: 1.75rem 2rem 2.5rem;
 }
 
 .page--narrow {
-  max-width: 40rem;
-  margin-inline: auto;
+  max-width: 34rem;
 }
 
 /* ---------- brand ---------- */
 
 .brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.6rem;
-  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0 0.5rem;
+  color: var(--hi);
   text-decoration: none;
-}
-
-.brand--static {
-  color: var(--ink);
-}
-
-.brand__mark {
-  width: 1.75rem;
-  height: 1.2rem;
-  background: #ffffff;
-  border: 2px solid currentColor;
-  border-top: 0.35rem solid var(--amber);
-  border-radius: 0.25rem;
 }
 
 .brand__name {
   font-family: var(--font-display);
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 0.84;
+  text-transform: uppercase;
+}
+
+.brand__log {
+  display: block;
+  color: var(--on-bar);
+}
+
+.brand__tape {
+  width: 6rem;
+  height: 6px;
+  background: var(--tape);
 }
 
 /* ---------- navigation ---------- */
 
 .nav {
   display: flex;
+  flex-direction: column;
   gap: 0.25rem;
-  margin-left: 1rem;
 }
 
 .nav__link {
-  padding: 0.55rem 0.9rem;
-  border-bottom: 3px solid transparent;
-  border-radius: var(--radius) var(--radius) 0 0;
-  color: #cfe0ef;
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: var(--tap);
+  padding: 0 0.75rem;
+  border-radius: var(--radius-sm);
+  color: var(--on-bar);
+  font-weight: 500;
   text-decoration: none;
 }
 
 .nav__link:hover {
-  background: rgb(255 255 255 / 0.08);
+  background: var(--bar-raised);
 }
 
 .nav__link[aria-current="page"] {
-  border-bottom-color: var(--amber);
-  color: #ffffff;
+  background: var(--hi);
+  color: var(--on-hi);
+  font-weight: 600;
 }
 
 /* ---------- account menu ---------- */
 
 .account {
   position: relative;
-  margin-left: auto;
+  margin-top: auto;
 }
 
 .account__summary {
   display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.25rem 0.4rem;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.8rem 0.75rem;
+  border: 1px solid var(--bar-line);
   border-radius: var(--radius);
   list-style: none;
   cursor: pointer;
@@ -112,45 +113,28 @@
   display: none;
 }
 
-.account__avatar {
-  display: grid;
-  place-items: center;
-  width: 2.4rem;
-  height: 2.4rem;
-  background: #ffffff;
-  border-radius: 50%;
-  color: #0b2540;
-  font-family: var(--font-display);
-  font-size: 1.1rem;
-  font-weight: 700;
-}
-
-.account__who {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.15;
-}
-
 .account__name {
   font-weight: 600;
 }
 
 .account__meta {
-  color: #a9c3da;
-  font-size: 0.8125rem;
+  color: var(--on-bar-soft);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
 }
 
 .account__panel {
   position: absolute;
-  top: calc(100% + 0.5rem);
-  right: 0;
+  bottom: calc(100% + 0.5rem);
+  left: 0;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
   min-width: 15rem;
   padding: 0.75rem;
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 2px solid var(--ink);
   border-radius: var(--radius);
   box-shadow: var(--shadow-pop);
   color: var(--ink);
@@ -162,10 +146,11 @@
 }
 
 .account__action {
-  display: block;
+  display: flex;
+  align-items: center;
   width: 100%;
-  margin-top: 0.15rem;
-  padding: 0.65rem 0.5rem;
+  min-height: 2.75rem;
+  padding: 0 0.5rem;
   background: none;
   border: 0;
   border-radius: var(--radius-sm);
@@ -190,53 +175,165 @@
   gap: 0.75rem;
 }
 
+.page-head__main {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.page-head__back {
+  display: grid;
+  place-items: center;
+  width: var(--tap);
+  height: var(--tap);
+  margin-left: -0.75rem;
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+}
+
+.page-head__back:hover {
+  background: var(--surface-sunk);
+}
+
 .page-head__sub {
-  margin-top: 0.25rem;
+  margin-top: 0.35rem;
   color: var(--ink-soft);
 }
 
-/* ---------- auth screens ---------- */
+/* ---------- auth screens: the black side of the app ---------- */
 
 .auth {
-  display: grid;
-  place-items: center;
+  /* the same components, re-inked for a black ground */
+  --ink: #f2f3ef;
+  --ink-soft: #b9bec4;
+  --ink-faint: #b9bec4;
+  --surface: #1a1d21;
+  --surface-sunk: #23272c;
+  --line: #3a4047;
+  --line-strong: #5a6068;
+  --blue: #dfff3a;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
   min-height: 100dvh;
-  padding: 1.25rem;
+  padding: 0 1.75rem 2rem;
+  background: var(--bar);
+  color: var(--ink);
 }
 
+.auth::before {
+  content: "";
+  align-self: stretch;
+  height: 14px;
+  margin: 0 -1.75rem;
+  background: var(--tape);
+}
+
+.auth--center {
+  justify-content: center;
+}
+
+.auth__hero,
 .auth__card {
-  width: min(26rem, 100%);
-  padding: 1.5rem;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: calc(var(--radius) + 4px);
-  box-shadow: 0 10px 30px rgb(8 18 28 / 0.1);
+  width: min(24rem, 100%);
 }
 
-/* ---------- phones: navigation moves to the thumb ---------- */
+.auth__hero {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 1.5rem;
+}
+
+.auth__eyebrow {
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.auth__wordmark {
+  color: var(--hi);
+  font-size: clamp(4.5rem, 26vw, 6.5rem);
+  line-height: 0.84;
+}
+
+.auth__wordmark span {
+  color: var(--ink);
+}
+
+.auth__foot {
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+}
+
+/* banners keep their light faces on the black ground, so their text stays dark */
+.auth .banner {
+  --ink: #0f1113;
+}
+
+/* ---------- phones: slim top bar, navigation at the thumb ---------- */
 
 @media (max-width: 52rem) {
+  .shell {
+    display: block;
+  }
+
+  .side {
+    position: static;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    height: auto;
+    padding: 0.6rem 1rem;
+    padding-top: calc(0.6rem + env(safe-area-inset-top));
+  }
+
+  .brand {
+    padding: 0;
+  }
+
+  .brand__name {
+    font-size: 1.5rem;
+    line-height: 1;
+  }
+
+  .brand__log {
+    display: inline;
+  }
+
+  .brand__tape {
+    display: none;
+  }
+
   .nav {
     position: fixed;
     right: 0;
     bottom: 0;
     left: 0;
     z-index: 30;
-    gap: 0;
-    margin: 0;
-    padding-bottom: env(safe-area-inset-bottom);
+    flex-direction: row;
+    gap: 0.4rem;
+    padding: 0.5rem 0.75rem calc(0.6rem + env(safe-area-inset-bottom));
     background: var(--surface);
     border-top: 1px solid var(--line);
   }
 
   .nav__link {
     flex: 1;
-    padding: 0.9rem 0.25rem;
-    border-top: 4px solid transparent;
-    border-bottom: 0;
-    border-radius: 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.2rem;
+    min-height: 3.25rem;
+    padding: 0;
     color: var(--ink-soft);
-    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 600;
   }
 
   .nav__link:hover {
@@ -244,15 +341,35 @@
   }
 
   .nav__link[aria-current="page"] {
-    border-top-color: var(--amber);
-    color: var(--ink);
+    background: var(--ink);
+    color: var(--hi);
   }
 
-  .account__who {
+  .account {
+    margin-top: 0;
+  }
+
+  .account__summary {
+    padding: 0.35rem 0.6rem;
+    text-align: right;
+  }
+
+  .account__name {
     display: none;
   }
 
+  .account__panel {
+    top: calc(100% + 0.5rem);
+    right: 0;
+    bottom: auto;
+    left: auto;
+  }
+
   .main {
-    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+    padding: 1.25rem 1rem calc(6rem + env(safe-area-inset-bottom));
+  }
+
+  .page--narrow {
+    margin-inline: auto;
   }
 }

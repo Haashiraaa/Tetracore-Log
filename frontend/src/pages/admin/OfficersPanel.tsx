@@ -186,7 +186,8 @@ export function OfficersPanel({ facilities }: { facilities: Facility[] }) {
                 <th scope="col">Code</th>
                 <th scope="col">Name</th>
                 <th scope="col">Facility</th>
-                <th scope="col">Role</th>
+                <th scope="col">Role label</th>
+                <th scope="col">Can do</th>
                 <th scope="col">Status</th>
                 <th scope="col">
                   <span className="visually-hidden">Actions</span>
@@ -197,11 +198,18 @@ export function OfficersPanel({ facilities }: { facilities: Facility[] }) {
               {rows.map((o) => (
                 <tr key={o.id}>
                   <td data-label="Code">
-                    <span className="cell-main">{o.officer_code}</span>
+                    <span className="cell-main mono">{o.officer_code}</span>
                   </td>
                   <td data-label="Name">{o.full_name}</td>
-                  <td data-label="Facility">{o.facility_code ?? "None"}</td>
-                  <td data-label="Role">{roleLabel(o.role)}</td>
+                  <td data-label="Facility" className="mono">
+                    {o.facility_code ?? "ALL"}
+                  </td>
+                  <td data-label="Role label">{roleLabel(o.role)}</td>
+                  <td data-label="Can do">
+                    <Badge tone={o.can_write_entries ? "green" : "ink"}>
+                      {o.can_write_entries ? "Signs in and out" : "Reads everything"}
+                    </Badge>
+                  </td>
                   <td data-label="Status">
                     <div className="row">
                       <Badge tone={o.is_active ? "green" : "red"}>{o.is_active ? "Active" : "Disabled"}</Badge>
@@ -233,6 +241,15 @@ export function OfficersPanel({ facilities }: { facilities: Facility[] }) {
           </table>
         </div>
       )}
+
+      <p className="note-dark">
+
+        <span className="mono" aria-hidden="true">$</span> Admins are not on this page. They are added and removed only
+
+        from the server, with <span className="mono">admin_manager</span>. Nobody can make themselves an admin from the app.
+
+      </p>
+
 
       <ConfirmDialog
         open={pending !== null}

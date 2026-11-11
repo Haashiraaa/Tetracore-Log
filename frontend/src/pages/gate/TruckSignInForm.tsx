@@ -1,12 +1,12 @@
-// frontend/src/pages/gate/SignInForm.tsx
+// frontend/src/pages/gate/TruckSignInForm.tsx
 // Confirm (returning truck) or enter (new truck) the driver's details, capture a signature, sign in.
 //
-// `entryId` is generated ONCE when the form opens (by GatePage) and reused on every
+// `entryId` is generated ONCE when the form opens (by TruckInPage) and reused on every
 // retry. If the first request reached the server but the reply was lost, the retry
 // returns the stored entry instead of creating a duplicate.
 import { useRef, useState, type FormEvent } from "react";
 import type { TruckEntry } from "@/api/schemas";
-import { SignaturePad, type SignaturePadHandle } from "@/components/signature/SignaturePad";
+import { SignaturePad, readPad, type SignaturePadHandle } from "@/components/signature/SignaturePad";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { PlateChip } from "@/components/ui/PlateChip";
@@ -31,7 +31,7 @@ interface SignInFormProps {
   onAlreadyInside: () => void;
 }
 
-export function SignInForm({ plate, mode, entryId, initial, onDone, onCancel, onAlreadyInside }: SignInFormProps) {
+export function TruckSignInForm({ plate, mode, entryId, initial, onDone, onCancel, onAlreadyInside }: SignInFormProps) {
   const [driverName, setDriverName] = useState(initial.driverName);
   const [driverPhone, setDriverPhone] = useState(initial.driverPhone);
   const [company, setCompany] = useState(initial.company);
@@ -43,19 +43,16 @@ export function SignInForm({ plate, mode, entryId, initial, onDone, onCancel, on
   async function submit(e: FormEvent) {
     e.preventDefault();
 
-    let png: string | null = null;
-    if (pad.current && !pad.current.isEmpty()) {
-      png = pad.current.toPng(SIGNATURE_MAX_BYTES);
-      if (!png) {
-        setErrors({ signature: "That signature is too detailed to save. Clear it and sign again." });
-        return;
-      }
+    const read = readPad(pad.current, SIGNATURE_MAX_BYTES);
+    if ("error" in read) {
+      setErrors({ signature: read.error });
+      return;
     }
 
     const built = truckService.buildSignInRequest(
       entryId,
       { plate, driverName, driverPhone, company },
-      png,
+      read.png,
     );
     if (!built.ok) {
       setErrors(built.errors);
@@ -84,10 +81,16 @@ export function SignInForm({ plate, mode, entryId, initial, onDone, onCancel, on
         <span className="muted">{mode === "returning" ? "Returning truck" : "New truck"}</span>
       </div>
 
-      <p className="muted">
-        {mode === "returning"
-          ? "Confirm the driver's details with them. Correct anything that changed."
-          : "Enter the driver's details. They are saved for the next visit."}
+      <p className="note-dark" role="status">
+        {mode === "returning" ? (
+          <>
+            <strong>Been here before.</strong> Details filled in. Check them with the driver.
+          </>
+        ) : (
+          <>
+            <strong>New truck.</strong> Enter the driver's details. They are saved for the next visit.
+          </>
+        )}
       </p>
 
       {error && <Banner tone="error">{error}</Banner>}
@@ -118,7 +121,7 @@ export function SignInForm({ plate, mode, entryId, initial, onDone, onCancel, on
 
       <div className="field">
         <span className="field__label">Driver's signature</span>
-        <SignaturePad ref={pad} disabled={busy} invalid={Boolean(errors.signature)} />
+        <SignaturePad ref={pad} disabled={busy} invalid={Boolean(errors.signature)} hint="Driver signs here" />
         {errors.signature && (
           <p className="field__error" role="alert">
             {errors.signature}
@@ -129,8 +132,8 @@ export function SignInForm({ plate, mode, entryId, initial, onDone, onCancel, on
       <p className="muted">Gas bought is recorded when the truck signs out.</p>
 
       <div className="row">
-        <Button type="submit" loading={busy}>
-          Sign in truck
+        <Button type="submit" className="btn--lead" loading={busy}>
+          Sign truck in
         </Button>
         <Button variant="ghost" onClick={onCancel} disabled={busy}>
           Cancel

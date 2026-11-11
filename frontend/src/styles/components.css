@@ -10,7 +10,7 @@
   min-height: var(--tap);
   padding: 0.5rem 1.25rem;
   border: 2px solid transparent;
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   font-size: 1rem;
   font-weight: 600;
   line-height: 1.2;
@@ -26,20 +26,50 @@
 }
 
 .btn--primary {
-  background: var(--blue);
-  color: var(--on-blue);
+  background: var(--hi);
+  color: var(--on-hi);
+  border-color: var(--bar);
 }
 .btn--primary:hover:not(:disabled) {
-  background: var(--blue-hover);
+  background: var(--hi-soft);
+}
+
+/* the way out: black, so it never reads as "the next thing to tap" */
+.btn--dark {
+  background: var(--bar);
+  color: var(--hi);
+  border-color: var(--bar);
+}
+.btn--dark:hover:not(:disabled) {
+  background: var(--bar-raised);
+}
+
+.btn--on-dark {
+  background: transparent;
+  color: var(--on-bar);
+  border: 1px solid var(--on-bar-soft);
+}
+.btn--on-dark:hover {
+  background: var(--bar-raised);
+}
+
+/* the one big action on a screen */
+.btn--lead {
+  min-height: 4.25rem;
+  font-family: var(--font-display);
+  font-size: 1.875rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 .btn--secondary {
   background: var(--surface);
   color: var(--ink);
-  border-color: var(--line-strong);
+  border-color: var(--ink);
 }
 .btn--secondary:hover:not(:disabled) {
-  border-color: var(--ink);
+  background: var(--surface-sunk);
 }
 
 .btn--danger {
@@ -62,14 +92,15 @@
 
 .btn--ghost {
   background: transparent;
-  color: var(--ink-soft);
+  color: var(--ink);
+  text-decoration: underline;
 }
 .btn--ghost:hover:not(:disabled) {
   background: var(--surface-sunk);
 }
 
 .btn--sm {
-  min-height: 2.5rem;
+  min-height: 2.75rem;
   padding: 0.25rem 0.9rem;
   font-size: 0.9375rem;
 }
@@ -85,7 +116,7 @@
   width: 1.75rem;
   height: 1.75rem;
   border: 3px solid var(--line-strong);
-  border-top-color: var(--blue);
+  border-top-color: var(--ink);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -113,8 +144,11 @@
 }
 
 .field__label {
-  font-size: 0.9375rem;
+  color: var(--ink-soft);
+  font-size: 0.75rem;
   font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .field__hint {
@@ -134,8 +168,8 @@
   padding: 0.5rem 0.8rem;
   background: var(--surface);
   color: var(--ink);
-  border: 2px solid var(--line-strong);
-  border-radius: var(--radius);
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius-sm);
   font-size: 1rem; /* 16px+ stops iOS zooming into the field */
 }
 
@@ -152,11 +186,18 @@
 }
 
 .input--code {
-  font-family: var(--font-display);
-  font-size: 1.375rem;
+  font-family: var(--font-mono);
+  font-size: 1.125rem;
   font-weight: 600;
-  letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+/* the first, most important field on a form */
+.input--lead {
+  min-height: 3.75rem;
+  border: 2.5px solid var(--ink);
+  font-size: 1.25rem;
+  font-weight: 600;
 }
 
 .select {
@@ -181,7 +222,7 @@
 .check input {
   width: 1.4rem;
   height: 1.4rem;
-  accent-color: var(--blue);
+  accent-color: var(--ink);
 }
 
 /* ---------- banners and badges ---------- */
@@ -227,8 +268,8 @@
 
 .badge {
   display: inline-block;
-  padding: 0.1rem 0.65rem;
-  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
   font-size: 0.8125rem;
   font-weight: 600;
   line-height: 1.5;
@@ -236,15 +277,19 @@
 }
 .badge--grey {
   background: var(--surface-sunk);
-  color: var(--ink-soft);
+  color: var(--ink);
+}
+.badge--ink {
+  background: var(--bar);
+  color: var(--on-bar);
 }
 .badge--blue {
   background: var(--blue-soft);
   color: var(--blue-ink);
 }
 .badge--amber {
-  background: var(--amber-soft);
-  color: var(--amber-ink);
+  background: var(--hot);
+  color: var(--on-hi);
 }
 .badge--green {
   background: var(--green-soft);
@@ -255,49 +300,47 @@
   color: var(--red-ink);
 }
 
-/* ---------- number plate: the one bold thing ---------- */
+/* ---------- number plate: the one thing the guard's eyes go to ---------- */
 
 .plate {
   display: inline-block;
-  padding: 0.1rem 0.75rem 0;
-  background: var(--plate-face);
-  color: var(--plate-ink);
-  border: 2px solid var(--plate-ink);
-  border-top: 0.5rem solid var(--plate-band);
-  border-radius: 0.4rem;
-  font-family: var(--font-display);
-  font-size: 1.375rem;
-  font-weight: 700;
-  line-height: 1.25;
-  letter-spacing: 0.08em;
+  padding: 0.1rem 0.5rem;
+  background: #ffffff;
+  color: #0f1113;
+  border: 2px solid #0f1113;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
   white-space: nowrap;
 }
 
 .plate--lg {
-  padding: 0.1rem 1rem 0;
-  font-size: 2rem;
+  padding: 0.2rem 0.65rem;
+  border-width: 2.5px;
+  border-radius: var(--radius-sm);
+  font-size: 1.375rem;
 }
 
+/* the yellow band and its black edge are painted, so the corners stay square-cut */
 .plate-input {
   width: 100%;
-  min-height: 5rem;
-  padding: 0.4rem 1rem;
-  background: var(--plate-face);
-  color: var(--plate-ink);
-  border: 3px solid var(--plate-ink);
-  border-top: 0.75rem solid var(--plate-band);
-  border-radius: 0.6rem;
-  font-family: var(--font-display);
-  font-size: clamp(2.25rem, 9vw, 3.25rem);
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-align: center;
+  min-height: 5.25rem;
+  padding: 0.4rem 0.9rem 0.4rem 2.1rem;
+  background: linear-gradient(to right, var(--hi) 0 1.1rem, #0f1113 1.1rem calc(1.1rem + 3px), #ffffff 0);
+  color: #0f1113;
+  border: 3px solid #0f1113;
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: clamp(1.75rem, 8vw, 2.4rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .plate-input::placeholder {
-  color: #9aa9b6;
-  font-weight: 600;
+  color: #5b6168;
 }
 
 .plate-input:focus-visible {
@@ -311,6 +354,10 @@
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
+}
+
+form.card {
+  border: 2px solid var(--ink);
 }
 
 .cards {
@@ -405,10 +452,10 @@
   background: var(--surface-sunk);
   border: 2px dashed var(--line-strong);
   border-radius: var(--radius);
-  font-family: var(--font-display);
-  font-size: 3.25rem;
-  font-weight: 700;
-  letter-spacing: 0.25em;
+  font-family: var(--font-mono);
+  font-size: 2.75rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
   text-align: center;
   user-select: all;
 }
@@ -428,12 +475,13 @@
 }
 
 .table th {
-  padding: 0.7rem 1rem;
-  background: var(--surface-sunk);
-  border-bottom: 1px solid var(--line);
+  padding: 0.85rem 1rem;
+  border-bottom: 2px solid var(--ink);
   color: var(--ink-soft);
-  font-size: 0.875rem;
+  font-size: 0.6875rem;
   font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   text-align: left;
   white-space: nowrap;
 }
@@ -441,7 +489,11 @@
 .table td {
   padding: 0.8rem 1rem;
   border-bottom: 1px solid var(--line);
-  vertical-align: top;
+  vertical-align: middle;
+}
+
+.table .plate {
+  margin-bottom: 0.3rem;
 }
 
 .table tr:last-child td {
@@ -545,7 +597,7 @@
   display: inline-flex;
   align-self: flex-start;
   overflow: hidden;
-  border: 2px solid var(--line-strong);
+  border: 2px solid var(--ink);
   border-radius: var(--radius);
 }
 
@@ -559,8 +611,8 @@
 }
 
 .segmented__tab[aria-selected="true"] {
-  background: var(--ink);
-  color: var(--surface);
+  background: var(--bar);
+  color: var(--hi);
 }
 
 /* ---------- signature pad ---------- */
@@ -569,7 +621,7 @@
   position: relative;
   overflow: hidden;
   background: #ffffff; /* the pad is paper in every theme */
-  border: 2px solid var(--line-strong);
+  border: 1.5px dashed #0f1113;
   border-radius: var(--radius);
 }
 
@@ -613,13 +665,383 @@
   top: 0.4rem;
   right: 0.4rem;
   background: rgb(255 255 255 / 0.92);
-  color: #0f1f2e;
+  color: #0f1113;
 }
 
 .sig-view {
   display: block;
   max-width: 100%;
   background: #ffffff;
-  border: 1px solid var(--line);
+  width: 100%;
   border-radius: var(--radius-sm);
+}
+
+/* ================= hi-vis screens ================= */
+
+/* ---------- notes on black ---------- */
+
+.note-dark {
+  padding: 0.8rem 1rem;
+  background: var(--bar);
+  border-radius: var(--radius-sm);
+  color: var(--on-bar);
+  font-size: 0.9375rem;
+}
+
+.note-dark strong,
+.note-dark .mono {
+  color: var(--hi);
+  font-weight: 600;
+}
+
+/* ---------- gate home: the count ---------- */
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: 1.25rem 1.25rem 1.6rem;
+  background: var(--bar);
+  border-radius: var(--radius);
+  color: var(--on-bar);
+  /* hazard tape along the bottom edge */
+  background-image: var(--tape);
+  background-repeat: no-repeat;
+  background-position: bottom;
+  background-size: 100% 8px;
+}
+
+.hero__where {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+
+.hero__row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.hero__count {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+}
+
+.hero__number {
+  color: var(--hi);
+  font-size: 7rem;
+  font-weight: 800;
+  line-height: 0.78;
+}
+
+.hero__label {
+  padding-bottom: 0.25rem;
+  font-size: 1.625rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ---------- gate home: sign-in tiles ---------- */
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.5rem;
+  min-height: 7.75rem;
+  padding: 1rem;
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.tile:hover {
+  background: var(--surface-sunk);
+}
+
+.tile--primary {
+  min-height: 8.25rem;
+  padding: 1.1rem 1.25rem;
+  background: var(--hi);
+}
+
+.tile--primary:hover {
+  background: var(--hi-soft);
+}
+
+.tile__top,
+.tile__bottom {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.tile__bottom {
+  align-items: center;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.tile__title {
+  font-family: var(--font-display);
+  font-size: 2.375rem;
+  font-weight: 800;
+  line-height: 0.9;
+  text-transform: uppercase;
+}
+
+.tile--primary .tile__title {
+  font-size: 3.375rem;
+}
+
+.tile__icon {
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.tile--primary .tile__icon {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+/* ---------- gate home: last at the gate ---------- */
+
+.activity {
+  margin: 0;
+  padding: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  list-style: none;
+}
+
+.activity__row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.75rem;
+  padding: 0.5rem 0.9rem;
+  border-bottom: 1px solid var(--surface-sunk);
+  font-size: 0.875rem;
+}
+
+.activity__row:last-child {
+  border-bottom: 0;
+}
+
+.activity__time {
+  flex: none;
+  width: 2.75rem;
+  color: var(--ink-soft);
+  font-size: 0.8125rem;
+}
+
+.activity__who {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity__who strong {
+  font-weight: 600;
+}
+
+/* ---------- trucks / visitors / staff switch ---------- */
+
+.kind-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+  max-width: 30rem;
+  padding: 0.25rem;
+  background: var(--bar);
+  border-radius: var(--radius);
+}
+
+.kind-tabs__tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: var(--tap);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--on-bar);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.kind-tabs__tab[aria-selected="true"] {
+  background: var(--hi);
+  color: var(--on-hi);
+}
+
+.kind-tabs__count {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+}
+
+/* ---------- entry cards (inside now) ---------- */
+
+.entry-name {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.entry-card {
+  justify-content: space-between;
+}
+
+.entry-card__main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.entry-card__time {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.25rem;
+  color: var(--ink-soft);
+  font-size: 0.8125rem;
+}
+
+/* ---------- quick-pick chips ---------- */
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.chip {
+  min-height: 2.75rem;
+  padding: 0 0.9rem;
+  background: var(--surface);
+  border: 1.5px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.chip[aria-pressed="true"] {
+  background: var(--bar);
+  border-color: var(--bar);
+  color: var(--hi);
+  font-weight: 600;
+}
+
+/* ---------- sign-out sheet ---------- */
+
+.strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.strip__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.7rem 0.85rem;
+  border-right: 1px solid var(--surface-sunk);
+}
+
+.strip__cell:last-child {
+  border-right: 0;
+}
+
+.strip dt {
+  color: var(--ink-soft);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.strip dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.strip__cell--key {
+  background: var(--bar);
+}
+
+.strip__cell--key dt {
+  color: var(--on-bar-soft);
+}
+
+.strip__cell--key dd {
+  color: var(--hi);
+}
+
+@media (max-width: 52rem) {
+  .modal--sheet {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 92dvh;
+    margin: auto 0 0;
+    border-radius: 20px 20px 0 0;
+  }
+
+  .modal--sheet .modal__body {
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
+  }
+
+  .modal--sheet .modal__footer .btn {
+    flex: 1;
+  }
+}
+
+/* ---------- both signatures, side by side ---------- */
+
+.sig-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.sig-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.sig-slot__none {
+  display: grid;
+  place-items: center;
+  min-height: 5rem;
+  border: 1.5px dashed var(--line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--ink-soft);
+  font-size: 0.875rem;
 }

@@ -26,6 +26,18 @@ interface SignaturePadProps {
   onInkChange?: (hasInk: boolean) => void;
   disabled?: boolean;
   invalid?: boolean;
+  /** Shown on the empty pad, e.g. "Visitor signs here". */
+  hint?: string;
+}
+
+/** Reads a pad for a form: the PNG (null if nothing was drawn) or a message to show. */
+export function readPad(
+  pad: SignaturePadHandle | null,
+  maxBytes: number,
+): { png: string | null } | { error: string } {
+  if (!pad || pad.isEmpty()) return { png: null };
+  const png = pad.toPng(maxBytes);
+  return png ? { png } : { error: "That signature is too detailed to save. Clear it and sign again." };
 }
 
 const INK = "#0b1d2c";
@@ -64,7 +76,7 @@ function paint(
 }
 
 export const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(function SignaturePad(
-  { onInkChange, disabled, invalid },
+  { onInkChange, disabled, invalid, hint = "Sign here" },
   ref,
 ) {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -198,7 +210,7 @@ export const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(fu
       />
       {!hasInk && (
         <span className="sig__hint" aria-hidden="true">
-          Driver signs here
+          {hint}
         </span>
       )}
       <button

@@ -1,21 +1,14 @@
 // frontend/src/services/truckService.ts
 // Truck rules. Mirrors backend/src/api/truck_service.py (and its layering):
-// api/trucks.ts only talks HTTP; decisions and validation live here.
+// api/trucks.ts only talks HTTP; decisions and validation live here. What every log
+// shares (lists, sign-out, export) is in entryService.ts.
 
+import type { TruckEntry, TruckLookup, TruckSignInRequest } from "@/api/schemas";
 import * as trucksApi from "@/api/trucks";
-import type {
-  TruckEntry,
-  TruckEntryFilters,
-  TruckLookup,
-  TruckSignInRequest,
-} from "@/api/schemas";
-import { EXPORT_ROW_CAP, PAGE_SIZE, REQUIRE_SIGNATURE } from "@/config/env";
-import { toCsv } from "@/lib/csv";
-import { formatDateTime } from "@/lib/dates";
+import { REQUIRE_SIGNATURE } from "@/config/env";
 import { deviceId } from "@/lib/ids";
 import { isValidPlate, normalizePlate } from "@/lib/plate";
-
-export type FieldErrors<K extends string> = Partial<Record<K, string>>;
+import type { FieldErrors } from "./entryService";
 
 // ---- lookup ----
 
@@ -75,80 +68,4 @@ export function buildSignInRequest(
 
 export function signIn(request: TruckSignInRequest): Promise<TruckEntry> {
   return trucksApi.signIn(request);
-}
-
-// ---- sign-out ----
-
-/** SCM of gas bought, as the decimal STRING the API expects ("12.50"). Blank = unknown. */
-export function parseScm(text: string): { value: string | null } | { error: string } {
-  const cleaned = text.trim().replace(",", ".");
-  if (cleaned === "") return { value: null };
-  if (!/^\d{1,10}(\.\d{1,2})?$/.test(cleaned)) {
-    return { error: "Enter a number such as 12 or 12.50." };
-  }
-  return { value: cleaned };
-}
-
-export function signOut(entryId: string, scm: string | null): Promise<TruckEntry> {
-  return trucksApi.signOut(entryId, scm === null ? {} : { scm_purchased: scm });
-}
-
-// ---- reading ----
-
-export async function fetchPage(
-  filters: TruckEntryFilters,
-  page: number,
-  signal?: AbortSignal,
-): Promise<{ rows: TruckEntry[]; hasMore: boolean }> {
-  // Ask for one extra row to learn whether a next page exists without a count query.
-  const rows = await trucksApi.listEntries(
-    { ...filters, limit: PAGE_SIZE + 1, offset: page * PAGE_SIZE },
-    signal,
-  );
-  return { rows: rows.slice(0, PAGE_SIZE), hasMore: rows.length > PAGE_SIZE };
-}
-
-export async function fetchInside(signal?: AbortSignal): Promise<TruckEntry[]> {
-  return trucksApi.listEntries({ open: true, limit: 200 }, signal);
-}
-
-export async function fetchAll(
-  filters: TruckEntryFilters,
-): Promise<{ rows: TruckEntry[]; capped: boolean }> {
-  const rows: TruckEntry[] = [];
-  const step = 200;
-  for (let offset = 0; offset < EXPORT_ROW_CAP; offset += step) {
-    const batch = await trucksApi.listEntries({ ...filters, limit: step, offset });
-    rows.push(...batch);
-    if (batch.length < step) return { rows, capped: false };
-  }
-  return { rows: rows.slice(0, EXPORT_ROW_CAP), capped: true };
-}
-
-export function entriesToCsv(entries: TruckEntry[], includeFacility: boolean): string {
-  const header = [
-    ...(includeFacility ? ["Facility"] : []),
-    "Plate",
-    "Driver",
-    "Phone",
-    "Company",
-    "Signed in",
-    "Signed out",
-    "SCM purchased",
-    "Signed in by",
-    "Signed out by",
-  ];
-  const body = entries.map((e) => [
-    ...(includeFacility ? [e.facility_code] : []),
-    e.plate_number,
-    e.driver_name,
-    e.driver_phone ?? "",
-    e.company ?? "",
-    formatDateTime(e.signed_in_at, true),
-    e.signed_out_at ? formatDateTime(e.signed_out_at, true) : "",
-    e.scm_purchased ?? "",
-    e.signed_in_by_name,
-    e.signed_out_by_name ?? "",
-  ]);
-  return toCsv([header, ...body]);
 }

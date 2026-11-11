@@ -10,9 +10,11 @@ interface ModalProps {
   footer?: ReactNode;
   /** false = Escape and backdrop clicks do nothing (e.g. while saving). */
   dismissible?: boolean;
+  /** true = slides up from the bottom on phones, where the thumb is. */
+  sheet?: boolean;
 }
 
-export function Modal({ open, title, onClose, children, footer, dismissible = true }: ModalProps) {
+export function Modal({ open, title, onClose, children, footer, dismissible = true, sheet }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
@@ -26,7 +28,7 @@ export function Modal({ open, title, onClose, children, footer, dismissible = tr
   return (
     <dialog
       ref={ref}
-      className="modal"
+      className={sheet ? "modal modal--sheet" : "modal"}
       aria-labelledby={titleId}
       onCancel={(e) => {
         e.preventDefault();

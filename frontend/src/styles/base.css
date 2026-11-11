@@ -25,17 +25,18 @@ h2,
 h3 {
   margin: 0;
   font-family: var(--font-display);
-  font-weight: 700;
-  line-height: 1.1;
+  font-weight: 800;
+  line-height: 0.95;
   letter-spacing: 0.005em;
+  text-transform: uppercase;
 }
 
 h1 {
-  font-size: clamp(2rem, 1.6rem + 2vw, 2.75rem);
+  font-size: clamp(2.5rem, 2rem + 3vw, 4rem);
 }
 
 h2 {
-  font-size: 1.625rem;
+  font-size: 1.875rem;
 }
 
 p {
@@ -43,7 +44,7 @@ p {
 }
 
 a {
-  color: var(--blue);
+  color: var(--ink);
   text-underline-offset: 0.15em;
 }
 
@@ -75,6 +76,21 @@ select {
   color: var(--ink-soft);
 }
 
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* small capital label above a group */
+.eyebrow {
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  line-height: 1.4;
+}
+
 .linklike {
   padding: 0;
   border: 0;
@@ -94,6 +110,10 @@ select {
 
 .stack--lg {
   gap: 1.5rem;
+}
+
+.stack--sm {
+  gap: 0.5rem;
 }
 
 .row {

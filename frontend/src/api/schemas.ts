@@ -1,5 +1,5 @@
 // frontend/src/api/schemas.ts
-// Request/response shapes. Mirrors backend/src/api/schemas.py.
+// Request/response shapes. Mirrors backend/src/api/schemas/.
 // Decimals (scm_purchased) travel as STRINGS ("12.50"); never parse them for storage.
 
 import type { Role } from "@/models";
@@ -79,6 +79,56 @@ export interface ResetPinResponse {
   temp_pin: string;
 }
 
+// ---- every log (trucks, visitors, staff) ----
+
+/** What every entry says. Mirrors EntryOut in backend/src/api/schemas/common.py. */
+export interface EntryBase {
+  id: string;
+  facility_id: string;
+  facility_code: string;
+  signed_in_at: string;
+  signed_out_at: string | null;
+  signed_in_by: string;
+  signed_in_by_name: string;
+  signed_out_by: string | null;
+  signed_out_by_name: string | null;
+  device_id: string | null;
+  /** Signed on the way in. */
+  has_signature: boolean;
+  has_signature_out: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EntrySignInBase {
+  id: string; // generated here, once per form open; makes retries idempotent
+  /** Omit while online: the server stamps its own clock, so phone drift cannot skew the log. */
+  signed_in_at?: string | null;
+  signature?: string | null; // PNG data URL
+  device_id?: string | null;
+}
+
+export interface EntrySignOutRequest {
+  signed_out_at?: string | null;
+  signature?: string | null; // PNG data URL
+}
+
+export type SignatureSide = "in" | "out";
+
+export interface EntryFilters {
+  open?: boolean;
+  facility_code?: string;
+  date_from?: string; // ISO with offset
+  date_to?: string; // exclusive
+  /** Trucks only. */
+  plate?: string;
+}
+
+export interface EntryQuery extends EntryFilters {
+  limit?: number;
+  offset?: number;
+}
+
 // ---- trucks ----
 
 export interface TruckLookup {
@@ -91,55 +141,53 @@ export interface TruckLookup {
   open_entry_id: string | null;
 }
 
-export interface TruckSignInRequest {
-  id: string; // generated here, once per form open; makes retries idempotent
+export interface TruckSignInRequest extends EntrySignInBase {
   plate_number: string;
   driver_name: string;
   driver_phone?: string | null;
   company?: string | null;
   scm_purchased?: string | null;
-  /** Omit in V1 (online): the server stamps its own clock, so phone drift cannot skew the log. */
-  signed_in_at?: string | null;
-  signature?: string | null; // PNG data URL
-  device_id?: string | null;
 }
 
-export interface TruckSignOutRequest {
-  signed_out_at?: string | null;
+export interface TruckSignOutRequest extends EntrySignOutRequest {
   scm_purchased?: string | null;
 }
 
-export interface TruckEntry {
-  id: string;
+export interface TruckEntry extends EntryBase {
   truck_id: string;
-  facility_id: string;
-  facility_code: string;
   plate_number: string;
   driver_name: string;
   driver_phone: string | null;
   company: string | null;
   scm_purchased: string | null;
-  signed_in_at: string;
-  signed_out_at: string | null;
-  signed_in_by: string;
-  signed_in_by_name: string;
-  signed_out_by: string | null;
-  signed_out_by_name: string | null;
-  device_id: string | null;
-  has_signature: boolean;
-  created_at: string;
-  updated_at: string;
 }
 
-export interface TruckEntryFilters {
-  open?: boolean;
-  plate?: string;
-  facility_code?: string;
-  date_from?: string; // ISO with offset
-  date_to?: string; // exclusive
+// ---- visitors ----
+
+export interface VisitorSignInRequest extends EntrySignInBase {
+  full_name: string;
+  company?: string | null;
+  purpose?: string | null;
+  items_received?: string | null;
+  phone?: string | null;
 }
 
-export interface TruckEntryQuery extends TruckEntryFilters {
-  limit?: number;
-  offset?: number;
+export interface VisitorEntry extends EntryBase {
+  full_name: string;
+  company: string | null;
+  purpose: string | null;
+  items_received: string | null;
+  phone: string | null;
 }
+
+// ---- staff ----
+
+export interface StaffSignInRequest extends EntrySignInBase {
+  full_name: string;
+}
+
+export interface StaffEntry extends EntryBase {
+  full_name: string;
+}
+
+export type AnyEntry = TruckEntry | VisitorEntry | StaffEntry;
