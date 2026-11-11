@@ -57,6 +57,9 @@ class EntryMixin:
     signature_in: Mapped[Optional[bytes]] = mapped_column(
         LargeBinary, nullable=True, deferred=True
     )
+    signature_out: Mapped[Optional[bytes]] = mapped_column(
+        LargeBinary, nullable=True, deferred=True
+    )
     signed_in_by: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("officers.id", ondelete="RESTRICT"), nullable=False
     )

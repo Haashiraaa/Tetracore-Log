@@ -302,19 +302,19 @@ class TruckEntry(EntryMixin, TimestampMixin, Base):
 
 
 class VisitorEntry(EntryMixin, TimestampMixin, Base):
+    """One visit, like a line on the paper gate log: who, where from, why, what was
+    received, phone, time in + signature, time out + signature."""
+
     __tablename__ = "visitor_entries"
 
     id: Mapped[uuid.UUID] = mapped_column(
         Uuid, primary_key=True, default=uuid.uuid4)
     full_name: Mapped[str] = mapped_column(String(150), nullable=False)
-    phone: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
-    organization: Mapped[Optional[str]] = mapped_column(
-        String(200), nullable=True)
+    company: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     purpose: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
-    person_visited: Mapped[Optional[str]] = mapped_column(
-        String(150), nullable=True)
-    id_type: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
-    id_number: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    items_received: Mapped[Optional[str]] = mapped_column(
+        String(500), nullable=True)
+    phone: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
 
     __table_args__ = (
         Index("ix_visitor_entries_facility_signed_in",
@@ -334,50 +334,17 @@ class VisitorEntry(EntryMixin, TimestampMixin, Base):
 # --------------------------------------------------------------------------
 
 
-class Staff(TimestampMixin, Base):
-    __tablename__ = "staff"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, primary_key=True, default=uuid.uuid4)
-    facility_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("facilities.id", ondelete="RESTRICT"), nullable=False
-    )
-    staff_code: Mapped[str] = mapped_column(String(32), nullable=False)
-    full_name: Mapped[str] = mapped_column(String(150), nullable=False)
-    department: Mapped[Optional[str]] = mapped_column(
-        String(100), nullable=True)
-    is_active: Mapped[bool] = mapped_column(
-        default=True, server_default=text("true"), nullable=False
-    )
-
-    __table_args__ = (
-        UniqueConstraint(
-            "facility_id", "staff_code", name="uq_staff_facility_id_staff_code"
-        ),
-        # Target for the composite FK on staff_entries.
-        UniqueConstraint("facility_id", "id", name="uq_staff_facility_id_id"),
-    )
-
-    @validates("staff_code")
-    def _normalize_code(self, _key: str, value: str) -> str:
-        return normalize_code(value)
-
-
 class StaffEntry(EntryMixin, TimestampMixin, Base):
+    """One staff attendance line: name, time in + signature, time out + signature.
+    The name is typed per entry; there is no staff register (yet)."""
+
     __tablename__ = "staff_entries"
 
     id: Mapped[uuid.UUID] = mapped_column(
         Uuid, primary_key=True, default=uuid.uuid4)
-    # FK is the composite one in __table_args__ (facility_id + staff_id).
-    staff_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    full_name: Mapped[str] = mapped_column(String(150), nullable=False)
 
     __table_args__ = (
-        ForeignKeyConstraint(
-            ["facility_id", "staff_id"],
-            ["staff.facility_id", "staff.id"],
-            ondelete="RESTRICT",
-            name="fk_staff_entries_facility_staff",
-        ),
         Index("ix_staff_entries_facility_signed_in",
               "facility_id", "signed_in_at"),
         Index("ix_staff_entries_facility_updated",

@@ -1,7 +1,7 @@
 # backend/src/db/queries/visitors.py
 
-"""Visitor log SQL. SPACE ONLY: what every log shares comes from _entries.py. Add the
-queries that are specific to visitors here once the details are decided."""
+"""Visitors log SQL: everything comes from _entries.py. Add queries that are
+specific to visitors here when they are needed."""
 
 from __future__ import annotations
 
@@ -19,9 +19,10 @@ def get_entry(db: Session, entry_id: uuid.UUID, scope: uuid.UUID | None) -> Any 
 
 
 def get_signature(
-    db: Session, entry_id: uuid.UUID, scope: uuid.UUID | None
+    db: Session, entry_id: uuid.UUID, scope: uuid.UUID | None,
+    which: _entries.Which = "in",
 ) -> Any | None:
-    return _entries.get_signature(db, VisitorEntry, entry_id, scope)
+    return _entries.get_signature(db, VisitorEntry, entry_id, scope, which)
 
 
 def list_entries(db: Session, **filters: Any) -> list[Any]:

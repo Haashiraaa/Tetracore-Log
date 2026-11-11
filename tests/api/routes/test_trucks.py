@@ -172,6 +172,15 @@ def test_signature_round_trip_and_scoping(client, officer_a, officer_b, cso):
                       headers=officer_b.headers).status_code == 404
 
 
+def test_sign_out_signature_round_trip(client, officer_a):
+    eid = sign_in(client, officer_a).json()["id"]
+    r = sign_out(client, officer_a, eid, {"signature": PNG_B64})
+    assert r.json()["has_signature_out"] is True and r.json()["has_signature"] is False
+    got = client.get(f"/api/trucks/entries/{eid}/signature", params={"side": "out"},
+                     headers=officer_a.headers)
+    assert got.status_code == 200 and got.content == PNG
+
+
 def test_missing_signature_is_404(client, officer_a):
     eid = sign_in(client, officer_a).json()["id"]
     assert client.get(f"/api/trucks/entries/{eid}/signature",

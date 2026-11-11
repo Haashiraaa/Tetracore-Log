@@ -23,22 +23,23 @@ from backend.src.api.schemas.auth import (
     RefreshResponse,
     RefreshResult,
 )
-from backend.src.api.schemas.common import EntryOut
-from backend.src.api.schemas.staff import StaffEntryOut
+from backend.src.api.schemas.common import EntryOut, EntrySignInRequest, EntrySignOutRequest
+from backend.src.api.schemas.staff import StaffEntryOut, StaffSignInRequest
 from backend.src.api.schemas.trucks import (
     TruckEntryOut,
     TruckLookupOut,
     TruckSignInRequest,
     TruckSignOutRequest,
 )
-from backend.src.api.schemas.visitors import VisitorEntryOut
+from backend.src.api.schemas.visitors import VisitorEntryOut, VisitorSignInRequest
 
 __all__ = [
     "AdminOfficerOut", "ChangePinRequest", "CreateFacilityRequest",
     "CreateOfficerRequest", "CreateOfficerResponse", "CurrentOfficer",
-    "EntryOut", "FacilityOut", "LoginRequest", "LoginResponse", "LoginResult",
-    "LogoutRequest", "OfficerProfile", "RefreshRequest", "RefreshResponse",
-    "RefreshResult", "ResetPinResponse", "StaffEntryOut", "TruckEntryOut",
+    "EntryOut", "EntrySignInRequest", "EntrySignOutRequest", "FacilityOut",
+    "LoginRequest", "LoginResponse", "LoginResult", "LogoutRequest",
+    "OfficerProfile", "RefreshRequest", "RefreshResponse", "RefreshResult",
+    "ResetPinResponse", "StaffEntryOut", "StaffSignInRequest", "TruckEntryOut",
     "TruckLookupOut", "TruckSignInRequest", "TruckSignOutRequest",
-    "VisitorEntryOut",
+    "VisitorEntryOut", "VisitorSignInRequest",
 ]

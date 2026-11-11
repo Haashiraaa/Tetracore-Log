@@ -52,7 +52,7 @@ def _clean():
     yield
     with engine.begin() as conn:
         conn.execute(text(
-            "TRUNCATE truck_entries, visitor_entries, staff_entries, trucks, staff, "
+            "TRUNCATE truck_entries, visitor_entries, staff_entries, trucks, "
             "officer_sessions, officers, counters, facilities RESTART IDENTITY CASCADE"))
 
 
