@@ -20,14 +20,22 @@ from backend.src.api.schemas import (
     FacilityOut,
     OfficerProfile,
     ResetPinResponse,
+    StateOut,
 )
 from backend.src.db.session import get_db
+from backend.src.facility_codes import STATES, state_abbrev
 
 # Every route in this file is admin-only. Applied at router level so it
 # cannot be forgotten on an individual endpoint.
 router = APIRouter(
     prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)]
 )
+
+
+@router.get("/states", response_model=list[StateOut])
+def list_states() -> list[StateOut]:
+    """The states a facility can be created in, with the letters used in its code."""
+    return [StateOut(name=s, abbrev=state_abbrev(s)) for s in STATES]
 
 
 @router.get("/facilities", response_model=list[FacilityOut])
@@ -41,7 +49,7 @@ def create_facility(
     body: CreateFacilityRequest, db: Session = Depends(get_db)
 ) -> FacilityOut:
     facility = admin_service.create_facility(
-        db, code=body.code, name=body.name)
+        db, state=body.state, name=body.name)
     return FacilityOut.model_validate(facility)
 
 

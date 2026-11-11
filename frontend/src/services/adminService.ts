@@ -7,6 +7,7 @@ import type {
   CreateFacilityRequest,
   CreateOfficerRequest,
   Facility,
+  StateOption,
 } from "@/api/schemas";
 import { ROLE_MAX_LENGTH } from "@/models";
 
@@ -21,23 +22,23 @@ export interface PinReveal {
   tempPin: string;
 }
 
-const CODE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9-]*$/;
 
 // ---- facilities ----
 
 export function validateFacility(
-  code: string,
+  state: string,
   name: string,
-): { ok: true; value: CreateFacilityRequest } | { ok: false; errors: FieldErrors<"code" | "name"> } {
-  const errors: FieldErrors<"code" | "name"> = {};
-  const c = code.trim();
+): { ok: true; value: CreateFacilityRequest } | { ok: false; errors: FieldErrors<"state" | "name"> } {
+  const errors: FieldErrors<"state" | "name"> = {};
   const n = name.trim();
-  if (c.length < 2 || c.length > 32 || !CODE_PATTERN.test(c)) {
-    errors.code = "Use 2-32 letters, digits or dashes, such as CNG-BEN-01.";
-  }
+  if (!state) errors.state = "Choose the state.";
   if (n.length < 2) errors.name = "Enter the facility name.";
   if (Object.keys(errors).length > 0) return { ok: false, errors };
-  return { ok: true, value: { code: c, name: n } };
+  return { ok: true, value: { state, name: n } };
+}
+
+export function listStates(signal?: AbortSignal): Promise<StateOption[]> {
+  return adminApi.listStates(signal);
 }
 
 export function createFacility(body: CreateFacilityRequest): Promise<Facility> {

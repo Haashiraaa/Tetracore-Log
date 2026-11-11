@@ -11,7 +11,7 @@ which only reads.
 python -m scripts.admin_manager list                 # admins only
 python -m scripts.admin_manager list --all           # every account
 python -m scripts.admin_manager create --code ADM-01 --name "Ada Obi"
-python -m scripts.admin_manager grant --code OFF-003 --facility CNG-A
+python -m scripts.admin_manager grant --code OFF-003 --facility CNG-LAG-01
 python -m scripts.admin_manager revoke --code ADM-01
 python -m scripts.admin_manager reset-pin --code ADM-01
 ```
@@ -31,7 +31,7 @@ python -m scripts.admin_manager reset-pin --code ADM-01
 | Option | Used by | Meaning |
 |---|---|---|
 | `--code CODE` | create, grant, revoke, reset-pin | The officer code (any case) |
-| `--facility CODE` | create, grant, revoke, reset-pin | The facility the account belongs to. Leave it out for a global account. The same officer code can exist in two facilities, so a scoped account needs this to be found |
+| `--facility CODE` | create, grant, revoke, reset-pin | The facility code as issued, e.g. `CNG-LAG-01` (see [facility-codes.md](../facility-codes.md)). Leave it out for a global account. The same officer code can exist in two facilities, so a scoped account needs this to be found |
 | `--name "Full Name"` | create | Required |
 | `--role LABEL` | create | Free-text label, up to 32 characters. Default `admin`. Nothing checks it, see [How access works](#how-access-works) |
 | `--force` | revoke | Allow dropping the **last active** admin |

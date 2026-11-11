@@ -75,7 +75,9 @@ class Facility(TimestampMixin, Base):
     id: Mapped[uuid.UUID] = mapped_column(
         Uuid, primary_key=True, default=uuid.uuid4)
     code: Mapped[str] = mapped_column(
-        String(32), nullable=False)  # e.g. CNG-BEN-01
+        String(32), nullable=False)  # issued by the server, e.g. CNG-LAG-01
+    # Empty only for a facility created before codes were issued from a state.
+    state: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     is_active: Mapped[bool] = mapped_column(
         default=True, server_default=text("true"), nullable=False
@@ -200,8 +202,9 @@ class OfficerSession(Base):
 
 
 class Counter(Base):
-    """Locked-row sequences for issuing account codes, one row per facility
-    ('officer_code:<facility id>:OFF'). Row is locked FOR UPDATE while issuing."""
+    """Locked-row sequences for issuing codes, one row each: officer codes per
+    facility ('officer_code:<facility id>:OFF') and facility codes per state
+    ('facility_code:LAG'). Row is locked FOR UPDATE while issuing; numbers only go up."""
 
     __tablename__ = "counters"
 

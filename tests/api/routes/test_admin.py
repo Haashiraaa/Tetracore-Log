@@ -6,10 +6,12 @@ import pytest
 
 from tests._helpers import PIN, login, login_response, make_actor
 
+FAC = "CNG-LAG-01"  # the first facility mkfac makes in Lagos
 
-def mkfac(client, who, code="CNG-N"):
+
+def mkfac(client, who, state="Lagos", name="Station"):
     return client.post("/api/admin/facilities", headers=who.headers,
-                       json={"code": code, "name": f"Station {code}"})
+                       json={"state": state, "name": name})
 
 
 def test_admin_routes_are_admin_only(client, officer_a, cso):
@@ -20,15 +22,50 @@ def test_admin_routes_are_admin_only(client, officer_a, cso):
         )["detail"]["code"] == "forbidden"
 
 
-def test_facilities(client, admin):
-    assert mkfac(client, admin).status_code == 201
-    # case-insensitive dup
-    assert mkfac(client, admin, "cng-n").status_code == 409
-    bad = client.post("/api/admin/facilities", headers=admin.headers,
-                      json={"code": "bad code!", "name": "Nope"})
-    assert bad.status_code == 422
+def test_facility_codes_are_issued_per_state(client, admin):
+    made = [mkfac(client, admin, st) for st in
+            ("Lagos", "lagos", "Benue", "  akwa   ibom ", "Federal Capital Territory", "Lagos")]
+    assert all(r.status_code == 201 for r in made)
+    assert [r.json()["code"] for r in made] == [
+        "CNG-LAG-01", "CNG-LAG-02", "CNG-BEN-01", "CNG-AKW-01", "CNG-FCT-01", "CNG-LAG-03"]
+    assert made[3].json()["state"] == "Akwa Ibom"  # stored with the proper spelling
     listed = client.get("/api/admin/facilities", headers=admin.headers).json()
-    assert [f["code"] for f in listed] == ["CNG-N"]
+    assert [f["code"] for f in listed] == sorted(r.json()["code"] for r in made)
+
+
+def test_a_facility_number_is_never_reused(client, admin):
+    from sqlalchemy import delete
+
+    from backend.src.db.orm.tables import Facility
+    from backend.src.db.session import create_session
+    assert mkfac(client, admin).json()["code"] == "CNG-LAG-01"
+    with create_session() as db:  # even if the facility is removed behind our back
+        db.execute(delete(Facility))
+        db.commit()
+    assert mkfac(client, admin).json()["code"] == "CNG-LAG-02"
+
+
+def test_the_code_cannot_be_chosen_or_made_up(client, admin):
+    r = client.post("/api/admin/facilities", headers=admin.headers,
+                    json={"state": "Lagos", "name": "Sneaky", "code": "MY-OWN-CODE"})
+    assert r.status_code == 201 and r.json()["code"] == "CNG-LAG-01"
+    for bad in ("Narnia", "", "L"):
+        assert mkfac(client, admin, bad).status_code == 422
+    no_state = client.post("/api/admin/facilities", headers=admin.headers,
+                           json={"name": "No state"})
+    assert no_state.status_code == 422
+
+
+def test_a_taken_code_is_skipped(client, admin):
+    from tests._helpers import make_account
+    make_account(code="OFF-001", facility="CNG-LAG-01")  # seeded by hand
+    assert mkfac(client, admin).json()["code"] == "CNG-LAG-02"
+
+
+def test_states_list(client, admin, officer_a):
+    rows = client.get("/api/admin/states", headers=admin.headers).json()
+    assert len(rows) == 37 and {"name": "Lagos", "abbrev": "LAG"} in rows
+    assert client.get("/api/admin/states", headers=officer_a.headers).status_code == 403
 
 
 def test_create_officers_auto_codes(client, admin):
@@ -37,7 +74,7 @@ def test_create_officers_auto_codes(client, admin):
     for name, role in [("Guard One", "officer"), ("Guard Two", "officer"),
                        ("Manager One", "facility_manager")]:
         r = client.post("/api/admin/officers", headers=admin.headers,
-                        json={"facility_code": "cng-n", "full_name": name, "role": role})
+                        json={"facility_code": FAC.lower(), "full_name": name, "role": role})
         assert r.status_code == 201, r.text
         assert r.headers["cache-control"] == "no-store"
         body = r.json()
@@ -52,19 +89,19 @@ def test_create_officers_auto_codes(client, admin):
 def test_role_is_a_free_label(client, admin):
     mkfac(client, admin)
     r = client.post("/api/admin/officers", headers=admin.headers,
-                    json={"facility_code": "CNG-N", "full_name": "Shift Boss",
+                    json={"facility_code": FAC, "full_name": "Shift Boss",
                           "role": "  Shift Supervisor "})
     assert r.status_code == 201, r.text
     assert r.json()["officer"]["role"] == "Shift Supervisor"
     # even a label that used to mean something is just a label now
     r = client.post("/api/admin/officers", headers=admin.headers,
-                    json={"facility_code": "CNG-N", "full_name": "Not Special", "role": "cso"})
+                    json={"facility_code": FAC, "full_name": "Not Special", "role": "cso"})
     assert r.status_code == 201
-    assert r.json()["officer"]["facility_code"] == "CNG-N"
+    assert r.json()["officer"]["facility_code"] == FAC
     assert r.json()["officer"]["sees_all_facilities"] is False
     # left out: the default label
     r = client.post("/api/admin/officers", headers=admin.headers,
-                    json={"facility_code": "CNG-N", "full_name": "Default Role"})
+                    json={"facility_code": FAC, "full_name": "Default Role"})
     assert r.json()["officer"]["role"] == "officer"
 
 
@@ -72,7 +109,7 @@ def test_role_is_a_free_label(client, admin):
 def test_blank_or_overlong_role_is_rejected(client, admin, bad):
     mkfac(client, admin)
     r = client.post("/api/admin/officers", headers=admin.headers,
-                    json={"facility_code": "CNG-N", "full_name": "Bad Role", "role": bad})
+                    json={"facility_code": FAC, "full_name": "Bad Role", "role": bad})
     assert r.status_code == 422
 
 
@@ -85,20 +122,20 @@ def test_create_officer_unknown_facility(client, admin):
 def test_the_api_can_never_make_an_admin(client, admin):
     mkfac(client, admin)
     r = client.post("/api/admin/officers", headers=admin.headers,
-                    json={"facility_code": "CNG-N", "full_name": "Sneaky",
+                    json={"facility_code": FAC, "full_name": "Sneaky",
                           "role": "admin", "is_admin": True})
     assert r.status_code == 201
     assert r.json()["officer"]["is_admin"] is False
-    h = login(client, r.json()["officer"]["officer_code"], "CNG-N", r.json()["temp_pin"])
+    h = login(client, r.json()["officer"]["officer_code"], FAC, r.json()["temp_pin"])
     assert client.get("/api/admin/facilities", headers=h).status_code == 403
 
 
 def test_temp_pin_flow(client, admin):
     mkfac(client, admin)
     r = client.post("/api/admin/officers", headers=admin.headers,
-                    json={"facility_code": "CNG-N", "full_name": "New Guard"})
+                    json={"facility_code": FAC, "full_name": "New Guard"})
     code, pin = r.json()["officer"]["officer_code"], r.json()["temp_pin"]
-    h = login(client, code, "CNG-N", pin)
+    h = login(client, code, FAC, pin)
     assert client.get(
         "/api/auth/me", headers=h).json()["must_change_pin"] is True
     blocked = client.get("/api/trucks/lookup",

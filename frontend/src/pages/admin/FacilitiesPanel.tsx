@@ -5,21 +5,23 @@ import { Badge } from "@/components/ui/Badge";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { TextField } from "@/components/ui/TextField";
+import { SelectField, TextField } from "@/components/ui/TextField";
 import { errorMessage } from "@/exceptions/errors";
+import { useAsync } from "@/hooks/useAsync";
 import * as adminService from "@/services/adminService";
 
 export function FacilitiesPanel({ facilities, onChanged }: { facilities: Facility[]; onChanged: () => void }) {
-  const [code, setCode] = useState("");
+  const states = useAsync((signal) => adminService.listStates(signal), []);
+  const [state, setState] = useState("");
   const [name, setName] = useState("");
-  const [errors, setErrors] = useState<{ code?: string; name?: string }>({});
+  const [errors, setErrors] = useState<{ state?: string; name?: string }>({});
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    const checked = adminService.validateFacility(code, name);
+    const checked = adminService.validateFacility(state, name);
     if (!checked.ok) {
       setErrors(checked.errors);
       return;
@@ -31,7 +33,7 @@ export function FacilitiesPanel({ facilities, onChanged }: { facilities: Facilit
     try {
       const facility = await adminService.createFacility(checked.value);
       setCreated(`${facility.code} created.`);
-      setCode("");
+      setState("");
       setName("");
       onChanged();
     } catch (err) {
@@ -48,16 +50,26 @@ export function FacilitiesPanel({ facilities, onChanged }: { facilities: Facilit
         {created && <Banner tone="success">{created}</Banner>}
         {error && <Banner tone="error">{error}</Banner>}
         <div className="form-grid">
-          <TextField
-            label="Code"
-            hint="Officers type this to log in, e.g. CNG-BEN-01."
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-            error={errors.code}
-            autoCapitalize="characters"
-            autoComplete="off"
-            spellCheck={false}
-          />
+          <SelectField
+            label="State"
+            hint={
+              state
+                ? "The code is issued for you, in the form CNG-" +
+                  (states.data?.find((o) => o.name === state)?.abbrev ?? "XXX") +
+                  "-01, -02 and so on."
+                : "Choose the state. The code is issued for you, e.g. CNG-LAG-01."
+            }
+            value={state}
+            onChange={(e) => setState(e.target.value)}
+            error={errors.state ?? (states.error ? "Could not load the states." : undefined)}
+          >
+            <option value="">Choose a state</option>
+            {(states.data ?? []).map((o) => (
+              <option key={o.name} value={o.name}>
+                {o.name}
+              </option>
+            ))}
+          </SelectField>
           <TextField
             label="Name"
             value={name}
@@ -81,6 +93,7 @@ export function FacilitiesPanel({ facilities, onChanged }: { facilities: Facilit
             <thead>
               <tr>
                 <th scope="col">Code</th>
+                <th scope="col">State</th>
                 <th scope="col">Name</th>
                 <th scope="col">Status</th>
               </tr>
@@ -91,6 +104,7 @@ export function FacilitiesPanel({ facilities, onChanged }: { facilities: Facilit
                   <td data-label="Code">
                     <span className="cell-main">{f.code}</span>
                   </td>
+                  <td data-label="State">{f.state ?? "-"}</td>
                   <td data-label="Name">{f.name}</td>
                   <td data-label="Status">
                     <Badge tone={f.is_active ? "green" : "red"}>{f.is_active ? "Active" : "Disabled"}</Badge>
