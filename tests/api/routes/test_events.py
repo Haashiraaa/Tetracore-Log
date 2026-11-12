@@ -346,6 +346,10 @@ def test_push_test_reports_what_happened(client, admin, officer_a, push_on, monk
     body = client.post("/api/admin/push/test", headers=admin.headers).json()
     assert body == {"subscriptions": 1, "sent": 1, "failed": []}
     assert push_on[0]["subscription_info"]["endpoint"] == "https://push.example/phone"
+    import json
+    first = json.loads(push_on[0]["data"])["tag"]
+    client.post("/api/admin/push/test", headers=admin.headers)
+    assert json.loads(push_on[1]["data"])["tag"] != first  # a repeated tag would be shown silently
 
     from pywebpush import WebPushException
 
