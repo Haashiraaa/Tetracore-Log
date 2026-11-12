@@ -90,8 +90,10 @@ def sign_out_entry(
     signed_out_at: datetime,
     signature: Optional[bytes] = None,
     extra: Optional[dict[str, Any]] = None,
+    require: Sequence[ColumnElement[bool]] = (),
 ) -> bool:
-    """True if this call closed the entry. False = not found OR already out.
+    """True if this call closed the entry. False = not found OR already out OR one of
+    `require` (a log's own conditions, e.g. a truck must be on site) does not hold.
     `extra` carries a log's own columns to set on the way out."""
     values: dict[str, Any] = {
         "signed_out_at": signed_out_at,
@@ -106,6 +108,7 @@ def sign_out_entry(
             model.id == entry_id,
             model.facility_id == facility_id,
             model.signed_out_at.is_(None),
+            *require,
         )
         .values(**values)
         .returning(model.id)

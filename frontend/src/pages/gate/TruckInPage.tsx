@@ -2,12 +2,18 @@
 // Look up a plate, then sign the truck in (or out).
 //   new plate        -> blank form
 //   known plate      -> form prefilled to CONFIRM
+//   already queued   -> offer "let in" or "left the queue" instead
 //   already inside   -> offer sign-out instead (the server would refuse a second sign-in)
 import { useCallback, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import type { AnyEntry, TruckEntry, TruckLookup } from "@/api/schemas";
 import { SignOutSheet, type SignOutTarget } from "@/components/entries/SignOutSheet";
 import { Badge } from "@/components/ui/Badge";
+import {
+  EnterTruckSheet,
+  LeaveQueueSheet,
+  type QueuedTruck,
+} from "@/components/entries/TruckQueueSheets";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -22,6 +28,7 @@ type Stage =
   | { kind: "idle" }
   | { kind: "looking" }
   | { kind: "form"; mode: "new" | "returning"; plate: string; entryId: string; initial: SignInInitial }
+  | { kind: "queued"; truck: TruckLookup }
   | { kind: "inside"; truck: TruckLookup };
 
 const BLANK: SignInInitial = { driverName: "", driverPhone: "", company: "" };
@@ -42,6 +49,8 @@ function stageFor(result: truckService.LookupResult): Stage {
           company: result.truck.company ?? "",
         },
       };
+    case "queued":
+      return { kind: "queued", truck: result.truck };
     case "inside":
       return { kind: "inside", truck: result.truck };
   }
@@ -54,6 +63,8 @@ export default function TruckInPage() {
   const [stage, setStage] = useState<Stage>({ kind: "idle" });
   const [outcome, setOutcome] = useState<string | null>(null);
   const [signOutTarget, setSignOutTarget] = useState<SignOutTarget | null>(null);
+  const [enterTarget, setEnterTarget] = useState<QueuedTruck | null>(null);
+  const [leaveTarget, setLeaveTarget] = useState<QueuedTruck | null>(null);
   const plateRef = useRef<HTMLInputElement>(null);
 
   const runLookup = useCallback(async (raw: string) => {
@@ -83,7 +94,21 @@ export default function TruckInPage() {
   }
 
   function onSignedIn(entry: TruckEntry) {
-    reset(`${entry.plate_number} signed in at ${formatTime(entry.signed_in_at)}.`);
+    reset(
+      entry.status === "queued"
+        ? `${entry.plate_number} added to the queue at ${formatTime(entry.signed_in_at)}.`
+        : `${entry.plate_number} signed in at ${formatTime(entry.signed_in_at)}.`,
+    );
+  }
+
+  function onLetIn(entry: TruckEntry) {
+    setEnterTarget(null);
+    reset(`${entry.plate_number} let in at ${formatTime(entry.entered_at ?? entry.signed_in_at)}.`);
+  }
+
+  function onLeftQueue(entry: TruckEntry) {
+    setLeaveTarget(null);
+    reset(`${entry.plate_number} marked as left the queue.`);
   }
 
   function onSignedOut(entry: AnyEntry) {
@@ -154,6 +179,50 @@ export default function TruckInPage() {
         />
       )}
 
+      {stage.kind === "queued" && (
+        <section className="card stack">
+          <div className="row row--between">
+            <PlateChip plate={stage.truck.plate_number} large />
+            <Badge tone="blue">Queued</Badge>
+          </div>
+          <p>
+            <span className="cell-main">{stage.truck.driver_name}</span>
+            {stage.truck.company && <span className="cell-sub">{stage.truck.company}</span>}
+          </p>
+          <Banner tone="warn">This truck is already in the queue. Let it in, or mark it as left the queue.</Banner>
+          <div className="row">
+            <Button
+              onClick={() =>
+                setEnterTarget({
+                  entryId: stage.truck.open_entry_id as string,
+                  plate: stage.truck.plate_number,
+                  driverName: stage.truck.driver_name,
+                  queuedAt: null,
+                })
+              }
+            >
+              Let in
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() =>
+                setLeaveTarget({
+                  entryId: stage.truck.open_entry_id as string,
+                  plate: stage.truck.plate_number,
+                  driverName: stage.truck.driver_name,
+                  queuedAt: null,
+                })
+              }
+            >
+              Left queue
+            </Button>
+            <Button variant="ghost" onClick={() => reset(null)}>
+              Cancel
+            </Button>
+          </div>
+        </section>
+      )}
+
       {stage.kind === "inside" && (
         <section className="card stack">
           <div className="row row--between">
@@ -186,6 +255,8 @@ export default function TruckInPage() {
         </section>
       )}
 
+      <EnterTruckSheet truck={enterTarget} onClose={() => setEnterTarget(null)} onDone={onLetIn} />
+      <LeaveQueueSheet truck={leaveTarget} onClose={() => setLeaveTarget(null)} onDone={onLeftQueue} />
       <SignOutSheet target={signOutTarget} onClose={() => setSignOutTarget(null)} onDone={onSignedOut} />
     </div>
   );

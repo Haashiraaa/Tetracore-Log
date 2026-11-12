@@ -93,12 +93,21 @@ class AccessClaims:
 # ---- events: what the global admin is told about ----
 # One row per thing that happens. `kind` says what, `severity` says whether it needs a look.
 
-GATE_KINDS = ("truck_in", "truck_out", "visitor_in", "visitor_out", "staff_in", "staff_out")
-ADMIN_KINDS = (
-    "facility_added", "officer_added", "officer_pin_reset", "officer_disabled",
-    "officer_enabled", "sessions_revoked", "admin_granted", "admin_revoked",
+GATE_KINDS = (
+    "truck_queued", "truck_in", "truck_out", "truck_left_queue",
+    "visitor_in", "visitor_out", "staff_in", "staff_out",
+    "officer_on_duty", "officer_off_duty", "officer_gate_changed",
 )
-WARNING_KINDS = ("already_inside", "left_inside")
+ADMIN_KINDS = (
+    "facility_added", "gates_changed", "officer_added", "officer_pin_reset",
+    "officer_disabled", "officer_enabled", "sessions_revoked", "admin_granted",
+    "admin_revoked",
+)
+WARNING_KINDS = (
+    "already_inside", "left_inside", "queued_too_long", "on_duty_too_long", "gate_unmanned",
+)
+# Warnings the server raises by itself (nobody acted), once each: see event_service.
+RAISED_BY_SERVER = ("left_inside", "queued_too_long", "on_duty_too_long", "gate_unmanned")
 EVENT_KINDS = GATE_KINDS + ADMIN_KINDS + WARNING_KINDS
 
 # The filter on the Notifications page. "warnings" is by severity, not by kind.
@@ -107,3 +116,17 @@ EVENT_GROUPS = ("gate", "admin", "warnings")
 
 def event_severity(kind: str) -> str:
     return "warning" if kind in WARNING_KINDS else "info"
+
+
+# ---- trucks and duty ----
+
+# A truck: Queued (registered, still outside) -> On site (let in, signed in) -> Departed
+# (signed out). Or Queued -> Left queue (gave up before entering, with a reason).
+TRUCK_STATUSES = ("queued", "on_site", "departed", "left_queue")
+TRUCK_OPEN_STATUSES = ("queued", "on_site")  # not finished yet
+
+MAX_GATES = 20  # a facility has 1 to MAX_GATES numbered gates
+
+# How a stretch of duty began / ended. "moved" = the officer changed gate mid-shift.
+DUTY_STARTED = ("on", "moved")
+DUTY_ENDED = ("off", "moved", "admin")

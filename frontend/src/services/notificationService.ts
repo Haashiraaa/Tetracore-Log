@@ -10,13 +10,19 @@ import type { EventGroup, EventItem } from "@/api/schemas";
 export type BadgeTone = "grey" | "blue" | "amber" | "green" | "red" | "ink";
 
 const KINDS: Record<string, { label: string; tone: BadgeTone }> = {
+  truck_queued: { label: "Truck queued", tone: "blue" },
   truck_in: { label: "Truck in", tone: "green" },
   truck_out: { label: "Truck out", tone: "grey" },
+  truck_left_queue: { label: "Left queue", tone: "amber" },
   visitor_in: { label: "Visitor in", tone: "green" },
   visitor_out: { label: "Visitor out", tone: "grey" },
   staff_in: { label: "Staff in", tone: "green" },
   staff_out: { label: "Staff out", tone: "grey" },
+  officer_on_duty: { label: "On duty", tone: "green" },
+  officer_off_duty: { label: "Off duty", tone: "grey" },
+  officer_gate_changed: { label: "Gate changed", tone: "grey" },
   facility_added: { label: "Facility", tone: "blue" },
+  gates_changed: { label: "Gates", tone: "blue" },
   officer_added: { label: "Officer added", tone: "blue" },
   officer_pin_reset: { label: "PIN reset", tone: "blue" },
   officer_disabled: { label: "Disabled", tone: "blue" },
@@ -26,6 +32,9 @@ const KINDS: Record<string, { label: string; tone: BadgeTone }> = {
   admin_revoked: { label: "Admin removed", tone: "blue" },
   already_inside: { label: "Already inside", tone: "amber" },
   left_inside: { label: "Left inside", tone: "red" },
+  queued_too_long: { label: "Queued too long", tone: "amber" },
+  on_duty_too_long: { label: "On duty too long", tone: "amber" },
+  gate_unmanned: { label: "Gate unmanned", tone: "red" },
 };
 
 export function eventLabel(e: EventItem): { label: string; tone: BadgeTone } {

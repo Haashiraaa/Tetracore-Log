@@ -1,5 +1,6 @@
 // frontend/src/pages/gate/TruckSignInForm.tsx
-// Confirm (returning truck) or enter (new truck) the driver's details, capture a signature, sign in.
+// Confirm (returning truck) or enter (new truck) the driver's details, then either put the
+// truck in the queue (no signature yet) or let it in now (the driver signs).
 //
 // `entryId` is generated ONCE when the form opens (by TruckInPage) and reused on every
 // retry. If the first request reached the server but the reply was lost, the retry
@@ -38,18 +39,23 @@ export function TruckSignInForm({ plate, mode, entryId, initial, onDone, onCance
   const [errors, setErrors] = useState<{ driverName?: string; signature?: string }>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [letIn, setLetIn] = useState(false);
   const pad = useRef<SignaturePadHandle>(null);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
 
-    const read = readPad(pad.current, SIGNATURE_MAX_BYTES);
+    const read = letIn ? readPad(pad.current, SIGNATURE_MAX_BYTES) : { png: null };
     if ("error" in read) {
       setErrors({ signature: read.error });
       return;
     }
 
-    const built = truckService.buildSignInRequest(entryId, { plate, driverName, driverPhone, company }, read.png);
+    const built = truckService.buildSignInRequest(
+      entryId,
+      { plate, driverName, driverPhone, company },
+      { enterNow: letIn, signaturePng: read.png },
+    );
     if (!built.ok) {
       setErrors(built.errors);
       return;
@@ -117,21 +123,32 @@ export function TruckSignInForm({ plate, mode, entryId, initial, onDone, onCance
         />
       </div>
 
-      <div className="field">
-        <span className="field__label">Driver's signature</span>
-        <SignaturePad ref={pad} disabled={busy} invalid={Boolean(errors.signature)} hint="Driver signs here" />
-        {errors.signature && (
-          <p className="field__error" role="alert">
-            {errors.signature}
-          </p>
-        )}
-      </div>
+      <label className="check">
+        <input type="checkbox" checked={letIn} onChange={(e) => setLetIn(e.target.checked)} disabled={busy} />
+        Let it in now (the driver signs)
+      </label>
 
-      <p className="muted">Gas bought is recorded when the truck signs out.</p>
+      {letIn && (
+        <div className="field">
+          <span className="field__label">Driver's signature</span>
+          <SignaturePad ref={pad} disabled={busy} invalid={Boolean(errors.signature)} hint="Driver signs here" />
+          {errors.signature && (
+            <p className="field__error" role="alert">
+              {errors.signature}
+            </p>
+          )}
+        </div>
+      )}
+
+      <p className="muted">
+        {letIn
+          ? "Gas bought is recorded when the truck signs out."
+          : "It waits in the queue until you let it in. The driver signs then."}
+      </p>
 
       <div className="row">
         <Button type="submit" className="btn--lead" loading={busy}>
-          Sign truck in
+          {letIn ? "Sign truck in" : "Add to queue"}
         </Button>
         <Button variant="ghost" onClick={onCancel} disabled={busy}>
           Cancel

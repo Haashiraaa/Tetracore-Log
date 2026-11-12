@@ -17,6 +17,10 @@ export const ErrorCode = {
   TruckAlreadyInside: "truck_already_inside",
   AlreadyInside: "already_inside",
   InvalidSignature: "invalid_signature",
+  NotOnDuty: "not_on_duty",
+  AlreadyOnDuty: "already_on_duty",
+  InvalidGate: "invalid_gate",
+  InvalidTruckState: "invalid_truck_state",
   // raised by this app
   Network: "network_error",
   Validation: "validation_error",

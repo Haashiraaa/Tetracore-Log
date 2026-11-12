@@ -47,6 +47,13 @@ class Settings:
     # How often the server looks for them. 0 turns the check off (the tests do).
     LEFT_INSIDE_CHECK_MINUTES = _int_env('LEFT_INSIDE_CHECK_MINUTES', 10)
 
+    # A truck still outside (queued) this many hours after it joined the queue.
+    QUEUED_WARN_HOURS = _int_env('QUEUED_WARN_HOURS', 6)
+    # An officer still on duty this many hours after their shift began.
+    DUTY_WARN_HOURS = _int_env('DUTY_WARN_HOURS', 14)
+    # A gate that had an officer and has had nobody for this many minutes. 0 turns it off.
+    GATE_UNMANNED_MINUTES = _int_env('GATE_UNMANNED_MINUTES', 15)
+
     @classmethod
     def push_enabled(cls) -> bool:
         return bool(cls.VAPID_PUBLIC_KEY and cls.VAPID_PRIVATE_KEY and cls.VAPID_SUBJECT)

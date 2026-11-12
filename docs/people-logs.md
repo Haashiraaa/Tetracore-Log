@@ -40,6 +40,7 @@ inside is refused with `409 already_inside`; sign them out first.
 
 ## Sign in and sign out
 
+The officer must be **on duty** (see [trucks-and-duty.md](trucks-and-duty.md)); the gate they stand at is recorded as `gate_in` / `gate_out`.
 Both need a signature. Older rows from before this rule may have none, so the database columns stay
 nullable; the API does not.
 
@@ -51,6 +52,7 @@ time in, Sign out). Trucks use the same list style.
 ## Trucks
 
 Trucks are found by plate. The driver's name follows the same two-word full-name rule.
+A truck's visit has a queue and statuses of its own: see [trucks-and-duty.md](trucks-and-duty.md).
 
 ## Data migration
 

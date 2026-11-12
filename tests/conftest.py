@@ -54,7 +54,7 @@ def _clean():
     yield
     with engine.begin() as conn:
         conn.execute(text(
-            "TRUNCATE events, event_cursors, push_subscriptions, truck_entries, "
+            "TRUNCATE events, event_cursors, push_subscriptions, duty_entries, truck_entries, "
             "visitor_entries, staff_entries, trucks, "
             "officer_sessions, officers, counters, facilities RESTART IDENTITY CASCADE"))
 

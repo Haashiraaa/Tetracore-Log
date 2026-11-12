@@ -15,7 +15,7 @@ PNG_B64 = base64.b64encode(PNG).decode()
 def payload(**over):
     base = {"id": str(uuid.uuid4()), "plate_number": "abc-123 xy",
             "driver_name": "Musa Ibrahim", "driver_phone": "08030000000",
-            "company": "Haulage Ltd", "signature": PNG_B64}
+            "company": "Haulage Ltd", "signature": PNG_B64, "enter_now": True}
     return {**base, **over}
 
 

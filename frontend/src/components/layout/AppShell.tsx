@@ -5,6 +5,7 @@ import { useRef, type ReactNode } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { useAuth, useOfficer } from "@/auth/AuthContext";
 import { canWriteEntries, isAdmin } from "@/auth/permissions";
+import { DutyProvider, useDuty } from "@/components/duty/DutyContext";
 import { NotificationsProvider, useNotifications } from "@/components/notifications/NotificationsContext";
 import { roleLabel } from "@/lib/format";
 
@@ -23,6 +24,7 @@ function Icon({ children }: { children: ReactNode }) {
 }
 
 const GATE: NavItem = { to: "/gate", label: "Gate", icon: <Icon><path d="M4 20V6M20 20V6M4 9h16M4 15h16" /></Icon> };
+const DUTY: NavItem = { to: "/duty", label: "Duty", icon: <Icon><path d="M12 3l7 3v5c0 4.500-3 8-7 10-4-2-7-5.500-7-10V6z" /><path d="M9 12l2 2 4-4" /></Icon> };
 const INSIDE: NavItem = { to: "/inside", label: "Inside", icon: <Icon><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="2.5" /></Icon> };
 const LOG: NavItem = { to: "/log", label: "Log", icon: <Icon><path d="M6 4h12v16H6zM9 9h6M9 13h6M9 17h3" /></Icon> };
 const ALERTS: NavItem = { to: "/notifications", label: "Alerts", icon: <Icon><path d="M6 17V11a6 6 0 0 1 12 0v6l1.500 2h-15zM10 21h4" /></Icon> };
@@ -39,12 +41,23 @@ function NavBadge({ to }: { to: string }) {
   );
 }
 
+/** On duty at which gate, or off duty: the first thing an officer needs to see. */
+function DutyChip() {
+  const duty = useDuty();
+  if (!duty || duty.status === null) return null;
+  return (
+    <Link to="/duty" className={duty.onDuty ? "duty-chip duty-chip--on" : "duty-chip"}>
+      {duty.onDuty ? `On duty, gate ${duty.gate}` : "Off duty"}
+    </Link>
+  );
+}
+
 export function AppShell() {
   const profile = useOfficer();
   const { logout } = useAuth();
   const menu = useRef<HTMLDetailsElement>(null);
 
-  const links = [canWriteEntries(profile) ? GATE : null, INSIDE, LOG, isAdmin(profile) ? ALERTS : null, isAdmin(profile) ? ADMIN : null].filter(
+  const links = [canWriteEntries(profile) ? GATE : null, INSIDE, LOG, DUTY, isAdmin(profile) ? ALERTS : null, isAdmin(profile) ? ADMIN : null].filter(
     (l): l is NavItem => l !== null,
   );
   const where = profile.facility_code ?? "All facilities";
@@ -69,6 +82,8 @@ export function AppShell() {
             </NavLink>
           ))}
         </nav>
+
+        <DutyChip />
 
         <details className="account" ref={menu}>
           <summary className="account__summary" aria-label="Account menu">
@@ -100,5 +115,6 @@ export function AppShell() {
       </main>
     </div>
   );
-  return isAdmin(profile) ? <NotificationsProvider>{frame}</NotificationsProvider> : frame;
+  const withDuty = canWriteEntries(profile) ? <DutyProvider>{frame}</DutyProvider> : frame;
+  return isAdmin(profile) ? <NotificationsProvider>{withDuty}</NotificationsProvider> : withDuty;
 }

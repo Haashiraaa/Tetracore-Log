@@ -29,19 +29,20 @@ from backend.src.exceptions.errors import (
 log = logging.getLogger(__name__)
 
 
-def _check_left_inside() -> None:
+def _check_warnings() -> None:
     with create_session() as db:
-        event_service.check_left_inside(db)
+        event_service.check_warnings(db)
 
 
-async def _watch_left_inside(every_minutes: int) -> None:
-    """Every few minutes, warn about anyone still inside long after signing in. Several
-    servers can run this at once: the database lets one warning through per entry."""
+async def _watch_warnings(every_minutes: int) -> None:
+    """Every few minutes, raise the warnings that are due (left inside, queued too long, on
+    duty too long, gate unmanned). Several servers can run this at once: the database lets
+    one warning through per entry."""
     while True:
         try:
-            await asyncio.to_thread(_check_left_inside)
+            await asyncio.to_thread(_check_warnings)
         except Exception:  # noqa: BLE001 - keep watching whatever one pass hit
-            log.exception("left-inside check failed")
+            log.exception("warning check failed")
         await asyncio.sleep(every_minutes * 60)
 
 
@@ -51,7 +52,7 @@ async def lifespan(_app: FastAPI):
     Settings.require_pin_pepper()
     watcher = None
     if Settings.LEFT_INSIDE_CHECK_MINUTES > 0:
-        watcher = asyncio.create_task(_watch_left_inside(Settings.LEFT_INSIDE_CHECK_MINUTES))
+        watcher = asyncio.create_task(_watch_warnings(Settings.LEFT_INSIDE_CHECK_MINUTES))
     try:
         yield
     finally:

@@ -104,6 +104,28 @@ class AlreadyInsideError(ConflictError):
     message = "That person is already inside. Sign them out first."
 
 
+class NotOnDutyError(ConflictError):
+    code = "not_on_duty"
+    message = "Go on duty first. Pick your gate on the Duty page."
+
+
+class AlreadyOnDutyError(ConflictError):
+    code = "already_on_duty"
+    message = "You are already on duty."
+
+
+class InvalidGateError(ConflictError):
+    code = "invalid_gate"
+    message = "That gate does not exist at this facility."
+
+
+class InvalidTruckStateError(ConflictError):
+    """The truck is not where this action needs it (e.g. signing out one still queued)."""
+
+    code = "invalid_truck_state"
+    message = "That truck is not in the right state for this."
+
+
 class InvalidSignatureError(DomainError):
     code = "invalid_signature"
     message = "Signature image is invalid."

@@ -24,7 +24,8 @@ from sqlalchemy.orm import Session
 from backend.src.api import push
 from backend.src.api.schemas import EventOut, EventsSummaryOut
 from backend.src.config.settings import Settings
-from backend.src.db.orm.tables import Event, StaffEntry, TruckEntry, VisitorEntry
+from backend.src.db.orm.tables import Event, Facility, StaffEntry, TruckEntry, VisitorEntry
+from backend.src.db.queries import duty as duty_q
 from backend.src.db.queries import events as q
 from backend.src.models import event_severity
 from backend.src.security.tokens import utcnow
@@ -46,34 +47,88 @@ def announce(*event_ids: int) -> None:
     push.dispatch(event_ids)
 
 
-# ---- "left inside": nobody does it, so the server notices ----
+# ---- warnings nobody triggers, so the server notices ----
 
-_LOGS = (
-    (TruckEntry, "Truck {who}", "plate_number"),
+_PEOPLE_LOGS = (
     (VisitorEntry, "{who}", "full_name"),
     (StaffEntry, "{who}", "full_name"),
 )
 
 
-def check_left_inside(db: Session) -> list[int]:
-    """Warn once for every entry still open LEFT_INSIDE_HOURS after sign-in. Safe to run
-    from several servers at once: the database lets only one of them raise each warning.
-    Returns the new event ids (already committed and announced)."""
-    cutoff = utcnow() - timedelta(hours=Settings.LEFT_INSIDE_HOURS)
+def _raise(db: Session, new: list[int], *, kind: str, summary: str,
+           facility_id: uuid.UUID, entry_id: uuid.UUID) -> None:
+    event_id = q.add_raised(
+        db, kind=kind, summary=summary, facility_id=facility_id, entry_id=entry_id)
+    if event_id is not None:
+        new.append(event_id)
+
+
+def _check_left_inside(db: Session, new: list[int]) -> None:
     hours = Settings.LEFT_INSIDE_HOURS
-    new: list[int] = []
-    for model, template, who_column in _LOGS:
+    cutoff = utcnow() - timedelta(hours=hours)
+    for model, template, column in _PEOPLE_LOGS:
         rows = db.execute(
-            select(model.id, model.facility_id, getattr(model, who_column))
-            .where(model.signed_out_at.is_(None), model.signed_in_at < cutoff)
-        ).all()
+            select(model.id, model.facility_id, getattr(model, column))
+            .where(model.signed_out_at.is_(None), model.signed_in_at < cutoff)).all()
         for entry_id, facility_id, who in rows:
-            summary = (f"{template.format(who=who)} is still inside, "
-                       f"{hours}+ hours after signing in.")
-            event_id = q.add_left_inside(
-                db, summary=summary, facility_id=facility_id, entry_id=entry_id)
-            if event_id is not None:
-                new.append(event_id)
+            _raise(db, new, kind="left_inside", facility_id=facility_id, entry_id=entry_id,
+                   summary=f"{template.format(who=who)} is still inside, "
+                           f"{hours}+ hours after signing in.")
+    # Trucks count from when they entered. A queued truck is not inside.
+    rows = db.execute(
+        select(TruckEntry.id, TruckEntry.facility_id, TruckEntry.plate_number)
+        .where(TruckEntry.status == "on_site", TruckEntry.entered_at < cutoff)).all()
+    for entry_id, facility_id, plate in rows:
+        _raise(db, new, kind="left_inside", facility_id=facility_id, entry_id=entry_id,
+               summary=f"Truck {plate} is still inside, {hours}+ hours after entering.")
+
+
+def _check_queued_too_long(db: Session, new: list[int]) -> None:
+    hours = Settings.QUEUED_WARN_HOURS
+    if hours <= 0:
+        return
+    cutoff = utcnow() - timedelta(hours=hours)
+    rows = db.execute(
+        select(TruckEntry.id, TruckEntry.facility_id, TruckEntry.plate_number)
+        .where(TruckEntry.status == "queued", TruckEntry.signed_in_at < cutoff)).all()
+    for entry_id, facility_id, plate in rows:
+        _raise(db, new, kind="queued_too_long", facility_id=facility_id, entry_id=entry_id,
+               summary=f"Truck {plate} has been in the queue for {hours}+ hours.")
+
+
+def _check_on_duty_too_long(db: Session, new: list[int]) -> None:
+    hours = Settings.DUTY_WARN_HOURS
+    if hours <= 0:
+        return
+    cutoff = utcnow() - timedelta(hours=hours)
+    for shift_id, facility_id, name, gate, _started in duty_q.shifts_running_since(db, cutoff):
+        _raise(db, new, kind="on_duty_too_long", facility_id=facility_id, entry_id=shift_id,
+               summary=f"{name} has been on duty for {hours}+ hours (gate {gate}).")
+
+
+def _check_gate_unmanned(db: Session, new: list[int]) -> None:
+    minutes = Settings.GATE_UNMANNED_MINUTES
+    if minutes <= 0:
+        return
+    now = utcnow()
+    for last_id, facility_id, gate, _left in duty_q.vacated_gates(
+            db, older_than=now - timedelta(minutes=minutes),
+            newer_than=now - timedelta(hours=24)):
+        facility = db.get(Facility, facility_id)
+        where = f" at {facility.code}" if facility is not None else ""
+        _raise(db, new, kind="gate_unmanned", facility_id=facility_id, entry_id=last_id,
+               summary=f"Gate {gate}{where} has had nobody on duty for {minutes}+ minutes.")
+
+
+def check_warnings(db: Session) -> list[int]:
+    """Raise every warning that is due. Safe to run from several servers at once: the
+    database lets only one of them raise each one. Returns the new event ids (already
+    committed and announced)."""
+    new: list[int] = []
+    _check_left_inside(db, new)
+    _check_queued_too_long(db, new)
+    _check_on_duty_too_long(db, new)
+    _check_gate_unmanned(db, new)
     db.commit()
     announce(*new)
     return new

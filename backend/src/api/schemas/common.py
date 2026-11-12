@@ -93,6 +93,8 @@ class EntryOut(BaseModel):
     signed_out_by: Optional[uuid.UUID]
     signed_out_by_name: Optional[str]
     device_id: Optional[str]
+    gate_in: Optional[int]
+    gate_out: Optional[int]
     has_signature: bool  # signed in
     has_signature_out: bool
     created_at: datetime
@@ -106,7 +108,8 @@ class EntryOut(BaseModel):
             signed_in_at=e.signed_in_at, signed_out_at=e.signed_out_at,
             signed_in_by=e.signed_in_by, signed_in_by_name=in_name,
             signed_out_by=e.signed_out_by, signed_out_by_name=out_name,
-            device_id=e.device_id, has_signature=bool(has_sig_in),
+            device_id=e.device_id, gate_in=e.gate_in, gate_out=e.gate_out,
+            has_signature=bool(has_sig_in),
             has_signature_out=bool(has_sig_out),
             created_at=e.created_at, updated_at=e.updated_at,
         )

@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { AnyEntry } from "@/api/schemas";
 import { useOfficer } from "@/auth/AuthContext";
+import { useDuty } from "@/components/duty/DutyContext";
 import { Badge } from "@/components/ui/Badge";
 import { Banner } from "@/components/ui/Banner";
 import { PlateChip } from "@/components/ui/PlateChip";
@@ -83,6 +84,7 @@ function Tile({
 
 export default function GateHomePage() {
   const profile = useOfficer();
+  const duty = useDuty();
   const inside = useAsync((signal) => Promise.all(LOG_KINDS.map((k) => entryService.fetchInside(k, signal))), []);
   const recent = useAsync(
     (signal) => Promise.all(LOG_KINDS.map((k) => entryService.fetchRecent(k, RECENT_PER_LOG, signal))),
@@ -117,6 +119,12 @@ export default function GateHomePage() {
             </Link>
           </div>
         </section>
+
+        {duty && duty.status !== null && !duty.onDuty && (
+          <Banner tone="warn">
+            You are off duty. <Link to="/duty">Go on duty</Link> to sign trucks, visitors and staff in or out.
+          </Banner>
+        )}
 
         {failure !== null && inside.data === null && <Banner tone="error">{errorMessage(failure)}</Banner>}
 

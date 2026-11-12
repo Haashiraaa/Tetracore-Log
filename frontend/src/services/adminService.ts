@@ -26,16 +26,41 @@ export interface PinReveal {
 
 // ---- facilities ----
 
+export const MAX_GATES = 20;
+
+/** "4" -> 4; null when it is not a whole number from 1 to 20. */
+export function parseGateCount(raw: string): number | null {
+  const text = raw.trim();
+  if (!/^\d{1,2}$/.test(text)) return null;
+  const n = Number(text);
+  return n >= 1 && n <= MAX_GATES ? n : null;
+}
+
+export const GATE_COUNT_ERROR = `Enter a number of gates from 1 to ${MAX_GATES}.`;
+
 export function validateFacility(
   state: string,
   name: string,
-): { ok: true; value: CreateFacilityRequest } | { ok: false; errors: FieldErrors<"state" | "name"> } {
-  const errors: FieldErrors<"state" | "name"> = {};
+  gates: string,
+): { ok: true; value: CreateFacilityRequest } | { ok: false; errors: FieldErrors<"state" | "name" | "gates"> } {
+  const errors: FieldErrors<"state" | "name" | "gates"> = {};
   const n = name.trim();
+  const gateCount = parseGateCount(gates);
   if (!state) errors.state = "Choose the state.";
   if (n.length < 2) errors.name = "Enter the facility name.";
-  if (Object.keys(errors).length > 0) return { ok: false, errors };
-  return { ok: true, value: { state, name: n } };
+  if (gateCount === null) errors.gates = GATE_COUNT_ERROR;
+  if (Object.keys(errors).length > 0 || gateCount === null) return { ok: false, errors };
+  return { ok: true, value: { state, name: n, gate_count: gateCount } };
+}
+
+export function setGates(facilityCode: string, gates: string): Promise<Facility> {
+  const gateCount = parseGateCount(gates);
+  if (gateCount === null) return Promise.reject(new Error(GATE_COUNT_ERROR));
+  return adminApi.setGates(facilityCode, gateCount);
+}
+
+export function endDuty(officerId: string): Promise<void> {
+  return adminApi.endDuty(officerId);
 }
 
 export function listStates(signal?: AbortSignal): Promise<StateOption[]> {

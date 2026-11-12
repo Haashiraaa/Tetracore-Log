@@ -27,7 +27,7 @@ def person(**over):
 
 def truck(**over):
     return {"id": str(uuid.uuid4()), "plate_number": "abc-123 xy", "driver_name": "Musa Ibrahim",
-            "driver_phone": "08030000000", "signature": PNG_B64, **over}
+            "driver_phone": "08030000000", "signature": PNG_B64, "enter_now": True, **over}
 
 
 def sign_in(client, who, log, body):
@@ -89,7 +89,8 @@ def test_signing_in_someone_already_inside_is_a_warning(client, officer_a, admin
     warnings = feed(client, admin, group="warnings")
     assert [w["kind"] for w in warnings] == ["already_inside", "already_inside"]
     assert {w["severity"] for w in warnings} == {"warning"}
-    assert warnings[0]["summary"] == "Truck ABC123XY tried to sign in but is already inside."
+    assert warnings[0]["summary"] == (
+        "Truck ABC123XY tried to sign in but is already queued or inside.")
     assert warnings[1]["summary"] == "Ada Okoro tried to sign in but is already inside."
     # the refused attempt made no sign-in
     assert kinds(feed(client, admin, group="gate")) == ["visitor_in", "truck_in"]
@@ -111,7 +112,7 @@ def test_admin_changes_are_recorded_with_who_did_them(client, admin):
     assert kinds(events) == ["facility_added", "officer_added", "officer_pin_reset",
                              "officer_disabled", "officer_enabled", "sessions_revoked"]
     assert events[-1].get("facility_code") == fac["code"]
-    assert f"Facility {fac['code']} (Ikeja Station) was added." == events[-1]["summary"]
+    assert f"Facility {fac['code']} (Ikeja Station) was added with 1 gate." == events[-1]["summary"]
     assert {e["actor_name"] for e in events} == {"Test ADM-001"}
     assert all(e["severity"] == "info" for e in events)
 
@@ -188,6 +189,8 @@ def _age(model, entry_id, hours):
         row = db.get(model, uuid.UUID(entry_id))
         assert row is not None
         row.signed_in_at = utcnow() - timedelta(hours=hours)
+        if model is TruckEntry:  # a truck counts from when it came in, not when it queued
+            row.entered_at = row.signed_in_at
         db.commit()
 
 
@@ -203,14 +206,14 @@ def test_people_left_inside_overnight_are_reported_once(client, officer_a, admin
     _age(StaffEntry, recent["id"], Settings.LEFT_INSIDE_HOURS - 1)  # not yet
 
     with create_session() as db:
-        assert len(event_service.check_left_inside(db)) == 3
+        assert len(event_service.check_warnings(db)) == 3
     with create_session() as db:
-        assert event_service.check_left_inside(db) == []  # already reported: nothing new
+        assert event_service.check_warnings(db) == []  # already reported: nothing new
 
     found = feed(client, admin, group="warnings")
     assert {w["kind"] for w in found} == {"left_inside"}
     assert sorted(w["summary"] for w in found) == sorted([
-        f"Truck ABC123XY is still inside, {Settings.LEFT_INSIDE_HOURS}+ hours after signing in.",
+        f"Truck ABC123XY is still inside, {Settings.LEFT_INSIDE_HOURS}+ hours after entering.",
         f"Ngozi Eze is still inside, {Settings.LEFT_INSIDE_HOURS}+ hours after signing in.",
         f"Ada Okoro is still inside, {Settings.LEFT_INSIDE_HOURS}+ hours after signing in."])
     assert all(w["actor_name"] is None and w["facility_code"] == "CNG-A" for w in found)
