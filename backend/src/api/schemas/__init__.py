@@ -39,6 +39,7 @@ from backend.src.api.schemas.events import (
     MarkReadRequest,
     PushConfigOut,
     PushSubscribeRequest,
+    PushTestOut,
     PushUnsubscribeRequest,
 )
 from backend.src.api.schemas.staff import StaffEntryOut, StaffLookupOut, StaffSignInRequest
@@ -61,7 +62,7 @@ __all__ = [
     "DutyStatusOut",
     "AdminOfficerOut", "StateOut", "ChangePinRequest", "CreateFacilityRequest",
     "CreateOfficerRequest", "CreateOfficerResponse", "CurrentOfficer",
-    "EventOut", "EventsSummaryOut", "MarkReadRequest", "PushConfigOut",
+    "EventOut", "EventsSummaryOut", "MarkReadRequest", "PushConfigOut", "PushTestOut",
     "PushSubscribeRequest", "PushUnsubscribeRequest",
     "EntryOut", "EntrySignInRequest", "EntrySignOutRequest", "FacilityOut",
     "LoginRequest", "LoginResponse", "LoginResult", "LogoutRequest",

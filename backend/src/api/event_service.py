@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session
 from backend.src.api import push
 from backend.src.api.schemas import EventOut, EventsSummaryOut
 from backend.src.config.settings import Settings
-from backend.src.db.orm.tables import Event, Facility, StaffEntry, TruckEntry, VisitorEntry
+from backend.src.db.orm.tables import Event, Facility, TruckEntry, VisitorEntry
 from backend.src.db.queries import duty as duty_q
 from backend.src.db.queries import events as q
 from backend.src.models import event_severity
@@ -49,9 +49,9 @@ def announce(*event_ids: int) -> None:
 
 # ---- warnings nobody triggers, so the server notices ----
 
+# Staff are left out on purpose: staying inside has many ordinary reasons, so it is only noise.
 _PEOPLE_LOGS = (
     (VisitorEntry, "{who}", "full_name"),
-    (StaffEntry, "{who}", "full_name"),
 )
 
 

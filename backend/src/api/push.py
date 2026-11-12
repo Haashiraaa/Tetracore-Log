@@ -64,6 +64,40 @@ def _send_all(event_ids: list[int]) -> None:
         log.exception("push dispatch failed")
 
 
+def send_test(db, officer_id) -> dict:
+    """Send a test notification to this admin's own browsers, one by one, and say what happened.
+    Unlike real pushes this waits for the answer, so a failure is shown, not only logged."""
+    subs = [s for s in q.admin_subscriptions(db) if s.officer_id == officer_id]
+    data = json.dumps({"title": "Tetracore Log", "body": "Test notification. Push is working.",
+                       "tag": "push-test", "url": "/notifications"})
+    sent, failed = 0, []
+    for sub in subs:
+        try:
+            webpush(
+                subscription_info={"endpoint": sub.endpoint,
+                                   "keys": {"p256dh": sub.p256dh, "auth": sub.auth}},
+                data=data, vapid_private_key=Settings.VAPID_PRIVATE_KEY,
+                vapid_claims={"sub": Settings.VAPID_SUBJECT}, ttl=60)
+            sent += 1
+        except WebPushException as exc:
+            status = getattr(exc.response, "status_code", None)
+            if status in _GONE:
+                q.delete_subscription_by_endpoint(db, sub.endpoint)
+                failed.append("The push service forgot this browser. "
+                              "Turn notifications off and on again.")
+            elif status in (400, 401, 403):
+                failed.append("The push service rejected the server's keys. "
+                              "Turn notifications off and on again on this device.")
+            else:
+                failed.append(f"The push service answered {status or 'with an error'}.")
+            log.warning("test push failed (%s): %s", status, exc)
+        except Exception as exc:  # noqa: BLE001
+            failed.append("The server could not send the push.")
+            log.warning("test push failed: %s", exc)
+    db.commit()
+    return {"subscriptions": len(subs), "sent": sent, "failed": failed}
+
+
 def _send_one(db, endpoint: str, p256dh: str, auth: str, data: str) -> None:
     try:
         webpush(

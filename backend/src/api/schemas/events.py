@@ -42,6 +42,15 @@ class MarkReadRequest(BaseModel):
     up_to_id: Optional[int] = Field(default=None, ge=0)  # None = everything so far
 
 
+class PushTestOut(BaseModel):
+    """What the test notification did: how many of this admin's browsers there are, how many
+    took it, and a plain reason for each that did not."""
+
+    subscriptions: int
+    sent: int
+    failed: list[str]
+
+
 class PushConfigOut(BaseModel):
     """public_key is None when the server has no push keys: the app then hides the switch."""
 

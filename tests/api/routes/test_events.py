@@ -198,15 +198,11 @@ def test_people_left_inside_overnight_are_reported_once(client, officer_a, admin
     t = sign_in(client, officer_a, "trucks", truck()).json()
     v = sign_in(client, officer_a, "visitors", person(full_name="Ngozi Eze")).json()
     s = sign_in(client, officer_a, "staff", person()).json()
-    recent = sign_in(client, officer_a, "staff", person()).json()
-    gone = sign_in(client, officer_a, "staff", person()).json()
-    sign_out(client, officer_a, "staff", gone["id"])
-    for model, e in ((TruckEntry, t), (VisitorEntry, v), (StaffEntry, s), (StaffEntry, gone)):
+    for model, e in ((TruckEntry, t), (VisitorEntry, v), (StaffEntry, s)):
         _age(model, e["id"], Settings.LEFT_INSIDE_HOURS + 1)
-    _age(StaffEntry, recent["id"], Settings.LEFT_INSIDE_HOURS - 1)  # not yet
 
     with create_session() as db:
-        assert len(event_service.check_warnings(db)) == 3
+        assert len(event_service.check_warnings(db)) == 2  # staff are never "left inside"
     with create_session() as db:
         assert event_service.check_warnings(db) == []  # already reported: nothing new
 
@@ -214,8 +210,7 @@ def test_people_left_inside_overnight_are_reported_once(client, officer_a, admin
     assert {w["kind"] for w in found} == {"left_inside"}
     assert sorted(w["summary"] for w in found) == sorted([
         f"Truck ABC123XY is still inside, {Settings.LEFT_INSIDE_HOURS}+ hours after entering.",
-        f"Ngozi Eze is still inside, {Settings.LEFT_INSIDE_HOURS}+ hours after signing in.",
-        f"Ada Okoro is still inside, {Settings.LEFT_INSIDE_HOURS}+ hours after signing in."])
+        f"Ngozi Eze is still inside, {Settings.LEFT_INSIDE_HOURS}+ hours after signing in."])
     assert all(w["actor_name"] is None and w["facility_code"] == "CNG-A" for w in found)
 
 
@@ -340,3 +335,29 @@ def test_subscribing_validates_the_browsers_shape(client, admin):
     r = client.post("/api/admin/push/subscribe", headers=admin.headers,
                     json={"endpoint": "x", "keys": {}})
     assert r.status_code == 422
+
+
+def test_push_test_reports_what_happened(client, admin, officer_a, push_on, monkeypatch):
+    assert client.post("/api/admin/push/test", headers=officer_a.headers).status_code == 403
+    assert client.post("/api/admin/push/test", headers=admin.headers).json() == {
+        "subscriptions": 0, "sent": 0, "failed": []}
+    subscribe(client, admin, "https://push.example/phone")
+    push_on.clear()
+    body = client.post("/api/admin/push/test", headers=admin.headers).json()
+    assert body == {"subscriptions": 1, "sent": 1, "failed": []}
+    assert push_on[0]["subscription_info"]["endpoint"] == "https://push.example/phone"
+
+    from pywebpush import WebPushException
+
+    class Resp:
+        status_code = 403
+
+    def refuse(**kw):
+        raise WebPushException("keys", response=Resp())
+    monkeypatch.setattr(push, "webpush", refuse)
+    body = client.post("/api/admin/push/test", headers=admin.headers).json()
+    assert body["sent"] == 0 and "keys" in body["failed"][0]
+
+
+def test_push_test_needs_push_to_be_set_up(client, admin):
+    assert client.post("/api/admin/push/test", headers=admin.headers).status_code == 409
