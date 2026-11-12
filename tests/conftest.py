@@ -25,7 +25,8 @@ os.environ["DATABASE_URL"] = _TEST_URL
 os.environ["JWT_SECRET"] = "t" * 48
 os.environ["PIN_PEPPER"] = "p" * 48
 os.environ["LEFT_INSIDE_CHECK_MINUTES"] = "0"  # no background watcher: tests call it directly
-os.environ.pop("VAPID_PRIVATE_KEY", None)       # push stays off unless a test turns it on
+for _name in ("VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "VAPID_SUBJECT"):
+    os.environ.pop(_name, None)  # a developer's own .env keys must not switch push on in tests
 
 from alembic.config import Config  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
