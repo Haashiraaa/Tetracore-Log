@@ -4,6 +4,13 @@ All notable changes to Tetracore Log. Entries above the baseline are written aut
 release-please from commit messages when a release pull request is merged (see
 [docs/releasing.md](docs/releasing.md)), so do not edit them by hand.
 
+## [0.10.1](https://github.com/Haashiraaa/Tetracore-Log/compare/v0.10.0...v0.10.1) (2026-11-12)
+
+
+### Bug fixes
+
+* **notifications:** recover from stale push keys, add test push, stop staff left-inside warnings ([#25](https://github.com/Haashiraaa/Tetracore-Log/issues/25)) ([e0e27a2](https://github.com/Haashiraaa/Tetracore-Log/commit/e0e27a26c976208d5b67a2c2b3673b730cdfb770))
+
 ## [0.10.0](https://github.com/Haashiraaa/Tetracore-Log/compare/v0.9.0...v0.10.0) (2026-11-12)
 
 
