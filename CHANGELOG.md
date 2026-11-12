@@ -4,6 +4,13 @@ All notable changes to Tetracore Log. Entries above the baseline are written aut
 release-please from commit messages when a release pull request is merged (see
 [docs/releasing.md](docs/releasing.md)), so do not edit them by hand.
 
+## [0.9.0](https://github.com/Haashiraaa/Tetracore-Log/compare/v0.8.0...v0.9.0) (2026-11-12)
+
+
+### Features
+
+* **trucks:** truck queue, facility gates and the officers' duty log ([#21](https://github.com/Haashiraaa/Tetracore-Log/issues/21)) ([76ae068](https://github.com/Haashiraaa/Tetracore-Log/commit/76ae0683a6ae908be68a5ebf4105649d56fc4637))
+
 ## [0.8.0](https://github.com/Haashiraaa/Tetracore-Log/compare/v0.7.0...v0.8.0) (2026-11-11)
 
 
