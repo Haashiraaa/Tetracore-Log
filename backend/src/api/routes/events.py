@@ -10,7 +10,7 @@ from typing import Literal, Optional
 from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 
-from backend.src.api import event_service
+from backend.src.api import event_service, push
 from backend.src.api.deps import require_admin
 from backend.src.api.schemas import (
     CurrentOfficer,
@@ -19,10 +19,12 @@ from backend.src.api.schemas import (
     MarkReadRequest,
     PushConfigOut,
     PushSubscribeRequest,
+    PushTestOut,
     PushUnsubscribeRequest,
 )
 from backend.src.config.settings import Settings
 from backend.src.db.session import get_db
+from backend.src.exceptions.errors import ConflictError
 
 router = APIRouter(
     prefix="/admin/events", tags=["notifications"], dependencies=[Depends(require_admin)]
@@ -86,3 +88,13 @@ def push_unsubscribe(
 ) -> Response:
     event_service.unsubscribe(db, admin.officer_id, body.endpoint)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@push_router.post("/test", response_model=PushTestOut)
+def push_test(
+    admin: CurrentOfficer = Depends(require_admin), db: Session = Depends(get_db),
+) -> PushTestOut:
+    """Send a test notification to the calling admin's own browsers and report what happened."""
+    if not Settings.push_enabled():
+        raise ConflictError("Push is not set up on the server.")
+    return PushTestOut(**push.send_test(db, admin.officer_id))

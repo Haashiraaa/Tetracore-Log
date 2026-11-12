@@ -10,7 +10,7 @@ pushed to their phone or laptop. Code: `backend/src/api/event_service.py`, `push
 |---|---|---|
 | **Gate** | `truck_queued`, `truck_in`, `truck_out`, `truck_left_queue`, `visitor_in`, `visitor_out`, `staff_in`, `staff_out`, `officer_on_duty`, `officer_off_duty`, `officer_gate_changed` | Every sign-in and sign-out, every change in a truck's queue, and every officer going on duty, off duty or changing gate, in every facility |
 | **Admin** | `facility_added`, `gates_changed`, `officer_added`, `officer_pin_reset`, `officer_disabled`, `officer_enabled`, `sessions_revoked`, `admin_granted`, `admin_revoked` | Changes made on the Accounts page, and admin changes made from the server console (`tetracore-admin`) |
-| **Warnings** | `already_inside`, `left_inside`, `queued_too_long`, `on_duty_too_long`, `gate_unmanned` | Someone is signed in who is still inside, someone is still inside many hours after signing in, a truck has queued too long, an officer has been on duty too long, or a gate has nobody on it |
+| **Warnings** | `already_inside`, `left_inside`, `queued_too_long`, `on_duty_too_long`, `gate_unmanned` | Someone is signed in who is still inside, a visitor or truck is still inside many hours after signing in, a truck has queued too long, an officer has been on duty too long, or a gate has nobody on it |
 
 Nothing else is recorded: logins, failed logins and PIN changes are **not** events.
 
@@ -28,6 +28,7 @@ Nothing else is recorded: logins, failed logins and PIN changes are **not** even
 - **`left_inside`**: nobody is acting, so the server notices. Every `LEFT_INSIDE_CHECK_MINUTES`
   minutes it looks for entries still open `LEFT_INSIDE_HOURS` after sign-in and raises **one** warning
   per entry (the database refuses a second, so several servers can run the check safely).
+  **Staff are not checked**: a staff member can stay inside for many ordinary reasons, so it would only be noise.
   A truck counts from when it was let in (`entered_at`); a truck still in the queue is never "left inside".
   Set `LEFT_INSIDE_CHECK_MINUTES=0` to turn all the server's checks off.
 - **`queued_too_long`**, **`on_duty_too_long`**, **`gate_unmanned`**: raised by the same check, once each. What they
@@ -57,6 +58,9 @@ Alerts page; the browser asks permission once.
 2. Put the three lines in the server's `.env` (set `VAPID_SUBJECT` to a real `mailto:`), restart the API.
 3. Open the Alerts page on each device and press **Turn on**.
 
+Check it with **Send test notification** (shown when the device is on). It sends to your own devices
+and says why it failed. On startup the server logs whether push is on or off.
+
 Things to know:
 
 - Push needs **https** (or `localhost`). Over plain `http://<laptop-ip>` the page says the browser
@@ -66,6 +70,8 @@ Things to know:
 - Push is sent after the request has finished, on a small thread pool. A slow or dead push service can
   never slow the gate down, and a failed push is logged and dropped: the event is in the feed either way.
 - A browser the push service reports gone (404/410) is forgotten automatically.
+- If you regenerate the VAPID keys, browsers set up under the old keys stop receiving. The app notices
+  and switches that device back to **Turn on**; press it once to subscribe under the new key.
 - Logging out does not turn push off for that device. Use **Turn off** first if the device is shared.
 
 ## API (all admin-only)
@@ -78,6 +84,7 @@ Things to know:
 | `GET /admin/push/config` | `{public_key}`, `null` when push is not set up |
 | `POST /admin/push/subscribe` | The browser's `PushSubscription` JSON |
 | `POST /admin/push/unsubscribe` | `{endpoint}` |
+| `POST /admin/push/test` | Sends a test to the caller's own browsers: `{subscriptions, sent, failed[]}`. 409 if push is not set up |
 
 ## Settings
 

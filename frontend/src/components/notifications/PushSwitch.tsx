@@ -4,13 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { errorMessage } from "@/exceptions/errors";
-import { disablePush, enablePush, loadPushState, type PushState } from "@/services/notificationService";
+import { disablePush, enablePush, loadPushState, sendTestPush, type PushState } from "@/services/notificationService";
 
 export function PushSwitch() {
   const [state, setState] = useState<PushState | null>(null);
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<{ ok: boolean; message: string } | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -40,6 +41,19 @@ export function PushSwitch() {
     }
   }
 
+  async function test() {
+    setBusy(true);
+    setError(null);
+    setNote(null);
+    try {
+      setNote(await sendTestPush());
+    } catch (e) {
+      setError(e instanceof Error && !("code" in e) ? e.message : errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (state === null || state === "unconfigured") return null;
 
   return (
@@ -57,11 +71,17 @@ export function PushSwitch() {
         {state === "off" && <p className="muted">Get every event as a notification, even when the app is closed.</p>}
         {state === "on" && <p className="muted">On. Every event reaches this device.</p>}
       </div>
+      {state === "on" && (
+        <Button variant="secondary" loading={busy} onClick={() => void test()}>
+          Send test notification
+        </Button>
+      )}
       {(state === "off" || state === "on") && (
         <Button variant={state === "on" ? "secondary" : "primary"} loading={busy} onClick={() => void toggle()}>
           {state === "on" ? "Turn off" : "Turn on"}
         </Button>
       )}
+      {note && <Banner tone={note.ok ? "success" : "error"}>{note.message}</Banner>}
       {error && <Banner tone="error">{error}</Banner>}
     </section>
   );

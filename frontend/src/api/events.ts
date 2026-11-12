@@ -31,3 +31,14 @@ export function pushSubscribe(sub: PushSubscriptionJson): Promise<void> {
 export function pushUnsubscribe(endpoint: string): Promise<void> {
   return request<void>("/admin/push/unsubscribe", { method: "POST", body: { endpoint } });
 }
+
+export interface PushTestResult {
+  subscriptions: number;
+  sent: number;
+  failed: string[];
+}
+
+/** Sends a test notification to this admin's own browsers and says what happened. */
+export function pushTest(): Promise<PushTestResult> {
+  return request<PushTestResult>("/admin/push/test", { method: "POST" });
+}

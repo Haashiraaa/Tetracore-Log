@@ -50,6 +50,11 @@ async def _watch_warnings(every_minutes: int) -> None:
 async def lifespan(_app: FastAPI):
     Settings.require_jwt_secret()
     Settings.require_pin_pepper()
+    if Settings.push_enabled():
+        log.info("browser push is on")
+    else:
+        log.warning("browser push is OFF: set VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and "
+                    "VAPID_SUBJECT in .env (python -m scripts.vapid_keys) and restart")
     watcher = None
     if Settings.LEFT_INSIDE_CHECK_MINUTES > 0:
         watcher = asyncio.create_task(_watch_warnings(Settings.LEFT_INSIDE_CHECK_MINUTES))
