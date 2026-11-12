@@ -4,6 +4,13 @@ All notable changes to Tetracore Log. Entries above the baseline are written aut
 release-please from commit messages when a release pull request is merged (see
 [docs/releasing.md](docs/releasing.md)), so do not edit them by hand.
 
+## [0.10.0](https://github.com/Haashiraaa/Tetracore-Log/compare/v0.9.0...v0.10.0) (2026-11-12)
+
+
+### Features
+
+* **scripts:** add the tetracore-admin command ([#23](https://github.com/Haashiraaa/Tetracore-Log/issues/23)) ([a615934](https://github.com/Haashiraaa/Tetracore-Log/commit/a615934e7a0443addb3cadc200912e1fef96905a))
+
 ## [0.9.0](https://github.com/Haashiraaa/Tetracore-Log/compare/v0.8.0...v0.9.0) (2026-11-12)
 
 
