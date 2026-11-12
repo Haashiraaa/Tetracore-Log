@@ -4,12 +4,15 @@
 
 """The ONLY place admins are set or dropped. No API route can do it.
 
-    python -m scripts.admin_manager create --code ADM-01 --name "Ada Obi"
-    python -m scripts.admin_manager grant  --code OFF-003 --facility CNG-LAG-01
-    python -m scripts.admin_manager revoke --code ADM-01
-    python -m scripts.admin_manager reset-pin --code ADM-01
-    python -m scripts.admin_manager list          # admins only
-    python -m scripts.admin_manager list --all    # every account, admin or not
+    tetracore-admin create --code ADM-01 --name "Ada Obi"
+    tetracore-admin grant  --code OFF-003 --facility CNG-LAG-01
+    tetracore-admin revoke --code ADM-01
+    tetracore-admin reset-pin --code ADM-01
+    tetracore-admin list          # admins only
+    tetracore-admin list --all    # every account, admin or not
+
+`tetracore-admin` is registered in pyproject.toml (`[project.scripts]`) and appears after
+`pip install -e .`. `python -m scripts.admin_manager ...` does the same thing.
 
 Add --facility CODE for accounts that belong to a facility; leave it out for a
 global account. PINs are prompted (hidden), never passed as arguments. `revoke`
@@ -154,7 +157,8 @@ COMMANDS: dict[str, tuple[str, Handler, Callable[[argparse.ArgumentParser], None
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Manage Tetracore Log admins.")
+    parser = argparse.ArgumentParser(
+        prog="tetracore-admin", description="Manage Tetracore Log admins.")
     sub = parser.add_subparsers(dest="command", required=True)
     for name, (help_text, handler, add_args) in COMMANDS.items():
         p = sub.add_parser(name, help=help_text)

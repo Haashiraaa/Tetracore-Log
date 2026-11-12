@@ -19,7 +19,7 @@ Other scripts: `npm run typecheck`, `npm run build` (typechecks, then writes `di
 
 ## First run, end to end
 
-1. Create an admin: `python -m scripts.admin_manager create --code AD-01 --name "Your Name"`. Admins are added and dropped from this script only (`grant`, `revoke`, `reset-pin`, `list`).
+1. Create an admin: `tetracore-admin create --code AD-01 --name "Your Name"`. Admins are added and dropped from this script only (`grant`, `revoke`, `reset-pin`, `list`).
 2. Log in with the facility field **blank**, officer code `SA-01` and your PIN.
 3. **Admin > Facilities**: add a station (e.g. `CNG-BEN-01`).
 4. **Admin > Officers**: add an officer. The temporary PIN is shown once; hand it over in person.

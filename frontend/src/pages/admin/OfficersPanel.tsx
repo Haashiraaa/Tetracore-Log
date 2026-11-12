@@ -259,7 +259,7 @@ export function OfficersPanel({ facilities }: { facilities: Facility[] }) {
 
         <span className="mono" aria-hidden="true">$</span> Admins are not on this page. They are added and removed only
 
-        from the server, with <span className="mono">admin_manager</span>. Nobody can make themselves an admin from the app.
+        from the server, with <span className="mono">tetracore-admin</span>. Nobody can make themselves an admin from the app.
 
       </p>
 

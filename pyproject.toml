@@ -47,6 +47,7 @@ pythonpath = ["."]
 
 [project.scripts]
 tetracore-log = "backend.src.main:serve"
+tetracore-admin = "scripts.admin_manager:main"
 
 [tool.ruff]
 line-length = 100

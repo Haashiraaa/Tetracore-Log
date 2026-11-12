@@ -9,7 +9,7 @@ pushed to their phone or laptop. Code: `backend/src/api/event_service.py`, `push
 | Group | Kinds | When |
 |---|---|---|
 | **Gate** | `truck_queued`, `truck_in`, `truck_out`, `truck_left_queue`, `visitor_in`, `visitor_out`, `staff_in`, `staff_out`, `officer_on_duty`, `officer_off_duty`, `officer_gate_changed` | Every sign-in and sign-out, every change in a truck's queue, and every officer going on duty, off duty or changing gate, in every facility |
-| **Admin** | `facility_added`, `gates_changed`, `officer_added`, `officer_pin_reset`, `officer_disabled`, `officer_enabled`, `sessions_revoked`, `admin_granted`, `admin_revoked` | Changes made on the Accounts page, and admin changes made from the server console (`scripts/admin_manager.py`) |
+| **Admin** | `facility_added`, `gates_changed`, `officer_added`, `officer_pin_reset`, `officer_disabled`, `officer_enabled`, `sessions_revoked`, `admin_granted`, `admin_revoked` | Changes made on the Accounts page, and admin changes made from the server console (`tetracore-admin`) |
 | **Warnings** | `already_inside`, `left_inside`, `queued_too_long`, `on_duty_too_long`, `gate_unmanned` | Someone is signed in who is still inside, someone is still inside many hours after signing in, a truck has queued too long, an officer has been on duty too long, or a gate has nobody on it |
 
 Nothing else is recorded: logins, failed logins and PIN changes are **not** events.
