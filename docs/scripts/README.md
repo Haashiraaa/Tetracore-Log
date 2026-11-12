@@ -7,6 +7,9 @@ them. Run them from the repository root as modules:
 python -m scripts.<name> [options]
 ```
 
+A script that is used often also gets a short command, registered in `pyproject.toml` under
+`[project.scripts]` (today: `tetracore-admin` for `admin_manager`). It works after `pip install -e .`.
+
 They load `.env` the same way the backend does, so `DATABASE_URL` (and the JWT and PIN secrets)
 must be set. Whatever database `DATABASE_URL` points at is the one the script changes: on the
 server that is the real one.
@@ -14,7 +17,7 @@ server that is the real one.
 | Script | Talks to | Changes data? | Use it to |
 |---|---|---|---|
 | [vapid_keys.py](vapid_keys.md) | nothing | no | Make the key pair browser push needs |
-| [admin_manager.py](admin_manager.md) | your real database | yes (one transaction per command, except `list`) | List accounts, create admins, grant or drop admin powers, reset an admin's PIN |
+| [admin_manager.py](admin_manager.md) (`tetracore-admin`) | your real database | yes (one transaction per command, except `list`) | List accounts, create admins, grant or drop admin powers, reset an admin's PIN |
 
 ## Rules for scripts
 

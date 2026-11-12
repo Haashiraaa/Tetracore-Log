@@ -10,7 +10,7 @@ Start with the [project README](../README.md). This folder holds the detail.
 | [trucks-and-duty.md](trucks-and-duty.md) | A truck's visit (queued, on site, departed, left queue), a facility's gates, the officers' own duty log, and its warnings |
 | [notifications.md](notifications.md) | The global admin's live feed of every event, the warnings, and browser push |
 | [scripts/README.md](scripts/README.md) | The operator scripts and the rules they follow |
-| [scripts/admin_manager.md](scripts/admin_manager.md) | List accounts, create or drop admins, reset an admin's PIN |
+| [scripts/admin_manager.md](scripts/admin_manager.md) | The `tetracore-admin` command: list accounts, create or drop admins, reset an admin's PIN |
 | [scripts/vapid_keys.md](scripts/vapid_keys.md) | Make the key pair browser push needs |
 
 ## Keeping these docs true
