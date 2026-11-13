@@ -14,6 +14,7 @@ import { formatScm } from "@/lib/format";
 import { formatPhone } from "@/lib/people";
 import { LOG_LABEL, type LogKind } from "@/models";
 import { faceOf, isTruck, isVisitor } from "@/services/entryService";
+import { quantityLabel } from "@/services/visitorService";
 import { EntryStatus } from "./EntryStatus";
 import { STATUS_LABEL } from "@/services/truckService";
 
@@ -76,7 +77,7 @@ function OwnFacts({ entry }: { entry: AnyEntry }) {
             <ul className="detail-items">
               {entry.items.map((item, i) => (
                 <li key={i}>
-                  {item.name} <span className="muted">× {item.quantity}</span>
+                  {item.name} <span className="muted">× {quantityLabel(item)}</span>
                 </li>
               ))}
             </ul>

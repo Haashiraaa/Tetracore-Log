@@ -14,7 +14,16 @@ export const PURPOSE_PICKS = ["Delivery", "Meeting", "Maintenance"] as const;
 export interface ItemRow {
   key: string;
   name: string;
+  /** Typed text; checked to be a whole number before it is sent. */
   quantity: string;
+  unit: string;
+}
+
+export const MAX_ITEM_QUANTITY = 100_000;
+
+/** "2 boxes", "10": how one item's amount reads. */
+export function quantityLabel(i: Pick<VisitorItem, "quantity" | "unit">): string {
+  return i.unit ? `${i.quantity} ${i.unit}` : String(i.quantity);
 }
 
 export interface VisitorForm {
@@ -29,7 +38,7 @@ export const BLANK_VISITOR: VisitorForm = { fullName: "", company: "", purpose: 
 /** What a visit's items read like in a table cell or a CSV: "Oil filters (2 boxes); Gloves (10)".
  *  Lines from before items were a list keep their old free text. */
 export function itemsLabel(e: Pick<VisitorEntry, "items" | "items_received">): string {
-  if (e.items.length > 0) return e.items.map((i) => `${i.name} (${i.quantity})`).join("; ");
+  if (e.items.length > 0) return e.items.map((i) => `${i.name} (${quantityLabel(i)})`).join("; ");
   return e.items_received ?? "";
 }
 
@@ -39,9 +48,14 @@ function cleanItems(rows: ItemRow[]): { items: VisitorItem[] } | { error: string
   for (const row of rows) {
     const name = row.name.trim();
     const quantity = row.quantity.trim();
-    if (!name && !quantity) continue;
+    const unit = row.unit.trim();
+    if (!name && !quantity && !unit) continue;
     if (!name || !quantity) return { error: "Give each item a name and a quantity, or remove it." };
-    items.push({ name, quantity });
+    const n = /^\d+$/.test(quantity) ? Number(quantity) : 0;
+    if (n < 1 || n > MAX_ITEM_QUANTITY) {
+      return { error: "Quantity must be a whole number, 1 or more. Put words like boxes in Unit." };
+    }
+    items.push({ name, quantity: n, unit: unit || null });
   }
   return { items };
 }

@@ -230,10 +230,11 @@ export interface VisitorLookup extends PersonLookup {
   company: string | null;
 }
 
-/** One thing a visitor brought. Quantity is free text: "2 boxes". */
+/** One thing a visitor brought: a whole-number quantity and an optional unit ("cartons"). */
 export interface VisitorItem {
   name: string;
-  quantity: string;
+  quantity: number;
+  unit: string | null;
 }
 
 export interface VisitorSignInRequest extends Omit<EntrySignInBase, "signature"> {

@@ -1,7 +1,7 @@
 // frontend/src/components/entries/ItemsEditor.tsx
 // "Items brought" for a visitor. Collapsed to a single Add item button until there is
 // something to write: a visitor who brought nothing costs no space and no taps. Each tap
-// on Add item opens one more name + quantity row; a row can be removed again.
+// on Add item opens one more name + quantity (+ optional unit) row; a row can be removed again.
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/Button";
 import { uuid } from "@/lib/ids";
@@ -28,7 +28,7 @@ export function ItemsEditor({ items, onChange, disabled, error }: ItemsEditorPro
 
   const add = () => {
     grew.current = true;
-    onChange([...items, { key: uuid(), name: "", quantity: "" }]);
+    onChange([...items, { key: uuid(), name: "", quantity: "", unit: "" }]);
   };
   const update = (key: string, patch: Partial<ItemRow>) =>
     onChange(items.map((row) => (row.key === key ? { ...row, ...patch } : row)));
@@ -58,10 +58,22 @@ export function ItemsEditor({ items, onChange, disabled, error }: ItemsEditorPro
                 className="input items__qty"
                 aria-label={`Item ${i + 1} quantity`}
                 placeholder="Qty"
+                inputMode="numeric"
                 value={row.quantity}
-                onChange={(e) => update(row.key, { quantity: e.target.value })}
+                onChange={(e) =>
+                  update(row.key, { quantity: e.target.value.replace(/\D/g, "").slice(0, 6) })
+                }
                 autoComplete="off"
-                maxLength={30}
+                disabled={disabled}
+              />
+              <input
+                className="input items__unit"
+                aria-label={`Item ${i + 1} unit (optional)`}
+                placeholder="Unit"
+                value={row.unit}
+                onChange={(e) => update(row.key, { unit: e.target.value })}
+                autoComplete="off"
+                maxLength={20}
                 disabled={disabled}
               />
               <button

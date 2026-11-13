@@ -17,18 +17,23 @@ the screens are `PersonInPage` and `lib/people.ts` in the frontend.
 ## Items brought (visitors)
 
 A visitor can bring nothing, or several things. On the sign-in form the field is collapsed to a
-single **+ Add item** button; each tap adds one **name + quantity** row (the cursor lands in the
-name), and **×** removes a row. A row left completely empty is ignored; a half-filled row is refused
+single **+ Add item** button; each tap adds one **name + quantity + unit** row (the cursor lands in
+the name; quantity takes digits only, unit is optional), and **×** removes a row. A row left completely empty is ignored; a half-filled row is refused
 ("Give each item a name and a quantity, or remove it").
 
-- Stored as `visitor_entries.items`, a JSON list of `{"name", "quantity"}` in the order given.
-  Name is up to 100 characters, quantity is free text up to 30 (`"2 boxes"`), at most 30 items.
+- Stored as `visitor_entries.items`, a JSON list of `{"name", "quantity", "unit"}` in the order given.
+  Name is up to 100 characters. **Quantity is an integer from 1 to 100,000 and must be sent as a JSON
+  number**: `"2"` or `"2 boxes"` is refused with `422`. Unit is optional text up to 20 characters
+  (`"boxes"`); blank means none. At most 30 items.
   Nothing brought is stored as null and comes back as `[]`.
 - The detail dialog lists them; the CSV has one **Items brought** column: `Oil filters (2 boxes); Gloves (10)`.
 - Lines written before this change keep their free text in `items_received` (the column stays, new
   lines never write it). The API still returns it and the screens show it when `items` is empty.
   `items_received` is no longer accepted on sign-in; an old client that still sends it is ignored.
-- Migration `a3d5f7b9c1e2` adds the column. Run `alembic upgrade head` on the server.
+- Migration `a3d5f7b9c1e2` adds the column. `d6a8c0e2f4b5` converts older text quantities: a leading
+  whole number is kept and the rest becomes the unit (`"2 boxes"` is 2 + `boxes`); text with no
+  usable number (`"a few"`) becomes quantity 1 and moves into the item name (`Gloves (a few)`), so
+  nothing is lost. Run `alembic upgrade head` on the server.
 
 ## Signatures are kept and reused
 

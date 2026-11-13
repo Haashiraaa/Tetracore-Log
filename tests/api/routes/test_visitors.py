@@ -19,7 +19,7 @@ def fresh_phone():
 def payload(**over):
     return {"id": str(uuid.uuid4()), "full_name": "Ngozi Eze", "company": "Acme Ltd",
             "purpose": "Delivery",
-            "items": [{"name": "Oil filters", "quantity": "2 boxes"}],
+            "items": [{"name": "Oil filters", "quantity": 2, "unit": "boxes"}],
             "phone": fresh_phone(), "signature": PNG_B64, **over}
 
 
@@ -42,7 +42,7 @@ def test_sign_in_records_the_fields(client, officer_a):
     assert r.status_code == 201
     e = r.json()
     assert (e["full_name"], e["company"], e["purpose"]) == ("Ngozi Eze", "Acme Ltd", "Delivery")
-    assert e["items"] == [{"name": "Oil filters", "quantity": "2 boxes"}]
+    assert e["items"] == [{"name": "Oil filters", "quantity": 2, "unit": "boxes"}]
     assert e["items_received"] is None and e["phone"].startswith("+234803")
     assert e["facility_code"] == "CNG-A" and e["signed_in_by_name"]
     assert e["signed_out_at"] is None
@@ -271,21 +271,22 @@ def test_search_needs_three_digits_and_a_facility(client, officer_a, cso):
 # ---- items brought: a list of name + quantity ----
 
 def test_items_are_a_list_in_the_order_given(client, officer_a):
-    items = [{"name": "  Oil filters ", "quantity": "2 boxes"},
-             {"name": "Gloves", "quantity": "10"},
-             {"name": "Hose", "quantity": "1"}]
+    items = [{"name": "  Oil filters ", "quantity": 2, "unit": " boxes "},
+             {"name": "Gloves", "quantity": 10, "unit": None},
+             {"name": "Hose", "quantity": 1, "unit": None}]
     e = sign_in(client, officer_a, items=items).json()
-    assert e["items"] == [{"name": "Oil filters", "quantity": "2 boxes"},
-                          {"name": "Gloves", "quantity": "10"}, {"name": "Hose", "quantity": "1"}]
+    assert e["items"] == [{"name": "Oil filters", "quantity": 2, "unit": "boxes"},
+                          {"name": "Gloves", "quantity": 10, "unit": None},
+                          {"name": "Hose", "quantity": 1, "unit": None}]
     listed = client.get(URL, headers=officer_a.headers).json()[0]
     assert listed["items"] == e["items"]
 
 
 def test_an_item_needs_a_name_and_a_quantity(client, officer_a):
-    for bad in ({"name": "", "quantity": "1"}, {"name": "Gloves", "quantity": ""},
-                {"name": "Gloves"}, {"quantity": "1"}):
+    for bad in ({"name": "", "quantity": 1}, {"name": "Gloves", "quantity": 0},
+                {"name": "Gloves"}, {"quantity": 1}):
         assert sign_in(client, officer_a, items=[bad]).status_code == 422
-    too_many = [{"name": f"Thing {i}", "quantity": "1"} for i in range(31)]
+    too_many = [{"name": f"Thing {i}", "quantity": 1} for i in range(31)]
     assert sign_in(client, officer_a, items=too_many).status_code == 422
 
 

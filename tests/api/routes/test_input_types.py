@@ -89,9 +89,30 @@ def test_items_must_be_a_list_of_name_and_quantity(client, officer_a, bad):
 
 
 @pytest.mark.parametrize("bad", [1, 12, True, ["a"], None])
-def test_an_item_name_and_quantity_are_text(client, officer_a, bad):
-    for item in ({"name": bad, "quantity": "1"}, {"name": "Gloves", "quantity": bad}):
+def test_an_item_name_and_unit_are_text(client, officer_a, bad):
+    for item in ({"name": bad, "quantity": 1}, {"name": "Gloves", "quantity": 1, "unit": bad}):
+        if item.get("unit") is None and "unit" in item:
+            continue  # null unit means "no unit" and is fine
         body = {"id": str(uuid.uuid4()), "full_name": "Ada Okoro", "phone": "08031112222",
                 "signature": PNG_B64, "items": [item]}
         assert client.post("/api/visitors/entries", json=body,
                            headers=officer_a.headers).status_code == 422
+
+
+@pytest.mark.parametrize("bad", ["2", "2 boxes", "", 2.5, True, False, 0, -1, 100_001, None, [2]])
+def test_an_item_quantity_must_be_a_whole_number(client, officer_a, bad):
+    body = {"id": str(uuid.uuid4()), "full_name": "Ada Okoro", "phone": "08031112222",
+            "signature": PNG_B64, "items": [{"name": "Gloves", "quantity": bad}]}
+    assert client.post("/api/visitors/entries", json=body,
+                       headers=officer_a.headers).status_code == 422
+
+
+def test_an_item_quantity_and_unit_are_kept(client, officer_a):
+    body = {"id": str(uuid.uuid4()), "full_name": "Ada Okoro", "phone": "08031112222",
+            "signature": PNG_B64,
+            "items": [{"name": "Water", "quantity": 3, "unit": "cartons"},
+                      {"name": "Gloves", "quantity": 100_000, "unit": ""}]}
+    r = client.post("/api/visitors/entries", json=body, headers=officer_a.headers)
+    assert r.status_code == 201, r.text
+    assert r.json()["items"] == [{"name": "Water", "quantity": 3, "unit": "cartons"},
+                                 {"name": "Gloves", "quantity": 100000, "unit": None}]
