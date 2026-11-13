@@ -4,6 +4,13 @@ All notable changes to Log Book. Entries above the baseline are written automati
 release-please from commit messages when a release pull request is merged (see
 [docs/releasing.md](docs/releasing.md)), so do not edit them by hand.
 
+## [0.14.0](https://github.com/Haashiraaa/log-book/compare/v0.13.0...v0.14.0) (2026-11-13)
+
+
+### Features
+
+* **visitors:** add item rows, and keep and reuse signatures for visitors and staff ([#36](https://github.com/Haashiraaa/log-book/issues/36)) ([cf8af86](https://github.com/Haashiraaa/log-book/commit/cf8af86d3cd37def90e432ed206c6de185f02f21))
+
 ## [0.13.0](https://github.com/Haashiraaa/log-book/compare/v0.12.0...v0.13.0) (2026-11-13)
 
 
