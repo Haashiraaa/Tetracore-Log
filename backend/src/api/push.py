@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Iterable
 
@@ -66,10 +67,12 @@ def _send_all(event_ids: list[int]) -> None:
 
 def send_test(db, officer_id) -> dict:
     """Send a test notification to this admin's own browsers, one by one, and say what happened.
+    Each test gets its own tag: a repeated tag makes the browser swap the old notification
+    silently instead of showing a new one.
     Unlike real pushes this waits for the answer, so a failure is shown, not only logged."""
     subs = [s for s in q.admin_subscriptions(db) if s.officer_id == officer_id]
     data = json.dumps({"title": "Tetracore Log", "body": "Test notification. Push is working.",
-                       "tag": "push-test", "url": "/notifications"})
+                       "tag": f"push-test-{time.time_ns()}", "url": "/notifications"})
     sent, failed = 0, []
     for sub in subs:
         try:
