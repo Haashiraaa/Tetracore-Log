@@ -4,6 +4,13 @@ All notable changes to Log Book. Entries above the baseline are written automati
 release-please from commit messages when a release pull request is merged (see
 [docs/releasing.md](docs/releasing.md)), so do not edit them by hand.
 
+## [0.15.0](https://github.com/Haashiraaa/log-book/compare/v0.14.0...v0.15.0) (2026-11-13)
+
+
+### Features
+
+* **trucks:** reuse a returning truck's signature, and record when a signature was reused ([#38](https://github.com/Haashiraaa/log-book/issues/38)) ([6a35775](https://github.com/Haashiraaa/log-book/commit/6a357755d62c618dfb3f5cadf8994e3f072e7270))
+
 ## [0.14.0](https://github.com/Haashiraaa/log-book/compare/v0.13.0...v0.14.0) (2026-11-13)
 
 
