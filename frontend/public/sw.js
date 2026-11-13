@@ -14,6 +14,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title || "Log Book", {
       body: data.body || "",
+      icon: "/icon-192.png", // the logo on the banner
+      badge: "/badge-96.png", // Android status bar: white on clear, the system tints it
       tag: data.tag, // the same event never shows twice
       data: { url: data.url || "/notifications" },
     }),
