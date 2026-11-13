@@ -4,6 +4,13 @@ All notable changes to Log Book. Entries above the baseline are written automati
 release-please from commit messages when a release pull request is merged (see
 [docs/releasing.md](docs/releasing.md)), so do not edit them by hand.
 
+## [0.16.0](https://github.com/Haashiraaa/log-book/compare/v0.15.0...v0.16.0) (2026-11-13)
+
+
+### Features
+
+* **phones:** per-country phone validation, E.164 storage, strict input types, docs reorg ([#40](https://github.com/Haashiraaa/log-book/issues/40)) ([08c3653](https://github.com/Haashiraaa/log-book/commit/08c3653bebb39c9eb09f4aa5925f2f6ef1f64401))
+
 ## [0.15.0](https://github.com/Haashiraaa/log-book/compare/v0.14.0...v0.15.0) (2026-11-13)
 
 
