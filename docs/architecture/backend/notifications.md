@@ -54,7 +54,7 @@ first, filtered by group, facility or unread. The app asks the server for the co
 Off until the server has keys. Then each admin switches it on **per device** with **Turn on** on the
 Alerts page; the browser asks permission once.
 
-1. Make the keys, once: `python -m scripts.vapid_keys` ([guide](scripts/vapid_keys.md)).
+1. Make the keys, once: `python -m scripts.vapid_keys` ([guide](../scripts/vapid_keys.md)).
 2. Put the three lines in the server's `.env` (set `VAPID_SUBJECT` to a real `mailto:`), restart the API.
 3. Open the Alerts page on each device and press **Turn on**.
 

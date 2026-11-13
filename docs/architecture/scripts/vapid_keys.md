@@ -1,6 +1,6 @@
 # `scripts/vapid_keys.py`
 
-**Purpose:** makes the key pair that browser push (see [../notifications.md](../notifications.md))
+**Purpose:** makes the key pair that browser push (see [notifications.md](../backend/notifications.md))
 needs. Run it once per installation.
 
 **Touches:** nothing. It does not read or change the database and needs no `.env`.

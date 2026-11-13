@@ -1,0 +1,70 @@
+# Log Book: frontend
+
+React + TypeScript + Vite. The browser talks only to its own origin (`/api/...`); in
+development Vite forwards that to FastAPI, so there is no CORS to configure.
+
+## Run it
+
+```bash
+cd frontend
+npm install
+npm run dev          # http://localhost:5173  (backend must be on 127.0.0.1:8000)
+```
+
+Open it from a phone on the same Wi-Fi with `npm run dev -- --host`, then browse to
+`http://<laptop-ip>:5173`. If the backend runs elsewhere, copy `.env.example` to `.env`
+and set `API_PROXY_TARGET`.
+
+Other scripts: `npm run typecheck`, `npm run build` (typechecks, then writes `dist/`).
+
+## First run, end to end
+
+1. Create an admin: `log-book-admin create --code AD-01 --name "Your Name"`. Admins are added and dropped from this script only (`grant`, `revoke`, `reset-pin`, `list`).
+2. Log in with the facility field **blank**, officer code `SA-01` and your PIN.
+3. **Admin > Facilities**: add a station (e.g. `CNG-BEN-01`).
+4. **Admin > Officers**: add an officer. The temporary PIN is shown once; hand it over in person.
+5. The officer logs in (facility, officer code, temp PIN), sets a new PIN, and lands on **Gate**.
+
+## Where things live
+
+The layout mirrors `backend/src/`, so each backend layer has a frontend twin:
+
+| Frontend (`src/`)    | Backend twin                      | What goes there                                            |
+| -------------------- | --------------------------------- | ---------------------------------------------------------- |
+| `config/env.ts`      | `config/settings.py`              | Every tunable (timezone, page size, signature rules)       |
+| `models.ts`          | `models.py`                       | Shared enums and labels (`Role`)                           |
+| `exceptions/`        | `exceptions/errors.py`            | `ApiError`, error codes, text safe to show a guard         |
+| `security/`          | `security/`                       | Token storage                                              |
+| `api/`               | `api/routes/` + `api/schemas.py`  | HTTP only: one file per route group, `schemas.ts` = shapes |
+| `services/`          | `api/*_service.py`                | Rules and validation. No JSX                               |
+| `auth/`              | `api/deps.py`                     | Login state, route guards, role checks                     |
+| `pages/`             | `api/routes/`                     | One folder per screen; thin, they call services            |
+| `components/`        | n/a                               | Reusable UI (`ui/`, `entries/`, `duty/`, `signature/`)   |
+| `lib/`, `hooks/`     | `db/orm/_helpers.py`              | Small pure helpers, React hooks                            |
+| `styles/`            | n/a                               | `tokens.css`, `base.css`, `components.css`, `layout.css`, `live.css` (everything that moves) |
+
+Rule of thumb: `api/*` never contains a decision, `services/*` never touches the DOM.
+
+## Behaviour worth knowing
+
+- **Three logs.** Trucks, visitors and staff share one set of screens: Gate (sign in), Inside (who is in now, sign out), Log (history, CSV, both signatures). Everyone signs on the way in and on the way out, except that a visitor's or staff member's signature is kept and reused (below). Visitors and staff need a full name and a phone; the sign-in screens search by phone as you type and prefill returning people (see `docs/architecture/backend/people-logs.md`).
+- **Trucks, gates and duty.** A truck joins the queue, is let in (the driver signs), then signs out; or it leaves the queue with a reason. Officers log themselves on the **Duty** page (gate dropdown, optional signature, change gate); off duty they cannot sign anyone in or out (`RequireDuty` in `auth/guards.tsx`, the server enforces it). See `docs/architecture/backend/trucks-and-duty.md`.
+- **Alerts.** Admins get an **Alerts** page: a live feed of every event (polled every 5 s, `components/notifications/`), a bell count in the menu and tab title, and a switch for browser push per device (`public/sw.js` shows the notification, with the logo from `public/icon-192.png`). See `docs/architecture/backend/notifications.md`.
+- **Icons.** `public/` holds the logo as the tab icon (`favicon-32.png`), the Home Screen icon (`icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, listed in `manifest.webmanifest`) and the notification badge (`badge-96.png`).
+- **Look.** "Hi-vis": black, off-white, one yellow for the next action, orange for still inside. Tokens are in `src/styles/tokens.css`.
+- **Day and night.** The night theme re-inks the same tokens for a dark gate (`:root[data-theme="night"]` in `tokens.css`, plus a few fixes at the end of `live.css`). The account menu has Auto / Day / Night; Auto, the default, uses night from 19:00 to 06:00 Lagos time (`NIGHT_STARTS_HOUR`, `NIGHT_ENDS_HOUR`). The choice is kept per browser under `log-book.theme` (`lib/theme.ts`).
+- **Live.** Gate and Inside ask the server who is inside every 15 seconds (`INSIDE_REFRESH_MS`) and show "Live · checked N s ago". What changes is shown moving: counts roll (`RollingNumber`), a new line slides in with a yellow flash (`useFreshKeys`), clocks tick off one shared timer (`useNow`), and a stamp lands on a line that was just let in or signed out (`Stamp`). Gate's black panel also shows today's sign-ins hour by hour (`DayStrip`, from up to 200 entries per log, refreshed every minute and whenever the count changes). All of it is in `styles/live.css`, and `prefers-reduced-motion` switches every animation off (`base.css`).
+- **Who sees what.** The role is a free-form label and changes nothing. Accounts with a facility get Gate, Inside, Log, Duty and can write entries. Accounts without a facility get Inside, Log and Duty (read-only, all facilities). Admins add Accounts and Alerts. The backend re-checks every request; the UI only hides what you can't use.
+- **Sessions.** Access token in memory, refresh token in `localStorage`. An expired token is refreshed once and the request retried. Only `session_revoked` logs you out; a wrong current PIN on Change PIN does not.
+- **Retries are safe.** The sign-in entry id is generated once when the form opens and reused on retry, so a lost response can't create a duplicate.
+- **Times.** The server stamps sign-in and sign-out times while the app is online. Everything is displayed in Lagos time (`config/env.ts`).
+- **Signatures.** Drawn on a canvas, exported as a small PNG (well under the 200 KB limit), fetched back with the bearer header as a blob.
+- **Items brought.** On the visitor form, `components/entries/ItemsEditor.tsx` is one **+ Add item** button until used; each tap adds a name + quantity row (`ItemRow` in `services/visitorService.ts`, `itemsLabel` for the table and CSV).
+- **Reused signatures.** A person with `has_signature` on their lookup gets "Signature on file" instead of the pad on the sign-in form (**Sign again instead** brings it back), and `SignOutSheet` shows their sign-in signature (`hooks/useSignature.ts`) and signs them out with it, sending no signature; **Let them sign instead** opens the pad. Trucks always draw.
+- **SCM** is typed at sign-out and sent as a decimal string (`"12.50"`).
+
+## Putting it on the VPS later
+
+`npm run build` produces `dist/`. Serve it from the same origin as the API (nginx, or a
+`StaticFiles` mount in FastAPI) so `/api` needs no CORS. The app uses client-side routes,
+so unknown paths must fall back to `index.html`.
