@@ -4,6 +4,13 @@ All notable changes to Log Book. Entries above the baseline are written automati
 release-please from commit messages when a release pull request is merged (see
 [docs/releasing.md](docs/releasing.md)), so do not edit them by hand.
 
+## [0.13.0](https://github.com/Haashiraaa/log-book/compare/v0.12.0...v0.13.0) (2026-11-13)
+
+
+### Features
+
+* **frontend:** give the app a logo for notifications, the tab and the home screen ([#33](https://github.com/Haashiraaa/log-book/issues/33)) ([5f00158](https://github.com/Haashiraaa/log-book/commit/5f001585a8c324b7a1c04e9668682ee13d0482f2))
+
 ## [0.12.0](https://github.com/Haashiraaa/log-book/compare/v0.11.0...v0.12.0) (2026-11-13)
 
 
