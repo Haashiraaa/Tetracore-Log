@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator
 
 from backend.src.api.schemas.auth import OfficerProfile
 from backend.src.db.orm.tables import Facility, Officer
@@ -17,7 +17,7 @@ class CreateFacilityRequest(BaseModel):
 
     state: str = Field(min_length=2, max_length=40)
     name: str = Field(min_length=2, max_length=200)
-    gate_count: int = Field(default=1, ge=1, le=MAX_GATES)
+    gate_count: StrictInt = Field(default=1, ge=1, le=MAX_GATES)
 
     @field_validator("state")
     @classmethod
@@ -29,7 +29,7 @@ class CreateFacilityRequest(BaseModel):
 
 
 class SetGatesRequest(BaseModel):
-    gate_count: int = Field(ge=1, le=MAX_GATES)
+    gate_count: StrictInt = Field(ge=1, le=MAX_GATES)
 
 
 class StateOut(BaseModel):

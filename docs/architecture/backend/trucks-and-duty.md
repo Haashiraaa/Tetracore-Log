@@ -50,6 +50,12 @@ visitors and staff ([people-logs.md](people-logs.md#signatures-are-kept-and-reus
 - `scm_purchased` is still recorded at sign-out.
 - Existing rows were migrated: signed out -> `departed`, still open -> `on_site` (with `entered_at` = `signed_in_at`).
 
+## Driver phone
+
+Optional on a truck sign-in. When given it follows the same rules as a person's phone (E.164, checked
+for its country, Nigerian unless it starts with `+`): see
+[people-logs.md](people-logs.md#phone-numbers). A blank one is stored as none.
+
 ## Gates
 
 Every facility has a number of gates, set when it is created (1 to 20, default 1) and changeable

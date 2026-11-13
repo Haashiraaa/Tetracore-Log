@@ -24,6 +24,8 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime
 
+import phonenumbers
+
 DEFAULT_ROLE = "Officer"
 ROLE_MAX_LENGTH = 32
 
@@ -50,26 +52,48 @@ def clean_full_name(raw: str) -> str:
     return name
 
 
-def phone_search_digits(raw: str) -> str:
-    """A phone number typed so far, for search-as-you-type: digits only (at least 3), and a
-    leading 234 written as 0 so it matches the stored form. Not a full-number check."""
-    digits = "".join(ch for ch in raw if ch.isdigit())
-    if digits.startswith("234"):
-        digits = "0" + digits[3:]
-    if len(digits) < 3:
-        raise ValueError("Type at least 3 digits of the phone number.")
-    return digits
+# A number typed without a country code (0803 123 4567, or 803 123 4567) is read as this
+# country's. The same constant is DEFAULT_PHONE_REGION in frontend/src/config/env.ts.
+DEFAULT_PHONE_REGION = "NG"
+
+PHONE_ERROR = (
+    "Enter a valid phone number. A Nigerian number looks like 0803 123 4567. For another "
+    "country start with + and the country code, for example +44 7911 123456."
+)
 
 
 def clean_phone(raw: str) -> str:
-    """One canonical form for a phone number, so the same person is found again however
-    it was typed: digits only, and +234 / 234 written as a leading 0
-    ("+234 803 123 4567" and "0803-123-4567" both become "08031234567")."""
+    """One canonical form for a phone number, so the same person is found again however it
+    was typed: E.164, a + then the country code then the number, no spaces ("+2348031112222").
+
+    A number without a country code is read as a DEFAULT_PHONE_REGION (Nigerian) number; one
+    that starts with + is read as that country's. Either way it must be a REAL number for
+    that country: the right length and a prefix that country actually uses. Raises ValueError
+    with a message safe to show."""
+    text = raw.strip()
+    if not text or any(ch.isalpha() for ch in text):  # also rules out "ext 5" and vanity numbers
+        raise ValueError(PHONE_ERROR)
+    try:
+        number = phonenumbers.parse(text, DEFAULT_PHONE_REGION)
+    except phonenumbers.NumberParseException:
+        raise ValueError(PHONE_ERROR) from None
+    if not phonenumbers.is_valid_number(number):
+        raise ValueError(PHONE_ERROR)
+    return phonenumbers.format_number(number, phonenumbers.PhoneNumberFormat.E164)
+
+
+def phone_search_digits(raw: str) -> str:
+    """A phone number typed so far, for search-as-you-type: digits only (at least 3 typed).
+    Numbers are stored as +<country code><number>, so a leading 0 (the local "trunk" zero, as
+    in 0803...) or 00 (international prefix) is dropped to match inside the stored digits.
+    Not a full-number check."""
     digits = "".join(ch for ch in raw if ch.isdigit())
-    if digits.startswith("234") and len(digits) == 13:
-        digits = "0" + digits[3:]
-    if not 7 <= len(digits) <= 15:
-        raise ValueError("Enter a valid phone number.")
+    if len(digits) < 3:
+        raise ValueError("Type at least 3 digits of the phone number.")
+    if digits.startswith("00"):
+        digits = digits[2:]
+    elif digits.startswith("0"):
+        digits = digits[1:]
     return digits
 
 

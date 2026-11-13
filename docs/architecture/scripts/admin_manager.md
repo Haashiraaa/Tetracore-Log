@@ -37,7 +37,7 @@ does exactly the same and needs no install.
 | Option | Used by | Meaning |
 |---|---|---|
 | `--code CODE` | create, grant, revoke, reset-pin | The officer code (any case) |
-| `--facility CODE` | create, grant, revoke, reset-pin | The facility code as issued, e.g. `CNG-LAG-01` (see [facility-codes.md](../facility-codes.md)). Leave it out for a global account. The same officer code can exist in two facilities, so a scoped account needs this to be found |
+| `--facility CODE` | create, grant, revoke, reset-pin | The facility code as issued, e.g. `CNG-LAG-01` (see [facility-codes.md](../backend/facility-codes.md)). Leave it out for a global account. The same officer code can exist in two facilities, so a scoped account needs this to be found |
 | `--name "Full Name"` | create | Required. First and last name (at least two words) |
 | `--role LABEL` | create | Free-text label, up to 32 characters. Default `admin`. Nothing checks it, see [How access works](#how-access-works) |
 | `--force` | revoke | Allow dropping the **last active** admin |
@@ -89,7 +89,7 @@ So `role` is a label for people ("Supervisor", "Officer"). Use any text you like
 ## Notifications
 
 `create`, `grant` and `revoke` add an event to the admins' notification feed, marked "from the
-server console" (see [../notifications.md](../notifications.md)). The event is written in the same
+server console" (see [notifications.md](../backend/notifications.md)). The event is written in the same
 transaction as the change. The console does **not** send browser push: only the running server does,
 so these appear in the feed the next time an admin looks.
 

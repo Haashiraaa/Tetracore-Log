@@ -38,7 +38,8 @@ class Settings:
     LOCKOUT_MINUTES = _int_env('LOCKOUT_MINUTES', 15)
 
     # --- notifications ---
-    # Browser push is off until all three VAPID values are set (see docs/notifications.md).
+    # Browser push is off until all three VAPID values are set
+    # (see docs/architecture/backend/notifications.md).
     VAPID_PUBLIC_KEY = os.getenv('VAPID_PUBLIC_KEY', '')
     VAPID_PRIVATE_KEY = os.getenv('VAPID_PRIVATE_KEY', '')
     VAPID_SUBJECT = os.getenv('VAPID_SUBJECT', '')   # mailto:you@example.com

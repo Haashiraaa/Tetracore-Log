@@ -4,6 +4,7 @@
 //   known plate      -> form prefilled to CONFIRM
 //   already queued   -> offer "let in" or "left the queue" instead
 //   already inside   -> offer sign-out instead (the server would refuse a second sign-in)
+import { formatPhone } from "@/lib/people";
 import { useCallback, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import type { AnyEntry, TruckEntry, TruckLookup } from "@/api/schemas";
@@ -53,7 +54,7 @@ function stageFor(result: truckService.LookupResult): Stage {
         hasSignature: result.truck.has_signature,
         initial: {
           driverName: result.truck.driver_name,
-          driverPhone: result.truck.driver_phone ?? "",
+          driverPhone: formatPhone(result.truck.driver_phone),
           company: result.truck.company ?? "",
         },
       };

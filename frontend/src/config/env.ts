@@ -9,6 +9,10 @@ export const DISPLAY_TZ = "Africa/Lagos";
 /** Nigeria has no daylight saving, so a fixed offset is safe for day boundaries. */
 export const DISPLAY_UTC_OFFSET = "+01:00";
 
+/** A phone number typed without a country code is read as this country's (Nigeria, +234).
+ *  Mirrors DEFAULT_PHONE_REGION in backend/src/models.py: change both together. */
+export const DEFAULT_PHONE_REGION = "NG";
+
 /** Backend rejects signatures over 200 KB; stay comfortably under. */
 export const SIGNATURE_MAX_BYTES = 180 * 1024;
 

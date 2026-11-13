@@ -1,6 +1,7 @@
 // frontend/src/components/entries/EntryTable.tsx
 // One table for all three logs. A real table on wide screens; on phones each row
 // stacks into a labelled card (see components.css).
+import { formatPhone } from "@/lib/people";
 import type { AnyEntry } from "@/api/schemas";
 import { PlateChip } from "@/components/ui/PlateChip";
 import { formatDateTime, formatDuration } from "@/lib/dates";
@@ -58,7 +59,7 @@ export function EntryTable({ kind, entries, showFacility, onOpen }: EntryTablePr
                 <td data-label="Full name">
                   <span className="cell-main">{face.name}</span>
                   {face.sub && <span className="cell-sub">{face.sub}</span>}
-                  {face.phone && <span className="cell-sub mono">{face.phone}</span>}
+                  {face.phone && <span className="cell-sub mono">{formatPhone(face.phone)}</span>}
                 </td>
                 {showFacility && (
                   <td data-label="Facility" className="mono">

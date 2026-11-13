@@ -70,26 +70,44 @@ def test_a_single_name_is_not_a_full_name(raw):
 
 
 @pytest.mark.parametrize("raw, expected", [
-    ("08031112222", "08031112222"),
-    ("0803 111 2222", "08031112222"),
-    ("0803-111-2222", "08031112222"),
-    ("+234 803 111 2222", "08031112222"),
-    ("2348031112222", "08031112222"),
-    ("(0803) 111 2222", "08031112222"),
+    ("08031112222", "+2348031112222"),
+    ("0803 111 2222", "+2348031112222"),
+    ("0803-111-2222", "+2348031112222"),
+    ("+234 803 111 2222", "+2348031112222"),
+    ("2348031112222", "+2348031112222"),
+    ("(0803) 111 2222", "+2348031112222"),
+    ("8031112222", "+2348031112222"),
+    ("+44 7911 123456", "+447911123456"),      # UK mobile
+    ("+233 24 123 4567", "+233241234567"),     # Ghana
+    ("+1 202 555 0143", "+12025550143"),       # USA
 ])
 def test_clean_phone_gives_one_form(raw, expected):
     assert clean_phone(raw) == expected
 
 
-@pytest.mark.parametrize("raw", ["", "abc", "12345", "1" * 16])
-def test_clean_phone_rejects_non_numbers(raw):
+@pytest.mark.parametrize("raw", [
+    "", "  ", "abc", "12345", "1" * 16,
+    "0803111222",            # one digit short for a Nigerian number
+    "080311122223",          # one too many
+    "07700 900123",          # 0770 is not a Nigerian mobile prefix
+    "+44 7911 12345",        # one digit short for the UK
+    "+999 123 456 789",      # no such country
+    "08031112222 ext 5",     # extensions and letters are not numbers
+    "1-800-FLOWERS",
+])
+def test_clean_phone_rejects_numbers_that_are_not_real(raw):
     with pytest.raises(ValueError):
         clean_phone(raw)
 
 
+def test_the_error_says_how_to_write_a_number():
+    with pytest.raises(ValueError, match=r"0803 123 4567.*\+44"):
+        clean_phone("nope")
+
+
 @pytest.mark.parametrize("raw,expected", [
-    ("080", "080"), ("0803-111", "0803111"), ("+234 803 11", "080311"), ("234803", "0803"),
-    ("803", "803"),
+    ("080", "80"), ("0803-111", "803111"), ("+234 803 11", "23480311"), ("234803", "234803"),
+    ("803", "803"), ("0044 7911", "447911"), ("+44 79", "4479"),
 ])
 def test_phone_search_digits_is_the_number_so_far(raw, expected):
     assert phone_search_digits(raw) == expected

@@ -481,7 +481,7 @@ class VisitorEntry(EntryMixin, TimestampMixin, Base):
     # Old free text, kept for lines written before `items`; new lines leave it empty.
     items_received: Mapped[Optional[str]] = mapped_column(
         String(500), nullable=True)
-    # What they brought: [{"name": ..., "quantity": ...}, ...]. Null = nothing.
+    # What they brought: [{"name", "quantity" (int), "unit" (text or null)}, ...]. Null = nothing.
     items: Mapped[Optional[list[dict[str, Any]]]] = mapped_column(JSONB, nullable=True)
     phone: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
 

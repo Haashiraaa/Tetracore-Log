@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator
 
 from backend.src.api.schemas.common import (
     EntryOut,
@@ -19,15 +19,20 @@ from backend.src.api.schemas.common import (
 )
 
 MAX_ITEMS = 30
+MAX_QUANTITY = 100_000
 
 
 class VisitorItem(BaseModel):
-    """One thing the visitor brought. Quantity is free text so "2 cartons" works."""
+    """One thing the visitor brought: a name, a whole-number quantity, and an optional unit
+    ("cartons", "litres"). The quantity must arrive as a JSON integer, never as text."""
 
     model_config = ConfigDict(str_strip_whitespace=True)
 
     name: str = Field(min_length=1, max_length=100)
-    quantity: str = Field(min_length=1, max_length=30)
+    quantity: StrictInt = Field(ge=1, le=MAX_QUANTITY)
+    unit: Optional[str] = Field(default=None, max_length=20)
+
+    _unit = field_validator("unit")(blank_to_none)
 
 
 class VisitorSignInRequest(PersonSignInRequest):

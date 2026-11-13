@@ -7,14 +7,16 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
 
 from backend.src.api.schemas.common import (
     EntryOut,
+    Gas,
     PersonSignInRequest,
     PersonSignOutRequest,
     blank_to_none,
     full_name_field,
+    optional_phone_field,
     require_tz,
 )
 from backend.src.db.orm._helpers import normalize_plate
@@ -39,12 +41,12 @@ class TruckSignInRequest(PersonSignInRequest):
     `enter_now` it is let in on the spot, which needs the driver's signature: drawn now, or
     left out to reuse the one on file for this plate (the service refuses if there is none)."""
 
-    enter_now: bool = False
+    enter_now: StrictBool = False
     plate_number: str = Field(min_length=2, max_length=40)
     driver_name: str = Field(min_length=2, max_length=150)
     driver_phone: Optional[str] = Field(default=None, max_length=32)
     company: Optional[str] = Field(default=None, max_length=200)
-    scm_purchased: Optional[Decimal] = Field(
+    scm_purchased: Optional[Gas] = Field(
         default=None, ge=0, max_digits=12, decimal_places=2)
 
     @field_validator("plate_number")
@@ -55,7 +57,8 @@ class TruckSignInRequest(PersonSignInRequest):
             raise ValueError("Plate number must be 2-20 letters/digits.")
         return plate
 
-    _blank = field_validator("driver_phone", "company")(blank_to_none)
+    _blank = field_validator("company")(blank_to_none)
+    _driver_phone = field_validator("driver_phone")(optional_phone_field)
     _name = field_validator("driver_name")(full_name_field)
 
 
@@ -86,7 +89,7 @@ class TruckLeaveQueueRequest(BaseModel):
 
 
 class TruckSignOutRequest(PersonSignOutRequest):  # only a truck that is on site
-    scm_purchased: Optional[Decimal] = Field(
+    scm_purchased: Optional[Gas] = Field(
         default=None, ge=0, max_digits=12, decimal_places=2)
 
 

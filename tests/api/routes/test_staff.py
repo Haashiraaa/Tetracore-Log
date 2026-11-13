@@ -38,7 +38,7 @@ def test_sign_in_records_the_fields(client, officer_a):
     assert r.status_code == 201
     e = r.json()
     assert (e["full_name"], e["capacity"]) == ("Ada Okoro", "Cashier")
-    assert e["phone"].startswith("0803")
+    assert e["phone"].startswith("+234803")
     assert e["facility_code"] == "CNG-A" and e["signed_in_by_name"]
     assert e["signed_out_at"] is None
     assert e["has_signature"] is True and e["has_signature_out"] is False
@@ -162,7 +162,7 @@ def test_lookup_finds_a_returning_staff_member(client, officer_a, officer_b):
     e = sign_in(client, officer_a, phone="08031112222", capacity="Cashier").json()
     found = look(officer_a).json()
     assert (found["full_name"], found["capacity"], found["phone"]) == (
-        "Ada Okoro", "Cashier", "08031112222")
+        "Ada Okoro", "Cashier", "+2348031112222")
     assert found["open_entry_id"] == e["id"]
     assert look(officer_b).json() is None  # another facility has never seen them
     sign_out(client, officer_a, e["id"])
@@ -205,14 +205,14 @@ def test_search_finds_people_as_the_number_is_typed(client, officer_a, officer_b
     assert search("080").status_code == 200
     assert [p["full_name"] for p in search("0803").json()] == ["Musa Bello", "Ada Okoro"]
     only = search("1112").json()  # the middle of a number matches too
-    assert [(p["full_name"], p["phone"]) for p in only] == [("Ada Okoro", "08031112222")]
+    assert [(p["full_name"], p["phone"]) for p in only] == [("Ada Okoro", "+2348031112222")]
     assert only[0]["open_entry_id"] is None
     inside = search("0803999").json()
     assert [p["full_name"] for p in inside] == ["Musa Bello"] and inside[0]["open_entry_id"]
-    assert search("+234 803 111").json()[0]["phone"] == "08031112222"  # 234 reads as 0
+    assert search("+234 803 111").json()[0]["phone"] == "+2348031112222"
     assert search("0803111", officer_b).json()[0]["full_name"] == "Other Place"
     assert [p["full_name"] for p in search("0803111").json()] == ["Ada Okoro"]  # not theirs
-    assert search("0999").json() == []
+    assert search("0555").json() == []
 
 
 def test_search_lists_each_person_once_with_their_latest_details(client, officer_a):
@@ -229,3 +229,9 @@ def test_search_needs_three_digits_and_a_facility(client, officer_a, cso):
     assert client.get(url, params={"q": "08"}, headers=officer_a.headers).status_code == 422
     assert client.get(url, params={"q": "abc"}, headers=officer_a.headers).status_code == 422
     assert client.get(url, params={"q": "0803"}, headers=cso.headers).status_code == 403
+
+
+def test_staff_numbers_are_real_numbers_for_their_country(client, officer_a):
+    assert sign_in(client, officer_a, phone="+233 24 123 4567").json()["phone"] == "+233241234567"
+    for bad in ("0803111222", "+999 123 456 789", "abc", 8031112222):
+        assert sign_in(client, officer_a, phone=bad).status_code == 422, bad

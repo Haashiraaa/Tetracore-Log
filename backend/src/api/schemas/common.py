@@ -6,11 +6,23 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any, Optional
+from decimal import Decimal
+from typing import Annotated, Any, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator
 
 from backend.src.models import clean_full_name, clean_phone
+
+
+def _not_a_flag(v: Any) -> Any:
+    if isinstance(v, bool):  # JSON true/false would otherwise pass as 1/0
+        raise ValueError("Must be a number, not true or false.")
+    return v
+
+
+# Gas bought (SCM). The app sends a decimal string such as "12.50" so no precision is lost;
+# a JSON number is accepted too. true/false is not a number.
+Gas = Annotated[Decimal, BeforeValidator(_not_a_flag)]
 
 
 def require_tz(v: Optional[datetime]) -> Optional[datetime]:
@@ -85,6 +97,11 @@ def full_name_field(v: str) -> str:
 def phone_field(v: str) -> str:
     """Validator body for a phone number that identifies a person: models.clean_phone."""
     return clean_phone(v)
+
+
+def optional_phone_field(v: Optional[str]) -> Optional[str]:
+    """Same, for a phone that may be left out: blank means "not given"."""
+    return clean_phone(v) if v else None
 
 
 class LookupOut(BaseModel):

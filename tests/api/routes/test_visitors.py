@@ -5,6 +5,8 @@
 import base64
 import uuid
 
+import pytest
+
 URL = "/api/visitors/entries"
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
 PNG_B64 = base64.b64encode(PNG).decode()
@@ -17,7 +19,7 @@ def fresh_phone():
 def payload(**over):
     return {"id": str(uuid.uuid4()), "full_name": "Ngozi Eze", "company": "Acme Ltd",
             "purpose": "Delivery",
-            "items": [{"name": "Oil filters", "quantity": "2 boxes"}],
+            "items": [{"name": "Oil filters", "quantity": 2, "unit": "boxes"}],
             "phone": fresh_phone(), "signature": PNG_B64, **over}
 
 
@@ -40,8 +42,8 @@ def test_sign_in_records_the_fields(client, officer_a):
     assert r.status_code == 201
     e = r.json()
     assert (e["full_name"], e["company"], e["purpose"]) == ("Ngozi Eze", "Acme Ltd", "Delivery")
-    assert e["items"] == [{"name": "Oil filters", "quantity": "2 boxes"}]
-    assert e["items_received"] is None and e["phone"].startswith("0803")
+    assert e["items"] == [{"name": "Oil filters", "quantity": 2, "unit": "boxes"}]
+    assert e["items_received"] is None and e["phone"].startswith("+234803")
     assert e["facility_code"] == "CNG-A" and e["signed_in_by_name"]
     assert e["signed_out_at"] is None
     assert e["has_signature"] is True and e["has_signature_out"] is False
@@ -167,7 +169,7 @@ def test_full_name_needs_two_words_and_is_tidied(client, officer_a):
 def test_phone_is_stored_in_one_canonical_form(client, officer_a):
     for typed in ("0803 111 2222", "+234 803 111 2222", "2348031112222", "(0803)-111-2222"):
         e = sign_in(client, officer_a, phone=typed).json()
-        assert e["phone"] == "08031112222"
+        assert e["phone"] == "+2348031112222"
         sign_out(client, officer_a, e["id"])
 
 
@@ -180,7 +182,7 @@ def test_lookup_finds_a_returning_visitor_however_the_phone_is_typed(client, off
     e = sign_in(client, officer_a, phone="08031112222", company="Acme Ltd").json()
     found = look("+234 803 111 2222").json()
     assert (found["full_name"], found["company"], found["phone"]) == (
-        "Ngozi Eze", "Acme Ltd", "08031112222")
+        "Ngozi Eze", "Acme Ltd", "+2348031112222")
     assert found["open_entry_id"] == e["id"]
     sign_out(client, officer_a, e["id"])
     assert look("08031112222").json()["open_entry_id"] is None
@@ -240,14 +242,14 @@ def test_search_finds_people_as_the_number_is_typed(client, officer_a, officer_b
     assert search("080").status_code == 200
     assert [p["full_name"] for p in search("0803").json()] == ["Musa Bello", "Ada Okoro"]
     only = search("1112").json()  # the middle of a number matches too
-    assert [(p["full_name"], p["phone"]) for p in only] == [("Ada Okoro", "08031112222")]
+    assert [(p["full_name"], p["phone"]) for p in only] == [("Ada Okoro", "+2348031112222")]
     assert only[0]["open_entry_id"] is None
     inside = search("0803999").json()
     assert [p["full_name"] for p in inside] == ["Musa Bello"] and inside[0]["open_entry_id"]
-    assert search("+234 803 111").json()[0]["phone"] == "08031112222"  # 234 reads as 0
+    assert search("+234 803 111").json()[0]["phone"] == "+2348031112222"
     assert search("0803111", officer_b).json()[0]["full_name"] == "Other Place"
     assert [p["full_name"] for p in search("0803111").json()] == ["Ada Okoro"]  # not theirs
-    assert search("0999").json() == []
+    assert search("0555").json() == []
 
 
 def test_search_lists_each_person_once_with_their_latest_details(client, officer_a):
@@ -269,21 +271,22 @@ def test_search_needs_three_digits_and_a_facility(client, officer_a, cso):
 # ---- items brought: a list of name + quantity ----
 
 def test_items_are_a_list_in_the_order_given(client, officer_a):
-    items = [{"name": "  Oil filters ", "quantity": "2 boxes"},
-             {"name": "Gloves", "quantity": "10"},
-             {"name": "Hose", "quantity": "1"}]
+    items = [{"name": "  Oil filters ", "quantity": 2, "unit": " boxes "},
+             {"name": "Gloves", "quantity": 10, "unit": None},
+             {"name": "Hose", "quantity": 1, "unit": None}]
     e = sign_in(client, officer_a, items=items).json()
-    assert e["items"] == [{"name": "Oil filters", "quantity": "2 boxes"},
-                          {"name": "Gloves", "quantity": "10"}, {"name": "Hose", "quantity": "1"}]
+    assert e["items"] == [{"name": "Oil filters", "quantity": 2, "unit": "boxes"},
+                          {"name": "Gloves", "quantity": 10, "unit": None},
+                          {"name": "Hose", "quantity": 1, "unit": None}]
     listed = client.get(URL, headers=officer_a.headers).json()[0]
     assert listed["items"] == e["items"]
 
 
 def test_an_item_needs_a_name_and_a_quantity(client, officer_a):
-    for bad in ({"name": "", "quantity": "1"}, {"name": "Gloves", "quantity": ""},
-                {"name": "Gloves"}, {"quantity": "1"}):
+    for bad in ({"name": "", "quantity": 1}, {"name": "Gloves", "quantity": 0},
+                {"name": "Gloves"}, {"quantity": 1}):
         assert sign_in(client, officer_a, items=[bad]).status_code == 422
-    too_many = [{"name": f"Thing {i}", "quantity": "1"} for i in range(31)]
+    too_many = [{"name": f"Thing {i}", "quantity": 1} for i in range(31)]
     assert sign_in(client, officer_a, items=too_many).status_code == 422
 
 
@@ -364,4 +367,41 @@ def test_lookup_and_search_say_whether_a_signature_is_on_file(client, officer_a,
     assert found["has_signature"] is True
     hits = client.get("/api/visitors/search", params={"q": "0803777"},
                       headers=officer_a.headers).json()
-    assert [(h["phone"], h["has_signature"]) for h in hits] == [(phone, True)]
+    assert [(h["phone"], h["has_signature"]) for h in hits] == [("+2348037771111", True)]
+
+
+# ---- real numbers, for any country ----
+
+def test_a_foreign_visitor_signs_in_with_their_own_number(client, officer_a):
+    uk = sign_in(client, officer_a, phone="+44 7911 123456").json()
+    assert uk["phone"] == "+447911123456"
+    gh = sign_in(client, officer_a, phone="+233 24 123 4567").json()
+    assert gh["phone"] == "+233241234567"
+    look = client.get("/api/visitors/lookup", params={"phone": "+44 7911 123456"},
+                      headers=officer_a.headers).json()
+    assert look["phone"] == "+447911123456" and look["open_entry_id"] == uk["id"]
+    hits = client.get("/api/visitors/search", params={"q": "+44 7911"},
+                      headers=officer_a.headers).json()
+    assert [h["phone"] for h in hits] == ["+447911123456"]
+
+
+@pytest.mark.parametrize("bad", [
+    "0803111222",       # a digit short for Nigeria
+    "07700 900123",     # 0770 is not a Nigerian mobile prefix
+    "+44 7911 12345",   # a digit short for the UK
+    "+999 123 456 789",  # no such country
+    "abc", "08031112222 ext 5", "1-800-FLOWERS", 8031112222,
+])
+def test_a_number_that_is_not_real_for_its_country_is_refused(client, officer_a, bad):
+    r = sign_in(client, officer_a, phone=bad)
+    assert r.status_code == 422, r.text
+    if isinstance(bad, str):
+        look = client.get("/api/visitors/lookup", params={"phone": bad}, headers=officer_a.headers)
+        assert look.status_code == 422
+
+
+def test_the_same_number_written_two_ways_is_one_person(client, officer_a):
+    first = sign_in(client, officer_a, phone="+44 7911 123456").json()
+    again = sign_in(client, officer_a, phone="07911 123456")  # no country code: read as Nigerian
+    assert again.status_code == 422  # 07911... is not a Nigerian number, so it is refused
+    assert first["phone"] == "+447911123456"
