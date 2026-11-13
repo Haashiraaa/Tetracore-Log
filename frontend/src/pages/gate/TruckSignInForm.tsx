@@ -47,7 +47,7 @@ export function TruckSignInForm({
   const [driverName, setDriverName] = useState(initial.driverName);
   const [driverPhone, setDriverPhone] = useState(initial.driverPhone);
   const [company, setCompany] = useState(initial.company);
-  const [errors, setErrors] = useState<{ driverName?: string; signature?: string }>({});
+  const [errors, setErrors] = useState<{ driverName?: string; driverPhone?: string; signature?: string }>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [letIn, setLetIn] = useState(false);
@@ -121,9 +121,11 @@ export function TruckSignInForm({
         />
         <TextField
           label="Phone number"
+          hint="Optional. Nigerian: 0803 123 4567. Another country: + and the country code."
           inputMode="tel"
           value={driverPhone}
           onChange={(e) => setDriverPhone(e.target.value)}
+          error={errors.driverPhone}
           autoComplete="off"
           disabled={busy}
         />

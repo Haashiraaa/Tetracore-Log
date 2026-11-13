@@ -26,6 +26,7 @@ dependencies = [
     "PyJWT==2.15.1",
     "haashi==1.3.2",
     "pywebpush==2.5.0",
+    "phonenumbers==9.0.43",   # real numbers per country (see docs/architecture/backend/people-logs.md)
 ]
 
 [project.optional-dependencies]

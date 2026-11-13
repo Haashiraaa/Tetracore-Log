@@ -11,6 +11,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { useSignature } from "@/hooks/useSignature";
 import { formatDateTime, formatDuration } from "@/lib/dates";
 import { formatScm } from "@/lib/format";
+import { formatPhone } from "@/lib/people";
 import { LOG_LABEL, type LogKind } from "@/models";
 import { faceOf, isTruck, isVisitor } from "@/services/entryService";
 import { EntryStatus } from "./EntryStatus";
@@ -46,7 +47,7 @@ function OwnFacts({ entry }: { entry: AnyEntry }) {
         <dt>Full name</dt>
         <dd>{entry.driver_name}</dd>
         <dt>Phone number</dt>
-        <dd>{entry.driver_phone ?? "—"}</dd>
+        <dd>{entry.driver_phone ? formatPhone(entry.driver_phone) : "—"}</dd>
         <dt>Company</dt>
         <dd>{entry.company ?? "—"}</dd>
         <dt>Gas bought</dt>
@@ -84,7 +85,7 @@ function OwnFacts({ entry }: { entry: AnyEntry }) {
           )}
         </dd>
         <dt>Phone number</dt>
-        <dd>{entry.phone ?? "—"}</dd>
+        <dd>{entry.phone ? formatPhone(entry.phone) : "—"}</dd>
       </>
     );
   }
@@ -95,7 +96,7 @@ function OwnFacts({ entry }: { entry: AnyEntry }) {
       <dt>Capacity</dt>
       <dd>{entry.capacity ?? "—"}</dd>
       <dt>Phone number</dt>
-      <dd>{entry.phone ?? "—"}</dd>
+      <dd>{entry.phone ? formatPhone(entry.phone) : "—"}</dd>
     </>
   );
 }

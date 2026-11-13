@@ -24,7 +24,7 @@ import { SIGNATURE_MAX_BYTES } from "@/config/env";
 import { ErrorCode, errorMessage, hasCode } from "@/exceptions/errors";
 import { formatTime } from "@/lib/dates";
 import { uuid } from "@/lib/ids";
-import { PHONE_ERROR, cleanPhone, phoneSearchDigits } from "@/lib/people";
+import { PHONE_ERROR, cleanPhone, formatPhone, phoneSearchDigits } from "@/lib/people";
 import * as staffService from "@/services/staffService";
 import * as visitorService from "@/services/visitorService";
 import { PURPOSE_PICKS, type ItemRow } from "@/services/visitorService";
@@ -151,7 +151,7 @@ export default function PersonInPage({ kind }: { kind: PersonKind }) {
     setOutcome(null);
     setPhoneError(null);
     setLookupError(null);
-    setPhoneInput(found.phone);
+    setPhoneInput(formatPhone(found.phone));
     openFound(found.phone, found);
   }
 
@@ -236,6 +236,7 @@ export default function PersonInPage({ kind }: { kind: PersonKind }) {
         <div className="lookup">
           <TextField
             label="Phone number"
+            hint="Nigerian: 0803 123 4567. Another country: start with + and the country code, e.g. +44 7911 123456."
             ref={phoneRef}
             inputMode="tel"
             value={phoneInput}
@@ -255,7 +256,7 @@ export default function PersonInPage({ kind }: { kind: PersonKind }) {
               <li key={m.phone}>
                 <button type="button" className="match" onClick={() => pick(m)}>
                   <span className="match__name">{m.full_name}</span>
-                  <span className="mono match__phone">{m.phone}</span>
+                  <span className="mono match__phone">{formatPhone(m.phone)}</span>
                   {m.open_entry_id && <Badge tone="amber">Inside</Badge>}
                 </button>
               </li>
@@ -271,7 +272,7 @@ export default function PersonInPage({ kind }: { kind: PersonKind }) {
       {stage.kind === "form" && (
         <form key={stage.entryId} className="card stack" onSubmit={submit} noValidate>
           <div className="row row--between">
-            <span className="mono cell-main">{stage.phone}</span>
+            <span className="mono cell-main">{formatPhone(stage.phone)}</span>
             <Badge tone={stage.returning ? "grey" : "amber"}>{stage.returning ? "Been here before" : "New here"}</Badge>
           </div>
           <p className="note-dark" role="status">

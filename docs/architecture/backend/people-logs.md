@@ -60,8 +60,18 @@ Visitors and staff are not made to sign twice or sign again on every visit. The 
 ## Phone numbers
 
 A phone number is the closest thing to an ID we have, so it is how we recognise a returning person.
-It is stored as digits only: `+234 803 123 4567` and `2348031234567` both become `08031234567`.
-Valid numbers are 7 to 15 digits after cleaning.
+It is stored in **E.164** (`+2348031234567`), country code included, and checked against the real
+numbering plan of its country with Google's libphonenumber (`phonenumbers` on the server,
+`libphonenumber-js` in the app, so both sides agree).
+
+- A number typed **without** a `+` is read as Nigerian: `0803 123 4567`, `803 123 4567` and
+  `2348031234567` all become `+2348031234567`. The default is `DEFAULT_PHONE_REGION` (`"NG"`), set in
+  `backend/src/models.py` and `frontend/src/config/env.ts`; change both together.
+- A number that starts with `+` is read as that country's, so a foreign visitor is
+  `+44 7911 123456` and is stored as `+447911123456`.
+- It must be a number that can really exist in that country (right length, valid prefix). Letters,
+  extensions and made-up numbers are refused with `422`, and the message says how to type one.
+- Screens show it formatted internationally (`+234 803 123 4567`); the CSV keeps E.164.
 
 There is no register of people. The sign-in screens **search as you type**: from 3 digits on, the
 people in the same facility whose number contains what was typed are listed under the box (up to 8,
@@ -71,7 +81,9 @@ sign-out if they are inside. No match is fine: finish the number, press **Look u
 as new.
 
 - `GET /visitors/search?q=0803` and `GET /staff/search?q=0803`: the matches, `[]` for none. 422
-  under 3 digits. A leading `234` is read as `0`, as when a number is saved.
+  under 3 digits. A leading `0` or `00` is dropped and the rest is matched anywhere in the stored
+  number, so `0803`, `803` and `+234803` find the same people, and `+44` or `7911` find a foreign one.
+  The app's own filter on the Log page does the same on the formatted and national forms.
 - `GET /visitors/lookup?phone=...` and `GET /staff/lookup?phone=...`: the one person with exactly
   this number (what **Look up** calls). Their latest entry is used and `open_entry_id` says whether
   they are inside.
@@ -109,3 +121,7 @@ A truck's visit has a queue and statuses of its own: see [trucks-and-duty.md](tr
 
 `d7a3f1c9b5e2` adds `staff_entries.capacity` and `phone`, cleans old visitor phones to the digits-only
 form, and renames stored role `officer` to `Officer`. Run `alembic upgrade head` on the server.
+
+`c5f7b9d1e3a4` converts every stored phone (visitor and staff entries, truck entries, trucks) to
+E.164, reading old numbers as Nigerian. A value that is not a valid number is left as it was rather
+than lost. Downgrading turns `+234…` back into `0…`.

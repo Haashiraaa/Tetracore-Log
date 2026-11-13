@@ -5,7 +5,7 @@
 
 import type { TruckEntry, TruckLookup, TruckSignInRequest } from "@/api/schemas";
 import * as trucksApi from "@/api/trucks";
-import { cleanFullName, fullNameError } from "@/lib/people";
+import { PHONE_ERROR, cleanFullName, cleanPhone, fullNameError } from "@/lib/people";
 import { deviceId } from "@/lib/ids";
 import { isValidPlate, normalizePlate } from "@/lib/plate";
 import type { FieldErrors } from "./entryService";
@@ -41,7 +41,7 @@ export interface SignInForm {
   company: string;
 }
 
-type SignInField = "driverName" | "signature";
+type SignInField = "driverName" | "driverPhone" | "signature";
 
 /** Register a truck. By default it joins the queue (no signature yet); with `enterNow` it
  *  is let in on the spot, which needs the driver's signature. */
@@ -54,6 +54,9 @@ export function buildSignInRequest(
   const driverName = form.driverName.trim();
   const nameProblem = fullNameError(driverName, "the driver's");
   if (nameProblem) errors.driverName = nameProblem;
+  // A phone is optional, but a number that is given must be a real one for its country.
+  const driverPhone = form.driverPhone.trim() ? cleanPhone(form.driverPhone) : null;
+  if (form.driverPhone.trim() && !driverPhone) errors.driverPhone = PHONE_ERROR;
   if (opts.enterNow && !opts.signaturePng && !opts.signatureOnFile) errors.signature = "Ask the driver to sign.";
   if (Object.keys(errors).length > 0) return { ok: false, errors };
 
@@ -63,7 +66,7 @@ export function buildSignInRequest(
       id: entryId,
       plate_number: normalizePlate(form.plate),
       driver_name: cleanFullName(driverName),
-      driver_phone: form.driverPhone.trim() || null,
+      driver_phone: driverPhone,
       company: form.company.trim() || null,
       // no signature + enter_now = the server uses the one on file for this plate
       ...(opts.enterNow ? { enter_now: true, ...(opts.signaturePng ? { signature: opts.signaturePng } : {}) } : {}),

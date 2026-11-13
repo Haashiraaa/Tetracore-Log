@@ -6,6 +6,7 @@ import * as entriesApi from "@/api/entries";
 import type { AnyEntry, EntryFilters, StaffEntry, TruckEntry, VisitorEntry } from "@/api/schemas";
 import { EXPORT_ROW_CAP, PAGE_SIZE, TODAY_MAX_ROWS } from "@/config/env";
 import { toCsv } from "@/lib/csv";
+import { phoneSearchText } from "@/lib/people";
 import { formatDateTime, lagosHour, startOfDayIso, todayDate } from "@/lib/dates";
 import type { LogKind } from "@/models";
 import { STATUS_LABEL } from "./truckService";
@@ -49,7 +50,7 @@ export function faceOf(e: AnyEntry): EntryFace {
 /** The words a search box matches against. */
 export function searchText(e: AnyEntry): string {
   const face = faceOf(e);
-  return [face.plate, face.name, face.sub, face.phone].filter(Boolean).join(" ").toUpperCase();
+  return [face.plate, face.name, face.sub, phoneSearchText(face.phone)].filter(Boolean).join(" ").toUpperCase();
 }
 
 // ---- sign-out ----

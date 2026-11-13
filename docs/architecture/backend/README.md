@@ -36,4 +36,6 @@ for a flag, or `["x"]` for a name are all refused with `422`, never quietly conv
 ids are the exception only in that JSON has no type for them: they travel as strings and are parsed
 and validated (a timestamp must carry a timezone offset; an id must be a UUID). Gas bought
 (`scm_purchased`) is sent as a decimal string such as `"12.50"` so no precision is lost.
-The shared definitions are in `api/schemas/common.py`.
+Phone numbers are validated for their country and stored as E.164 (see
+[people-logs.md](people-logs.md#phone-numbers)). The shared definitions are in
+`api/schemas/common.py`.

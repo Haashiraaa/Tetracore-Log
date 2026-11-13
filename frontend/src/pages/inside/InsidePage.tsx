@@ -3,6 +3,7 @@
 // the server); only accounts that belong to a facility get the sign-out button.
 // Time moves here: every line has a running clock and a bar that fills towards the point
 // where the server warns, and a line is stamped the moment it is let in or signed out.
+import { formatPhone } from "@/lib/people";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import type { AnyEntry, TruckEntry } from "@/api/schemas";
@@ -204,7 +205,7 @@ export default function InsidePage() {
                   <div className="line__meta">
                     {face.phone && (
                       <a className="mono" href={`tel:${face.phone}`}>
-                        {face.phone}
+                        {formatPhone(face.phone)}
                       </a>
                     )}
                     {showFacility && <Badge tone="ink">{e.facility_code}</Badge>}
@@ -254,7 +255,7 @@ export default function InsidePage() {
               <div className="line__meta">
                 {face.phone && (
                   <a className="mono" href={`tel:${face.phone}`}>
-                    {face.phone}
+                    {formatPhone(face.phone)}
                   </a>
                 )}
                 {showFacility && <Badge tone="ink">{e.facility_code}</Badge>}

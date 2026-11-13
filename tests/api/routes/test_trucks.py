@@ -315,3 +315,16 @@ def test_date_filters(client, officer_a):
                   date_from="2026-06-01T00:00:00+00:00") == {"NEW222"}
     assert plates(client, officer_a,
                   date_to="2026-06-01T00:00:00+00:00") == {"OLD111"}
+
+
+def test_a_driver_phone_is_kept_as_a_real_number(client, officer_a):
+    e = sign_in(client, officer_a, driver_phone="0803 000 0000").json()
+    assert e["driver_phone"] == "+2348030000000"
+    uk = sign_in(client, officer_a, plate_number="UK-100 AA", driver_phone="+44 7911 123456").json()
+    assert uk["driver_phone"] == "+447911123456"
+    assert lookup(client, officer_a, "UK-100 AA").json()["driver_phone"] == "+447911123456"
+    assert sign_in(client, officer_a, plate_number="NO-1 PH", driver_phone="").json()[
+        "driver_phone"] is None  # a phone is optional
+    for bad in ("12345", "abc", "0803000000"):
+        assert sign_in(client, officer_a, plate_number="BAD-1 PH",
+                       driver_phone=bad).status_code == 422, bad
