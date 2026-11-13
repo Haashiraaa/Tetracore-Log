@@ -5,6 +5,8 @@ interface AsyncState<T> {
   data: T | null;
   error: unknown;
   loading: boolean;
+  /** When data last arrived (ms since epoch). null until the first answer. */
+  updatedAt: number | null;
 }
 
 /**
@@ -12,7 +14,7 @@ interface AsyncState<T> {
  * Keeps the previous data while reloading, so auto-refreshing lists don't flash.
  */
 export function useAsync<T>(fn: (signal: AbortSignal) => Promise<T>, deps: DependencyList) {
-  const [state, setState] = useState<AsyncState<T>>({ data: null, error: null, loading: true });
+  const [state, setState] = useState<AsyncState<T>>({ data: null, error: null, loading: true, updatedAt: null });
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -20,7 +22,7 @@ export function useAsync<T>(fn: (signal: AbortSignal) => Promise<T>, deps: Depen
     setState((s) => ({ ...s, loading: true, error: null }));
     fn(ctrl.signal)
       .then((data) => {
-        if (!ctrl.signal.aborted) setState({ data, error: null, loading: false });
+        if (!ctrl.signal.aborted) setState({ data, error: null, loading: false, updatedAt: Date.now() });
       })
       .catch((error: unknown) => {
         if (ctrl.signal.aborted) return;

@@ -1,7 +1,8 @@
 /* frontend/src/styles/tokens.css
    Design tokens. The look is "hi-vis": black ink on off-white, one hi-vis yellow for
    the thing to tap next, and orange kept for "still inside". Hazard tape is the only
-   decoration. Light only for now: gates are outdoors in daylight. */
+   decoration. Day is the default; the night theme at the bottom re-inks the same tokens
+   for a dark gate (lib/theme.ts decides which one is on). */
 
 :root {
   color-scheme: light;
@@ -59,4 +60,41 @@
   --radius-sm: 6px;
   --tap: 3rem; /* minimum touch target, comfortable with gloves */
   --shadow-pop: 0 14px 40px rgb(15 17 19 / 0.3);
+}
+
+/* ---------- night: the same hi-vis, on black ---------- */
+:root[data-theme="night"] {
+  color-scheme: dark;
+
+  --ink: #f2f3ef;
+  --ink-soft: #b9bec4;
+  --ink-faint: #b9bec4;
+  --paper: #0f1113;
+  --surface: #1a1d21;
+  --surface-sunk: #23272c;
+  --line: #3a4047;
+  --line-strong: #5a6068;
+
+  /* the chrome goes one step darker than the page, so it still reads as chrome */
+  --bar: #000000;
+  --bar-raised: #1a1d21;
+  --bar-line: #3a4047;
+
+  --hot-soft: #3a2413;
+  --hot-ink: #ffc79c;
+
+  --blue: #9db8ff;
+  --blue-soft: #17233f;
+  --blue-ink: #c9d8ff;
+
+  --green: #58c98a;
+  --green-soft: #12301f;
+  --green-ink: #a9eec6;
+
+  --red: #ff8a7a;
+  --on-red: #0f1113;
+  --red-soft: #3d1a15;
+  --red-ink: #ffc2b8;
+
+  --shadow-pop: 0 14px 40px rgb(0 0 0 / 0.6);
 }

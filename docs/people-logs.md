@@ -49,6 +49,13 @@ nullable; the API does not.
 People who are still inside are shown as one long line each (name, capacity or purpose, phone,
 time in, Sign out). Trucks use the same list style.
 
+Each line has a clock that ticks every second, and turns orange after 6 hours. Visitors and trucks
+also carry a thin bar along the bottom that fills over 12 hours, warming from grey to orange in the
+second half and turning to moving hazard tape past the limit: that is the point where the server
+raises `left_inside` (see [notifications.md](notifications.md)). Staff get the clock but no bar,
+because staff are never warned about. When a line is signed out a "Signed out" stamp lands on it
+for a moment (with a short buzz on phones) before it leaves the list.
+
 ## Trucks
 
 Trucks are found by plate. The driver's name follows the same two-word full-name rule.

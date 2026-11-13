@@ -21,6 +21,19 @@ const timeFmt = new Intl.DateTimeFormat("en-GB", {
   hourCycle: "h23",
 });
 
+const hourFmt = new Intl.DateTimeFormat("en-GB", { timeZone: DISPLAY_TZ, hour: "2-digit", hourCycle: "h23" });
+const isoDayFmt = new Intl.DateTimeFormat("en-CA", { timeZone: DISPLAY_TZ, year: "numeric", month: "2-digit", day: "2-digit" });
+
+/** The hour of the day in Lagos, 0 to 23. */
+export function lagosHour(at: Date | string | number = new Date()): number {
+  return Number(hourFmt.format(new Date(at)));
+}
+
+/** Today's date in Lagos as 'YYYY-MM-DD'. */
+export function todayDate(at: Date = new Date()): string {
+  return isoDayFmt.format(at);
+}
+
 export function formatTime(iso: string): string {
   return timeFmt.format(new Date(iso));
 }
@@ -38,6 +51,14 @@ export function formatDuration(fromIso: string, to: Date = new Date()): string {
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours} h ${minutes % 60} min`;
   return `${Math.floor(hours / 24)} d ${hours % 24} h`;
+}
+
+/** A running clock, "0:52:07", for the first day; after that "1 d 3 h". */
+export function formatClock(fromIso: string, nowMs: number = Date.now()): string {
+  const seconds = Math.max(0, Math.floor((nowMs - new Date(fromIso).getTime()) / 1000));
+  if (seconds >= 24 * 3600) return formatDuration(fromIso, new Date(nowMs));
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${Math.floor(seconds / 3600)}:${pad(Math.floor((seconds % 3600) / 60))}:${pad(seconds % 60)}`;
 }
 
 /** 'YYYY-MM-DD' (from <input type="date">) -> ISO instant at 00:00 Lagos time. */

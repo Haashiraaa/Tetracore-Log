@@ -1,0 +1,293 @@
+/* frontend/src/styles/live.css : things that move. Rolling numbers, lines that arrive,
+   the hour strip, the stay bar, the stamp, and the few places the night theme needs more
+   than new tokens. base.css switches every animation off for prefers-reduced-motion. */
+
+/* ---------- a number that rolls when it changes ---------- */
+.roll {
+  display: inline-block;
+}
+.roll--up {
+  animation: roll-up 0.5s cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+.roll--down {
+  animation: roll-down 0.5s cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+@keyframes roll-up {
+  from {
+    transform: translateY(45%);
+    opacity: 0;
+  }
+}
+@keyframes roll-down {
+  from {
+    transform: translateY(-45%);
+    opacity: 0;
+  }
+}
+
+/* ---------- "Live": the screen keeps itself up to date ---------- */
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--ink-soft);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+.hero .live {
+  color: var(--on-bar-soft);
+}
+.live__dot {
+  flex: none;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: #58c98a;
+  animation: live-pulse 1.6s ease-out infinite;
+}
+.live--off .live__dot {
+  background: var(--hot);
+  animation: none;
+}
+@keyframes live-pulse {
+  from {
+    box-shadow: 0 0 0 0 rgb(88 201 138 / 0.7);
+  }
+  to {
+    box-shadow: 0 0 0 0.6rem rgb(88 201 138 / 0);
+  }
+}
+
+/* ---------- gate hero: today, hour by hour ---------- */
+.hero__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem 1rem;
+}
+.day {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.day__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--on-bar-soft);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.day__head .mono {
+  letter-spacing: 0;
+  text-transform: none;
+}
+.day__bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 3rem;
+}
+.day__bar {
+  flex: 1 1 0;
+  min-height: 3px;
+  background: #5a6068;
+  border-radius: 2px 2px 0 0;
+  transition: height 0.5s cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+.day__bar--now {
+  background: var(--hi);
+  animation: day-now 0.9s ease-in-out infinite alternate;
+}
+.day__bar--later {
+  background: #2c3136;
+}
+@keyframes day-now {
+  from {
+    opacity: 0.55;
+  }
+}
+.day__axis {
+  display: flex;
+  justify-content: space-between;
+  color: var(--on-bar-soft);
+  font-size: 0.6875rem;
+}
+
+/* ---------- a line that has just arrived ---------- */
+.activity {
+  overflow: hidden;
+}
+.activity__row--new,
+.line--new {
+  animation: arrive 1.8s ease-out;
+}
+@keyframes arrive {
+  0% {
+    transform: translateY(-60%);
+    opacity: 0;
+    background-color: var(--arrive);
+  }
+  22% {
+    transform: none;
+    opacity: 1;
+    background-color: var(--arrive);
+  }
+}
+:root {
+  --arrive: var(--hi);
+}
+
+/* ---------- trucks: queued, on site, gone ---------- */
+.flow {
+  max-width: 30rem;
+}
+.flow dd {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 0.9;
+}
+.flow .strip__cell {
+  position: relative;
+}
+.flow .strip__cell:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 0.85rem;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-top: 2.5px solid currentColor;
+  border-right: 2.5px solid currentColor;
+  transform: translateY(-50%) rotate(45deg);
+  opacity: 0.55;
+}
+.flow .strip__cell--key {
+  color: var(--on-bar);
+}
+
+/* ---------- inside: the stay bar and the stamp ---------- */
+.line {
+  position: relative;
+}
+.line:has(.stay--late) {
+  background: var(--hot-soft);
+}
+.stay {
+  grid-column: 1 / -1;
+  height: 0.5rem;
+  margin: 0.35rem -1rem -0.65rem;
+  background: var(--surface-sunk);
+}
+.stay__fill {
+  height: 100%;
+  background-color: var(--line-strong);
+  background-color: color-mix(in srgb, var(--hot) var(--warmth, 0%), var(--line-strong));
+  transition:
+    width 1s linear,
+    background-color 1s linear;
+}
+.stay--late .stay__fill {
+  background-image: repeating-linear-gradient(135deg, var(--hot) 0 10px, #0f1113 10px 20px);
+  background-size: 28.28px 100%;
+  animation: tape-run 0.9s linear infinite;
+}
+@keyframes tape-run {
+  to {
+    background-position: 28.28px 0;
+  }
+}
+@media (max-width: 52rem) {
+  .stay {
+    margin: 0.35rem -0.85rem -0.7rem;
+  }
+}
+.stamp {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+}
+.stamp__mark {
+  padding: 0.25rem 1rem 0.15rem;
+  background: #0f1113;
+  border-radius: 4px;
+  box-shadow: 0 10px 24px rgb(15 17 19 / 0.3);
+  color: #dfff3a;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transform: rotate(-6deg);
+  animation: stamp-land 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+@keyframes stamp-land {
+  from {
+    transform: rotate(-6deg) scale(2.6);
+    opacity: 0;
+  }
+}
+
+/* ---------- theme switch in the account menu ---------- */
+.account__theme {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0.35rem 0;
+  overflow: hidden;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sm);
+}
+.account__choice {
+  min-height: 2.75rem;
+  background: var(--surface);
+  border: 0;
+  color: var(--ink);
+  font-weight: 600;
+  cursor: pointer;
+}
+.account__choice[aria-pressed="true"] {
+  background: var(--hi);
+  color: var(--on-hi);
+}
+
+/* ---------- night: where new tokens are not enough ---------- */
+:root[data-theme="night"] {
+  --arrive: rgb(223 255 58 / 0.26);
+}
+:root[data-theme="night"] .hero {
+  background-color: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+:root[data-theme="night"] .stamp__mark {
+  box-shadow: 0 0 0 2px #dfff3a;
+}
+:root[data-theme="night"] .btn--dark,
+:root[data-theme="night"] .badge--ink,
+:root[data-theme="night"] .kind-tabs,
+:root[data-theme="night"] .strip__cell--key {
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+:root[data-theme="night"] .event--new {
+  background: rgb(223 255 58 / 0.14);
+}
+@media (max-width: 52rem) {
+  :root[data-theme="night"] .nav__link[aria-current="page"] {
+    background: var(--hi);
+    color: var(--on-hi);
+  }
+}
+
+/* Yellow always carries black text, whatever the theme's ink is. */
+.tile--primary {
+  color: var(--on-hi);
+}
