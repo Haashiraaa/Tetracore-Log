@@ -4,9 +4,9 @@
 
 import * as entriesApi from "@/api/entries";
 import type { AnyEntry, EntryFilters, StaffEntry, TruckEntry, VisitorEntry } from "@/api/schemas";
-import { EXPORT_ROW_CAP, PAGE_SIZE } from "@/config/env";
+import { EXPORT_ROW_CAP, PAGE_SIZE, TODAY_MAX_ROWS } from "@/config/env";
 import { toCsv } from "@/lib/csv";
-import { formatDateTime } from "@/lib/dates";
+import { formatDateTime, lagosHour, startOfDayIso, todayDate } from "@/lib/dates";
 import type { LogKind } from "@/models";
 import { STATUS_LABEL } from "./truckService";
 
@@ -103,6 +103,30 @@ export function fetchInside(kind: LogKind, signal?: AbortSignal): Promise<AnyEnt
 
 export function fetchRecent(kind: LogKind, count: number, signal?: AbortSignal): Promise<AnyEntry[]> {
   return entriesApi.listEntries<AnyEntry>(kind, { limit: count }, signal);
+}
+
+/** Everything signed in since midnight in Lagos, newest first, up to TODAY_MAX_ROWS. */
+export function fetchToday(kind: LogKind, signal?: AbortSignal): Promise<AnyEntry[]> {
+  return entriesApi.listEntries<AnyEntry>(
+    kind,
+    { date_from: startOfDayIso(todayDate()), limit: TODAY_MAX_ROWS },
+    signal,
+  );
+}
+
+/** 24 counts: how many of these entries signed in during each Lagos hour. */
+export function signInsByHour(entries: AnyEntry[]): number[] {
+  const hours = new Array<number>(24).fill(0);
+  for (const e of entries) hours[lagosHour(e.signed_in_at)] += 1;
+  return hours;
+}
+
+/** How many of these trucks signed out and went today, whichever day they arrived. */
+export function departedToday(entries: AnyEntry[]): number {
+  const midnight = startOfDayIso(todayDate());
+  return entries.filter(
+    (e) => isTruck(e) && e.status === "departed" && e.signed_out_at !== null && e.signed_out_at >= midnight,
+  ).length;
 }
 
 export async function fetchAll(

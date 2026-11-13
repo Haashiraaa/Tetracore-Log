@@ -41,7 +41,7 @@ The layout mirrors `backend/src/`, so each backend layer has a frontend twin:
 | `pages/`             | `api/routes/`                     | One folder per screen; thin, they call services            |
 | `components/`        | n/a                               | Reusable UI (`ui/`, `entries/`, `duty/`, `signature/`)   |
 | `lib/`, `hooks/`     | `db/orm/_helpers.py`              | Small pure helpers, React hooks                            |
-| `styles/`            | n/a                               | `tokens.css`, `base.css`, `components.css`, `layout.css`   |
+| `styles/`            | n/a                               | `tokens.css`, `base.css`, `components.css`, `layout.css`, `live.css` (everything that moves) |
 
 Rule of thumb: `api/*` never contains a decision, `services/*` never touches the DOM.
 
@@ -51,7 +51,9 @@ Rule of thumb: `api/*` never contains a decision, `services/*` never touches the
 - **Trucks, gates and duty.** A truck joins the queue, is let in (the driver signs), then signs out; or it leaves the queue with a reason. Officers log themselves on the **Duty** page (gate dropdown, optional signature, change gate); off duty they cannot sign anyone in or out (`RequireDuty` in `auth/guards.tsx`, the server enforces it). See `docs/trucks-and-duty.md`.
 - **Alerts.** Admins get an **Alerts** page: a live feed of every event (polled every 5 s, `components/notifications/`), a bell count in the menu and tab title, and a switch for browser push per device (`public/sw.js` shows the notification, with the logo from `public/icon-192.png`). See `docs/notifications.md`.
 - **Icons.** `public/` holds the logo as the tab icon (`favicon-32.png`), the Home Screen icon (`icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, listed in `manifest.webmanifest`) and the notification badge (`badge-96.png`).
-- **Look.** "Hi-vis": black, off-white, one yellow for the next action, orange for still inside. Tokens are in `src/styles/tokens.css`. Light only for now.
+- **Look.** "Hi-vis": black, off-white, one yellow for the next action, orange for still inside. Tokens are in `src/styles/tokens.css`.
+- **Day and night.** The night theme re-inks the same tokens for a dark gate (`:root[data-theme="night"]` in `tokens.css`, plus a few fixes at the end of `live.css`). The account menu has Auto / Day / Night; Auto, the default, uses night from 19:00 to 06:00 Lagos time (`NIGHT_STARTS_HOUR`, `NIGHT_ENDS_HOUR`). The choice is kept per browser under `log-book.theme` (`lib/theme.ts`).
+- **Live.** Gate and Inside ask the server who is inside every 15 seconds (`INSIDE_REFRESH_MS`) and show "Live · checked N s ago". What changes is shown moving: counts roll (`RollingNumber`), a new line slides in with a yellow flash (`useFreshKeys`), clocks tick off one shared timer (`useNow`), and a stamp lands on a line that was just let in or signed out (`Stamp`). Gate's black panel also shows today's sign-ins hour by hour (`DayStrip`, from up to 200 entries per log, refreshed every minute and whenever the count changes). All of it is in `styles/live.css`, and `prefers-reduced-motion` switches every animation off (`base.css`).
 - **Who sees what.** The role is a free-form label and changes nothing. Accounts with a facility get Gate, Inside, Log, Duty and can write entries. Accounts without a facility get Inside, Log and Duty (read-only, all facilities). Admins add Accounts and Alerts. The backend re-checks every request; the UI only hides what you can't use.
 - **Sessions.** Access token in memory, refresh token in `localStorage`. An expired token is refreshed once and the request retried. Only `session_revoked` logs you out; a wrong current PIN on Change PIN does not.
 - **Retries are safe.** The sign-in entry id is generated once when the form opens and reused on retry, so a lost response can't create a duplicate.

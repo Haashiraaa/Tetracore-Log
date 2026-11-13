@@ -4,6 +4,13 @@ All notable changes to Log Book. Entries above the baseline are written automati
 release-please from commit messages when a release pull request is merged (see
 [docs/releasing.md](docs/releasing.md)), so do not edit them by hand.
 
+## [0.12.0](https://github.com/Haashiraaa/log-book/compare/v0.11.0...v0.12.0) (2026-11-13)
+
+
+### Features
+
+* **frontend:** make Gate and Inside live, and add a night theme ([#32](https://github.com/Haashiraaa/log-book/issues/32)) ([abe29ee](https://github.com/Haashiraaa/log-book/commit/abe29ee1949f8799a1b999217fa36b414d881d98))
+
 ## [0.11.0](https://github.com/Haashiraaa/log-book/compare/v0.10.2...v0.11.0) (2026-11-13)
 
 
