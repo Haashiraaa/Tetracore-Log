@@ -16,7 +16,8 @@ def fresh_phone():
 
 def payload(**over):
     return {"id": str(uuid.uuid4()), "full_name": "Ngozi Eze", "company": "Acme Ltd",
-            "purpose": "Delivery", "items_received": "2 boxes of filters",
+            "purpose": "Delivery",
+            "items": [{"name": "Oil filters", "quantity": "2 boxes"}],
             "phone": fresh_phone(), "signature": PNG_B64, **over}
 
 
@@ -39,7 +40,8 @@ def test_sign_in_records_the_fields(client, officer_a):
     assert r.status_code == 201
     e = r.json()
     assert (e["full_name"], e["company"], e["purpose"]) == ("Ngozi Eze", "Acme Ltd", "Delivery")
-    assert e["items_received"] == "2 boxes of filters" and e["phone"].startswith("0803")
+    assert e["items"] == [{"name": "Oil filters", "quantity": "2 boxes"}]
+    assert e["items_received"] is None and e["phone"].startswith("0803")
     assert e["facility_code"] == "CNG-A" and e["signed_in_by_name"]
     assert e["signed_out_at"] is None
     assert e["has_signature"] is True and e["has_signature_out"] is False
@@ -136,10 +138,11 @@ def test_open_filter_and_paging(client, officer_a):
 
 
 def test_name_phone_and_signature_are_required_the_rest_may_be_blank(client, officer_a):
-    r = sign_in(client, officer_a, company="", purpose="  ", items_received="")
+    r = sign_in(client, officer_a, company="", purpose="  ", items=[])
     assert r.status_code == 201
     e = r.json()
     assert (e["company"], e["purpose"], e["items_received"]) == (None,) * 3
+    assert e["items"] == []
     for missing in ("full_name", "phone", "signature"):
         body = payload()
         del body[missing]
@@ -209,12 +212,20 @@ def test_one_sign_in_at_a_time(client, officer_a):
     assert sign_in(client, officer_a, phone="08031112222").status_code == 201
 
 
-def test_signatures_are_required_both_ways(client, officer_a):
+def test_sign_out_needs_some_signature_to_use(client, officer_a):
+    """A line from before signatures were required has none to reuse: it must be signed."""
+    from sqlalchemy import text
+
+    from backend.src.db.session import engine
     eid = sign_in(client, officer_a).json()["id"]
+    with engine.begin() as conn:
+        conn.execute(text("UPDATE visitor_entries SET signature_in = NULL WHERE id = :i"),
+                     {"i": eid})
     out = f"{URL}/{eid}/sign-out"
-    assert client.post(out, json={}, headers=officer_a.headers).status_code == 422
-    assert client.post(out, headers=officer_a.headers).status_code == 422
-    assert client.get(URL, params={"open": True}, headers=officer_a.headers).json()
+    r = client.post(out, json={}, headers=officer_a.headers)
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "invalid_signature"
+    assert sign_out(client, officer_a, eid).status_code == 200  # signing in person works
+    assert client.post(out, headers=officer_a.headers).status_code == 422  # no body at all
 
 
 def test_search_finds_people_as_the_number_is_typed(client, officer_a, officer_b):
@@ -253,3 +264,103 @@ def test_search_needs_three_digits_and_a_facility(client, officer_a, cso):
     assert client.get(url, params={"q": "08"}, headers=officer_a.headers).status_code == 422
     assert client.get(url, params={"q": "abc"}, headers=officer_a.headers).status_code == 422
     assert client.get(url, params={"q": "0803"}, headers=cso.headers).status_code == 403
+
+
+# ---- items brought: a list of name + quantity ----
+
+def test_items_are_a_list_in_the_order_given(client, officer_a):
+    items = [{"name": "  Oil filters ", "quantity": "2 boxes"},
+             {"name": "Gloves", "quantity": "10"},
+             {"name": "Hose", "quantity": "1"}]
+    e = sign_in(client, officer_a, items=items).json()
+    assert e["items"] == [{"name": "Oil filters", "quantity": "2 boxes"},
+                          {"name": "Gloves", "quantity": "10"}, {"name": "Hose", "quantity": "1"}]
+    listed = client.get(URL, headers=officer_a.headers).json()[0]
+    assert listed["items"] == e["items"]
+
+
+def test_an_item_needs_a_name_and_a_quantity(client, officer_a):
+    for bad in ({"name": "", "quantity": "1"}, {"name": "Gloves", "quantity": ""},
+                {"name": "Gloves"}, {"quantity": "1"}):
+        assert sign_in(client, officer_a, items=[bad]).status_code == 422
+    too_many = [{"name": f"Thing {i}", "quantity": "1"} for i in range(31)]
+    assert sign_in(client, officer_a, items=too_many).status_code == 422
+
+
+def test_no_items_key_means_nothing_brought(client, officer_a):
+    body = payload()
+    del body["items"]
+    r = client.post(URL, json=body, headers=officer_a.headers)
+    assert r.status_code == 201 and r.json()["items"] == []
+
+
+# ---- signatures are kept and reused ----
+
+def test_sign_out_without_a_signature_reuses_the_sign_in_one(client, officer_a):
+    eid = sign_in(client, officer_a).json()["id"]
+    r = client.post(f"{URL}/{eid}/sign-out", json={}, headers=officer_a.headers)
+    assert r.status_code == 200
+    assert r.json()["has_signature"] is True and r.json()["has_signature_out"] is True
+    got = client.get(f"{URL}/{eid}/signature", params={"side": "out"}, headers=officer_a.headers)
+    assert got.status_code == 200 and got.content == PNG
+
+
+def test_sign_out_with_a_new_signature_keeps_that_one(client, officer_a):
+    other = b"\x89PNG\r\n\x1a\n" + b"\x01" * 64
+    eid = sign_in(client, officer_a).json()["id"]
+    sign_out(client, officer_a, eid, {"signature": base64.b64encode(other).decode()})
+    got = client.get(f"{URL}/{eid}/signature", params={"side": "out"}, headers=officer_a.headers)
+    assert got.content == other
+
+
+def test_returning_visitor_signs_in_without_signing_again(client, officer_a):
+    phone = fresh_phone()
+    first = sign_in(client, officer_a, phone=phone).json()
+    sign_out(client, officer_a, first["id"])
+    body = payload(phone=phone, full_name="Ngozi Eze-Okafor", company="New Co")
+    del body["signature"]  # they do not sign: the one on file is used
+    r = client.post(URL, json=body, headers=officer_a.headers)
+    assert r.status_code == 201
+    e = r.json()
+    assert (e["full_name"], e["company"]) == ("Ngozi Eze-Okafor", "New Co")
+    assert e["has_signature"] is True
+    got = client.get(f"{URL}/{e['id']}/signature", headers=officer_a.headers)
+    assert got.content == PNG
+
+
+def test_a_new_signature_replaces_the_one_on_file(client, officer_a):
+    newer = b"\x89PNG\r\n\x1a\n" + b"\x02" * 64
+    phone = fresh_phone()
+    first = sign_in(client, officer_a, phone=phone).json()
+    sign_out(client, officer_a, first["id"])
+    second = sign_in(client, officer_a, phone=phone,
+                     signature=base64.b64encode(newer).decode()).json()
+    sign_out(client, officer_a, second["id"])
+    body = payload(phone=phone)
+    del body["signature"]
+    third = client.post(URL, json=body, headers=officer_a.headers).json()
+    assert client.get(f"{URL}/{third['id']}/signature", headers=officer_a.headers).content == newer
+
+
+def test_no_signature_on_file_means_one_is_required(client, officer_a, officer_b):
+    phone = fresh_phone()
+    sign_out_first = sign_in(client, officer_b, phone=phone).json()  # another facility
+    sign_out(client, officer_b, sign_out_first["id"])
+    body = payload(phone=phone)
+    del body["signature"]
+    r = client.post(URL, json=body, headers=officer_a.headers)
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "invalid_signature"
+
+
+def test_lookup_and_search_say_whether_a_signature_is_on_file(client, officer_a, officer_b):
+    phone = "08037771111"
+    assert client.get("/api/visitors/lookup", params={"phone": phone},
+                      headers=officer_a.headers).json() is None
+    sign_in(client, officer_a, phone=phone)
+    sign_in(client, officer_b, phone="08037772222")
+    found = client.get("/api/visitors/lookup", params={"phone": phone},
+                       headers=officer_a.headers).json()
+    assert found["has_signature"] is True
+    hits = client.get("/api/visitors/search", params={"q": "0803777"},
+                      headers=officer_a.headers).json()
+    assert [(h["phone"], h["has_signature"]) for h in hits] == [(phone, True)]

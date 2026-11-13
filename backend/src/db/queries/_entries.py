@@ -128,6 +128,32 @@ def latest_by_phone(
         .limit(1))
 
 
+def latest_signature_by_phone(
+    db: Session, model: Model, facility_id: uuid.UUID, phone: str
+) -> bytes | None:
+    """The signature this person most recently gave on the way IN at this facility, or
+    None if they never gave one. Facility-scoped, like everything else about a phone."""
+    return db.scalar(
+        select(model.signature_in)
+        .where(model.facility_id == facility_id, model.phone == phone,
+               model.signature_in.is_not(None))
+        .order_by(model.signed_in_at.desc(), model.id)
+        .limit(1))
+
+
+def phones_with_signature(
+    db: Session, model: Model, facility_id: uuid.UUID, phones: Sequence[str]
+) -> set[str]:
+    """Which of these (canonical) phones have a signature on file here."""
+    if not phones:
+        return set()
+    return set(db.scalars(
+        select(model.phone)
+        .where(model.facility_id == facility_id, model.phone.in_(list(phones)),
+               model.signature_in.is_not(None))
+        .distinct()))
+
+
 def search_by_phone(
     db: Session, model: Model, facility_id: uuid.UUID, digits: str, limit: int
 ) -> list[tuple[Any, uuid.UUID | None]]:

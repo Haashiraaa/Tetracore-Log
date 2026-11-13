@@ -9,6 +9,7 @@ import { toCsv } from "@/lib/csv";
 import { formatDateTime, lagosHour, startOfDayIso, todayDate } from "@/lib/dates";
 import type { LogKind } from "@/models";
 import { STATUS_LABEL } from "./truckService";
+import { itemsLabel } from "./visitorService";
 
 export type FieldErrors<K extends string> = Partial<Record<K, string>>;
 
@@ -70,10 +71,11 @@ export function signatureError(png: string | null): string | null {
 export function signOut(
   kind: LogKind,
   entryId: string,
-  opts: { signature: string; scm?: string | null },
+  opts: { signature: string | null; scm?: string | null },
 ): Promise<AnyEntry> {
+  // signature null (visitors and staff only): the server reuses the one from sign-in
   return entriesApi.signOut<AnyEntry>(kind, entryId, {
-    signature: opts.signature,
+    ...(opts.signature ? { signature: opts.signature } : {}),
     ...(kind === "trucks" && opts.scm ? { scm_purchased: opts.scm } : {}),
   });
 }
@@ -162,7 +164,7 @@ const OWN_COLUMNS: Record<LogKind, Column[]> = {
     ["Full name", (e) => (isVisitor(e) ? e.full_name : "")],
     ["Company name", (e) => (isVisitor(e) ? (e.company ?? "") : "")],
     ["Purpose of visit", (e) => (isVisitor(e) ? (e.purpose ?? "") : "")],
-    ["Items received", (e) => (isVisitor(e) ? (e.items_received ?? "") : "")],
+    ["Items brought", (e) => (isVisitor(e) ? itemsLabel(e) : "")],
     ["Phone number", (e) => (isVisitor(e) ? (e.phone ?? "") : "")],
   ],
   staff: [

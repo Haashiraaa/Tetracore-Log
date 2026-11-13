@@ -47,7 +47,7 @@ Rule of thumb: `api/*` never contains a decision, `services/*` never touches the
 
 ## Behaviour worth knowing
 
-- **Three logs.** Trucks, visitors and staff share one set of screens: Gate (sign in), Inside (who is in now, sign out), Log (history, CSV, both signatures). Everyone signs on the way in and on the way out. Visitors and staff need a full name and a phone; the sign-in screens search by phone as you type and prefill returning people (see `docs/people-logs.md`).
+- **Three logs.** Trucks, visitors and staff share one set of screens: Gate (sign in), Inside (who is in now, sign out), Log (history, CSV, both signatures). Everyone signs on the way in and on the way out, except that a visitor's or staff member's signature is kept and reused (below). Visitors and staff need a full name and a phone; the sign-in screens search by phone as you type and prefill returning people (see `docs/people-logs.md`).
 - **Trucks, gates and duty.** A truck joins the queue, is let in (the driver signs), then signs out; or it leaves the queue with a reason. Officers log themselves on the **Duty** page (gate dropdown, optional signature, change gate); off duty they cannot sign anyone in or out (`RequireDuty` in `auth/guards.tsx`, the server enforces it). See `docs/trucks-and-duty.md`.
 - **Alerts.** Admins get an **Alerts** page: a live feed of every event (polled every 5 s, `components/notifications/`), a bell count in the menu and tab title, and a switch for browser push per device (`public/sw.js` shows the notification, with the logo from `public/icon-192.png`). See `docs/notifications.md`.
 - **Icons.** `public/` holds the logo as the tab icon (`favicon-32.png`), the Home Screen icon (`icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, listed in `manifest.webmanifest`) and the notification badge (`badge-96.png`).
@@ -59,6 +59,8 @@ Rule of thumb: `api/*` never contains a decision, `services/*` never touches the
 - **Retries are safe.** The sign-in entry id is generated once when the form opens and reused on retry, so a lost response can't create a duplicate.
 - **Times.** The server stamps sign-in and sign-out times while the app is online. Everything is displayed in Lagos time (`config/env.ts`).
 - **Signatures.** Drawn on a canvas, exported as a small PNG (well under the 200 KB limit), fetched back with the bearer header as a blob.
+- **Items brought.** On the visitor form, `components/entries/ItemsEditor.tsx` is one **+ Add item** button until used; each tap adds a name + quantity row (`ItemRow` in `services/visitorService.ts`, `itemsLabel` for the table and CSV).
+- **Reused signatures.** A person with `has_signature` on their lookup gets "Signature on file" instead of the pad on the sign-in form (**Sign again instead** brings it back), and `SignOutSheet` shows their sign-in signature (`hooks/useSignature.ts`) and signs them out with it, sending no signature; **Let them sign instead** opens the pad. Trucks always draw.
 - **SCM** is typed at sign-out and sent as a decimal string (`"12.50"`).
 
 ## Putting it on the VPS later

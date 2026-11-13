@@ -35,7 +35,7 @@ Access model (officers table), see backend/src/models.py:
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
+from typing import Any, Optional
 
 from sqlalchemy import (
     BigInteger,
@@ -54,6 +54,7 @@ from sqlalchemy import (
     func,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, validates
 
 from backend.src.db.orm._helpers import normalize_code, normalize_plate
@@ -477,8 +478,11 @@ class VisitorEntry(EntryMixin, TimestampMixin, Base):
     full_name: Mapped[str] = mapped_column(String(150), nullable=False)
     company: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     purpose: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
+    # Old free text, kept for lines written before `items`; new lines leave it empty.
     items_received: Mapped[Optional[str]] = mapped_column(
         String(500), nullable=True)
+    # What they brought: [{"name": ..., "quantity": ...}, ...]. Null = nothing.
+    items: Mapped[Optional[list[dict[str, Any]]]] = mapped_column(JSONB, nullable=True)
     phone: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
 
     __table_args__ = (

@@ -11,14 +11,14 @@ from pydantic import Field, field_validator
 
 from backend.src.api.schemas.common import (
     EntryOut,
-    EntrySignInRequest,
     LookupOut,
+    PersonSignInRequest,
     full_name_field,
     phone_field,
 )
 
 
-class StaffSignInRequest(EntrySignInRequest):
+class StaffSignInRequest(PersonSignInRequest):
     full_name: str = Field(min_length=2, max_length=150)
     capacity: str = Field(min_length=2, max_length=100)  # free text
     phone: str = Field(min_length=1, max_length=32)

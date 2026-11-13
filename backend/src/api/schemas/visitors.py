@@ -1,32 +1,43 @@
 # backend/src/api/schemas/visitors.py
 
-"""Visitor log: full name, company, purpose of visit, items received, phone, time in +
-signature, time out + signature (the last four come from the shared base classes)."""
+"""Visitor log: full name, company, purpose of visit, items brought (name + quantity), phone,
+time in + signature, time out + signature (the last four come from the shared base classes)."""
 
 from __future__ import annotations
 
 from typing import Any, Optional
 
-from pydantic import Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from backend.src.api.schemas.common import (
     EntryOut,
-    EntrySignInRequest,
     LookupOut,
+    PersonSignInRequest,
     blank_to_none,
     full_name_field,
     phone_field,
 )
 
+MAX_ITEMS = 30
 
-class VisitorSignInRequest(EntrySignInRequest):
+
+class VisitorItem(BaseModel):
+    """One thing the visitor brought. Quantity is free text so "2 cartons" works."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    name: str = Field(min_length=1, max_length=100)
+    quantity: str = Field(min_length=1, max_length=30)
+
+
+class VisitorSignInRequest(PersonSignInRequest):
     full_name: str = Field(min_length=2, max_length=150)
     company: Optional[str] = Field(default=None, max_length=200)
     purpose: Optional[str] = Field(default=None, max_length=300)
-    items_received: Optional[str] = Field(default=None, max_length=500)
+    items: list[VisitorItem] = Field(default_factory=list, max_length=MAX_ITEMS)
     phone: str = Field(min_length=1, max_length=32)
 
-    _blank = field_validator("company", "purpose", "items_received")(blank_to_none)
+    _blank = field_validator("company", "purpose")(blank_to_none)
     _name = field_validator("full_name")(full_name_field)
     _phone = field_validator("phone")(phone_field)
 
@@ -39,7 +50,8 @@ class VisitorEntryOut(EntryOut):
     full_name: str
     company: Optional[str]
     purpose: Optional[str]
-    items_received: Optional[str]
+    items: list[VisitorItem]
+    items_received: Optional[str]  # old free text, only on lines from before `items`
     phone: Optional[str]
 
     @classmethod
@@ -47,5 +59,6 @@ class VisitorEntryOut(EntryOut):
         e = row[0]
         return cls(
             **cls.common_fields(row), full_name=e.full_name, company=e.company,
-            purpose=e.purpose, items_received=e.items_received, phone=e.phone,
+            purpose=e.purpose, items=e.items or [], items_received=e.items_received,
+            phone=e.phone,
         )
