@@ -66,6 +66,10 @@ Things to know:
 - Push needs **https** (or `localhost`). Over plain `http://<laptop-ip>` the page says the browser
   cannot do it; the feed still works.
 - On iPhone, push works only for a web app **added to the Home Screen**.
+- The banner carries the Log Book logo (`frontend/public/icon-192.png`) and, in the Android status bar, a
+  white "LB" badge (`badge-96.png`). Both are set in `public/sw.js`. The same icon set is the browser tab icon
+  and, through `manifest.webmanifest`, the Home Screen icon. A browser that already has the old service worker
+  picks the logo up the next time the app is opened.
 - Every event is pushed, to every browser of every active admin. A disabled or demoted admin gets none.
 - Push is sent after the request has finished, on a small thread pool. A slow or dead push service can
   never slow the gate down, and a failed push is logged and dropped: the event is in the feed either way.
