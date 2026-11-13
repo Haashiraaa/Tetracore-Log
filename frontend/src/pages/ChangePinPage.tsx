@@ -46,7 +46,7 @@ export default function ChangePinPage() {
   return (
     <main className="auth">
       <form className="auth__card stack" onSubmit={submit} noValidate>
-        <p className="auth__eyebrow mono">Tetracore Log</p>
+        <p className="auth__eyebrow mono">Log Book</p>
 
         <h1>{forced ? "Set your new PIN" : "Change PIN"}</h1>
 

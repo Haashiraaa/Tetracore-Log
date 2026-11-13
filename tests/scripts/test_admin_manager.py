@@ -142,11 +142,11 @@ def test_admin_changes_from_the_console_reach_the_notification_feed(client, run)
     assert events[0]["facility_code"] == "CNG-A" and events[0]["actor_name"] is None
 
 
-def test_the_tetracore_admin_command_is_registered():
-    """`tetracore-admin` must point at a real callable, or the command breaks after install."""
+def test_the_log_book_admin_command_is_registered():
+    """`log-book-admin` must point at a real callable, or the command breaks after install."""
     from pathlib import Path
 
     text = (Path(__file__).parents[2] / "pyproject.toml").read_text()
-    assert 'tetracore-admin = "scripts.admin_manager:main"' in text
+    assert 'log-book-admin = "scripts.admin_manager:main"' in text
     assert callable(admin_manager.main)
-    assert admin_manager._build_parser().prog == "tetracore-admin"
+    assert admin_manager._build_parser().prog == "log-book-admin"

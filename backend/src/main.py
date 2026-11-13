@@ -67,7 +67,7 @@ async def lifespan(_app: FastAPI):
                 await watcher
 
 
-app = FastAPI(title="Tetracore Log", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Log Book", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -117,7 +117,7 @@ def health() -> dict[str, str]:
 
 
 def serve() -> None:
-    """tetracore-log api. Add --reload for development."""
+    """log-book api. Add --reload for development."""
     import sys
 
     import uvicorn

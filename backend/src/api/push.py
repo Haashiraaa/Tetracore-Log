@@ -36,7 +36,7 @@ def dispatch(event_ids: Iterable[int]) -> None:
 
 
 def _payload(summary: str, facility_code: str | None, warning: bool, event_id: int) -> str:
-    where = facility_code or "Tetracore Log"
+    where = facility_code or "Log Book"
     return json.dumps({
         "title": f"Warning · {where}" if warning else where,
         "body": summary,
@@ -71,7 +71,7 @@ def send_test(db, officer_id) -> dict:
     silently instead of showing a new one.
     Unlike real pushes this waits for the answer, so a failure is shown, not only logged."""
     subs = [s for s in q.admin_subscriptions(db) if s.officer_id == officer_id]
-    data = json.dumps({"title": "Tetracore Log", "body": "Test notification. Push is working.",
+    data = json.dumps({"title": "Log Book", "body": "Test notification. Push is working.",
                        "tag": f"push-test-{time.time_ns()}", "url": "/notifications"})
     sent, failed = 0, []
     for sub in subs:

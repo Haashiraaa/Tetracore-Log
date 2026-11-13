@@ -18,14 +18,17 @@ export function uuid(): string {
     .join("-");
 }
 
-const DEVICE_KEY = "tetracore-log.device_id";
+const DEVICE_KEY = "log-book.device_id";
+const OLD_DEVICE_KEY = "tetracore-log.device_id"; // the app's name before the rename
 
 /** Stable per-browser id, stored on each entry so odd rows can be traced to a device. */
 export function deviceId(): string {
   try {
     let id = window.localStorage.getItem(DEVICE_KEY);
     if (!id) {
-      id = uuid();
+      // Keep the id this browser already had under the old name, so its past entries still match.
+      id = window.localStorage.getItem(OLD_DEVICE_KEY) ?? uuid();
+      window.localStorage.removeItem(OLD_DEVICE_KEY);
       window.localStorage.setItem(DEVICE_KEY, id);
     }
     return id;

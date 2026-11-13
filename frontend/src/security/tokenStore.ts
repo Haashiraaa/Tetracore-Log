@@ -4,7 +4,19 @@
 // (V1 trade-off: localStorage is readable by any script on the page. There is
 // no third-party script here; revisit with httpOnly cookies if that changes.)
 
-const REFRESH_KEY = "tetracore-log.refresh_token";
+const REFRESH_KEY = "log-book.refresh_token";
+const OLD_REFRESH_KEY = "tetracore-log.refresh_token"; // the app's name before the rename
+
+// Carry a saved login over from the old key once, so the rename signs nobody out.
+try {
+  const old = window.localStorage.getItem(OLD_REFRESH_KEY);
+  if (old !== null) {
+    if (window.localStorage.getItem(REFRESH_KEY) === null) window.localStorage.setItem(REFRESH_KEY, old);
+    window.localStorage.removeItem(OLD_REFRESH_KEY);
+  }
+} catch {
+  /* storage blocked: nothing to carry over */
+}
 
 let accessToken: string | null = null;
 let refreshFallback: string | null = null; // used if storage is blocked

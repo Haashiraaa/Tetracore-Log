@@ -31,7 +31,7 @@ class Settings:
     JWT_SECRET = os.getenv('JWT_SECRET')
     PIN_PEPPER = os.getenv('PIN_PEPPER')
     JWT_ALGORITHM = "HS256"
-    JWT_ISSUER = os.getenv('JWT_ISSUER', 'tetracore-log')
+    JWT_ISSUER = os.getenv('JWT_ISSUER', 'log-book')
     ACCESS_TOKEN_MINUTES = _int_env('ACCESS_TOKEN_MINUTES', 15)
     REFRESH_TOKEN_DAYS = _int_env('REFRESH_TOKEN_DAYS', 30)
     MAX_PIN_ATTEMPTS = _int_env('MAX_PIN_ATTEMPTS', 5)

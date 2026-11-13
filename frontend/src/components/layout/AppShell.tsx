@@ -66,9 +66,9 @@ export function AppShell() {
   const frame = (
     <div className="shell">
       <aside className="side">
-        <Link to="/" className="brand" aria-label="Tetracore Log home">
+        <Link to="/" className="brand" aria-label="Log Book home">
           <span className="brand__name">
-            Tetracore <span className="brand__log">Log</span>
+            Log <span className="brand__log">Book</span>
           </span>
           <span className="brand__tape" aria-hidden="true" />
         </Link>

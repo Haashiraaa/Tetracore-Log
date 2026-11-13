@@ -23,7 +23,7 @@ export function useNotifications(): NotificationsValue | null {
   return useContext(Ctx);
 }
 
-const BASE_TITLE = "Tetracore Log";
+const BASE_TITLE = "Log Book";
 
 export function NotificationsProvider({ children }: { children: ReactNode }) {
   const [summary, setSummary] = useState<EventsSummary | null>(null);
