@@ -7,12 +7,12 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from backend.src.api.schemas.common import (
     EntryOut,
-    EntrySignInRequest,
-    EntrySignOutRequest,
+    PersonSignInRequest,
+    PersonSignOutRequest,
     blank_to_none,
     full_name_field,
     require_tz,
@@ -30,14 +30,15 @@ class TruckLookupOut(BaseModel):
     # with that visit's status: "queued" or "on_site".
     open_entry_id: Optional[uuid.UUID]
     open_entry_status: Optional[str]
+    # A driver's signature from an earlier visit is on file: no need to sign again.
+    has_signature: bool = False
 
 
-class TruckSignInRequest(EntrySignInRequest):
+class TruckSignInRequest(PersonSignInRequest):
     """Register a truck. By default it joins the queue (outside, no signature yet). With
-    `enter_now` it is let in on the spot, which needs the driver's signature."""
+    `enter_now` it is let in on the spot, which needs the driver's signature: drawn now, or
+    left out to reuse the one on file for this plate (the service refuses if there is none)."""
 
-    signature: Optional[str] = Field(  # pyright: ignore[reportIncompatibleVariableOverride]
-        default=None, max_length=400_000)
     enter_now: bool = False
     plate_number: str = Field(min_length=2, max_length=40)
     driver_name: str = Field(min_length=2, max_length=150)
@@ -57,18 +58,12 @@ class TruckSignInRequest(EntrySignInRequest):
     _blank = field_validator("driver_phone", "company")(blank_to_none)
     _name = field_validator("driver_name")(full_name_field)
 
-    @model_validator(mode="after")
-    def _signature_to_enter(self) -> "TruckSignInRequest":
-        if self.enter_now and not (self.signature or "").strip():
-            raise ValueError("The driver's signature is needed to let a truck in.")
-        return self
-
 
 class TruckEnterRequest(BaseModel):
-    """Let a queued truck in: the driver signs on the way in."""
+    """Let a queued truck in: the driver signs on the way in, or the one on file is used."""
 
     entered_at: Optional[datetime] = None  # default: server time
-    signature: str = Field(min_length=1, max_length=400_000)
+    signature: Optional[str] = Field(default=None, max_length=400_000)
 
     @field_validator("entered_at")
     @classmethod
@@ -90,7 +85,7 @@ class TruckLeaveQueueRequest(BaseModel):
         return require_tz(v)
 
 
-class TruckSignOutRequest(EntrySignOutRequest):  # only a truck that is on site
+class TruckSignOutRequest(PersonSignOutRequest):  # only a truck that is on site
     scm_purchased: Optional[Decimal] = Field(
         default=None, ge=0, max_digits=12, decimal_places=2)
 

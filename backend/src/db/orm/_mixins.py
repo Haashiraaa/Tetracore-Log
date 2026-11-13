@@ -8,7 +8,17 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, ForeignKey, LargeBinary, SmallInteger, String, Uuid, func
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    LargeBinary,
+    SmallInteger,
+    String,
+    Uuid,
+    false,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 # --------------------------------------------------------------------------
@@ -60,6 +70,13 @@ class EntryMixin:
     signature_out: Mapped[Optional[bytes]] = mapped_column(
         LargeBinary, nullable=True, deferred=True
     )
+    # True when nobody drew this signature: it was copied from one already on file
+    # (the person's or truck's signature from an earlier visit; for sign-out, the one
+    # from sign-in). Lets an audit tell a drawn signature from a reused one.
+    signature_in_reused: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false())
+    signature_out_reused: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false())
     signed_in_by: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("officers.id", ondelete="RESTRICT"), nullable=False
     )

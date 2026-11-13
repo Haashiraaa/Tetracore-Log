@@ -38,6 +38,21 @@ def find_open_entry(
     return None if row is None else (row[0], row[1])
 
 
+def latest_signature(db: Session, facility_id: uuid.UUID, truck_id: uuid.UUID) -> bytes | None:
+    """The signature a driver of this truck last gave on the way in at this facility."""
+    return _entries.latest_signature(
+        db, TruckEntry, facility_id, TruckEntry.truck_id == truck_id)
+
+
+def has_signature(db: Session, facility_id: uuid.UUID, truck_id: uuid.UUID) -> bool:
+    """Is there a signature on file for this truck? (Does not load the image.)"""
+    return db.scalar(
+        select(TruckEntry.id)
+        .where(TruckEntry.facility_id == facility_id, TruckEntry.truck_id == truck_id,
+               TruckEntry.signature_in.is_not(None))
+        .limit(1)) is not None
+
+
 def upsert_truck(
     db: Session, *, facility_id: uuid.UUID, plate: str, driver_name: str,
     driver_phone: Optional[str], company: Optional[str],

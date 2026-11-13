@@ -65,14 +65,14 @@ class EntrySignOutRequest(_SignOutFields):
 
 
 class PersonSignInRequest(_SignInFields):
-    """Visitors and staff: the signature may be left out when one is already on file for
-    this phone number (see entry_service.create_entry). Without one on file it is required."""
+    """Visitors, staff and trucks: the signature may be left out when one is already on file
+    for this person or plate (see entry_service.create_entry). Otherwise it is required."""
 
     signature: Optional[str] = Field(default=None, max_length=400_000)
 
 
 class PersonSignOutRequest(_SignOutFields):
-    """Visitors and staff: leave the signature out to reuse the one given at sign-in."""
+    """Visitors, staff and trucks: leave the signature out to reuse the one given at sign-in."""
 
     signature: Optional[str] = Field(default=None, max_length=400_000)
 
@@ -123,6 +123,9 @@ class EntryOut(BaseModel):
     gate_out: Optional[int]
     has_signature: bool  # signed in
     has_signature_out: bool
+    # Nobody drew it: copied from one on file (sign-in) or from sign-in (sign-out).
+    signature_in_reused: bool
+    signature_out_reused: bool
     created_at: datetime
     updated_at: datetime
 
@@ -137,5 +140,7 @@ class EntryOut(BaseModel):
             device_id=e.device_id, gate_in=e.gate_in, gate_out=e.gate_out,
             has_signature=bool(has_sig_in),
             has_signature_out=bool(has_sig_out),
+            signature_in_reused=e.signature_in_reused,
+            signature_out_reused=e.signature_out_reused,
             created_at=e.created_at, updated_at=e.updated_at,
         )

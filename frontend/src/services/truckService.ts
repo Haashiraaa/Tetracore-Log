@@ -48,13 +48,13 @@ type SignInField = "driverName" | "signature";
 export function buildSignInRequest(
   entryId: string,
   form: SignInForm,
-  opts: { enterNow: boolean; signaturePng: string | null },
+  opts: { enterNow: boolean; signaturePng: string | null; signatureOnFile?: boolean },
 ): { ok: true; value: TruckSignInRequest } | { ok: false; errors: FieldErrors<SignInField> } {
   const errors: FieldErrors<SignInField> = {};
   const driverName = form.driverName.trim();
   const nameProblem = fullNameError(driverName, "the driver's");
   if (nameProblem) errors.driverName = nameProblem;
-  if (opts.enterNow && !opts.signaturePng) errors.signature = "Ask the driver to sign.";
+  if (opts.enterNow && !opts.signaturePng && !opts.signatureOnFile) errors.signature = "Ask the driver to sign.";
   if (Object.keys(errors).length > 0) return { ok: false, errors };
 
   return {
@@ -65,7 +65,8 @@ export function buildSignInRequest(
       driver_name: cleanFullName(driverName),
       driver_phone: form.driverPhone.trim() || null,
       company: form.company.trim() || null,
-      ...(opts.enterNow ? { enter_now: true, signature: opts.signaturePng } : {}),
+      // no signature + enter_now = the server uses the one on file for this plate
+      ...(opts.enterNow ? { enter_now: true, ...(opts.signaturePng ? { signature: opts.signaturePng } : {}) } : {}),
       device_id: deviceId(),
       // signed_in_at is left out on purpose: the server clock is the truth while online.
     },
@@ -87,9 +88,9 @@ export function leaveReasonError(raw: string): string | null {
   return null;
 }
 
-/** Let a queued truck in; the driver signs. */
-export function enter(entryId: string, signaturePng: string): Promise<TruckEntry> {
-  return trucksApi.enter(entryId, { signature: signaturePng });
+/** Let a queued truck in; the driver signs, or null to use the signature on file. */
+export function enter(entryId: string, signaturePng: string | null): Promise<TruckEntry> {
+  return trucksApi.enter(entryId, signaturePng ? { signature: signaturePng } : {});
 }
 
 /** A queued truck gave up before entering. */

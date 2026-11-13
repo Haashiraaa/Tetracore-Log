@@ -301,6 +301,7 @@ def test_sign_out_without_a_signature_reuses_the_sign_in_one(client, officer_a):
     r = client.post(f"{URL}/{eid}/sign-out", json={}, headers=officer_a.headers)
     assert r.status_code == 200
     assert r.json()["has_signature"] is True and r.json()["has_signature_out"] is True
+    assert r.json()["signature_out_reused"] is True and r.json()["signature_in_reused"] is False
     got = client.get(f"{URL}/{eid}/signature", params={"side": "out"}, headers=officer_a.headers)
     assert got.status_code == 200 and got.content == PNG
 
@@ -323,7 +324,7 @@ def test_returning_visitor_signs_in_without_signing_again(client, officer_a):
     assert r.status_code == 201
     e = r.json()
     assert (e["full_name"], e["company"]) == ("Ngozi Eze-Okafor", "New Co")
-    assert e["has_signature"] is True
+    assert e["has_signature"] is True and e["signature_in_reused"] is True
     got = client.get(f"{URL}/{e['id']}/signature", headers=officer_a.headers)
     assert got.content == PNG
 

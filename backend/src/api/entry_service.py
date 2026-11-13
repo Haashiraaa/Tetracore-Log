@@ -120,9 +120,11 @@ def create_entry(
     stored = stored_entry(db, model, data.id, facility_id)
     if stored is not None:
         return stored, False
+    reused = False
     if signature is None and reuse_signature and fields.get("phone"):
         signature = _entries.latest_signature_by_phone(
             db, model, facility_id, fields["phone"])
+        reused = signature is not None
     if signature is None:
         raise InvalidSignatureError(
             "No signature on file for this phone number. Ask them to sign.")
@@ -142,7 +144,8 @@ def create_entry(
     created = _entries.insert_entry(
         db, model, id=data.id, facility_id=facility_id,
         signed_in_at=data.signed_in_at or utcnow(), signature_in=signature,
-        signed_in_by=officer.officer_id, device_id=data.device_id, gate_in=gate, **fields)
+        signed_in_by=officer.officer_id, device_id=data.device_id, gate_in=gate,
+        signature_in_reused=reused, **fields)
     event = None
     if created:  # a retry of the same entry is not news
         event = event_service.record(
@@ -181,7 +184,9 @@ def close_entry(
     if row[0].signed_out_at is not None:
         return row
     gate = require_gate(db, officer)
+    reused = False
     if png is None and reuse_signature:
+        reused = True
         sig_row = _entries.get_signature(db, model, entry_id, facility_id, "in")
         png = sig_row[0] if sig_row is not None else None
         if png is None:
@@ -190,7 +195,9 @@ def close_entry(
     closed = _entries.sign_out_entry(
         db, model, entry_id=entry_id, facility_id=facility_id,
         officer_id=officer.officer_id, signed_out_at=signed_out_at or utcnow(),
-        signature=png, extra={"gate_out": gate, **(extra or {})}, require=require)
+        signature=png,
+        extra={"gate_out": gate, "signature_out_reused": reused, **(extra or {})},
+        require=require)
     row = _entries.get_entry(db, model, entry_id, facility_id)
     event = None
     if closed and row is not None:  # a repeat sign-out is not news
