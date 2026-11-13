@@ -27,12 +27,23 @@ interface SignInFormProps {
   mode: "new" | "returning";
   entryId: string;
   initial: SignInInitial;
+  /** A driver's signature for this plate is on file, so letting it in needs no signing. */
+  hasSignature?: boolean;
   onDone: (entry: TruckEntry) => void;
   onCancel: () => void;
   onAlreadyInside: () => void;
 }
 
-export function TruckSignInForm({ plate, mode, entryId, initial, onDone, onCancel, onAlreadyInside }: SignInFormProps) {
+export function TruckSignInForm({
+  plate,
+  mode,
+  entryId,
+  initial,
+  hasSignature = false,
+  onDone,
+  onCancel,
+  onAlreadyInside,
+}: SignInFormProps) {
   const [driverName, setDriverName] = useState(initial.driverName);
   const [driverPhone, setDriverPhone] = useState(initial.driverPhone);
   const [company, setCompany] = useState(initial.company);
@@ -40,12 +51,14 @@ export function TruckSignInForm({ plate, mode, entryId, initial, onDone, onCance
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [letIn, setLetIn] = useState(false);
+  const [resign, setResign] = useState(false); // sign again even though one is on file
   const pad = useRef<SignaturePadHandle>(null);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
 
-    const read = letIn ? readPad(pad.current, SIGNATURE_MAX_BYTES) : { png: null };
+    const onFile = hasSignature && !resign;
+    const read = letIn && !onFile ? readPad(pad.current, SIGNATURE_MAX_BYTES) : { png: null };
     if ("error" in read) {
       setErrors({ signature: read.error });
       return;
@@ -54,7 +67,7 @@ export function TruckSignInForm({ plate, mode, entryId, initial, onDone, onCance
     const built = truckService.buildSignInRequest(
       entryId,
       { plate, driverName, driverPhone, company },
-      { enterNow: letIn, signaturePng: read.png },
+      { enterNow: letIn, signaturePng: read.png, signatureOnFile: onFile },
     );
     if (!built.ok) {
       setErrors(built.errors);
@@ -128,7 +141,22 @@ export function TruckSignInForm({ plate, mode, entryId, initial, onDone, onCance
         Let it in now (the driver signs)
       </label>
 
-      {letIn && (
+      {letIn && hasSignature && !resign && (
+        <div className="sig-onfile">
+          <span className="field__label">Driver's signature</span>
+          <p>
+            <strong>Signature on file.</strong> The driver does not need to sign again; it is used for entering and
+            for signing out.
+          </p>
+          <div>
+            <Button variant="secondary" size="sm" onClick={() => setResign(true)} disabled={busy}>
+              Sign again instead
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {letIn && !(hasSignature && !resign) && (
         <div className="field">
           <span className="field__label">Driver's signature</span>
           <SignaturePad ref={pad} disabled={busy} invalid={Boolean(errors.signature)} hint="Driver signs here" />
@@ -136,6 +164,13 @@ export function TruckSignInForm({ plate, mode, entryId, initial, onDone, onCance
             <p className="field__error" role="alert">
               {errors.signature}
             </p>
+          )}
+          {hasSignature && (
+            <div>
+              <Button variant="ghost" size="sm" onClick={() => setResign(false)} disabled={busy}>
+                Use the signature on file
+              </Button>
+            </div>
           )}
         </div>
       )}

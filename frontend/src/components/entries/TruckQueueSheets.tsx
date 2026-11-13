@@ -1,6 +1,6 @@
 // frontend/src/components/entries/TruckQueueSheets.tsx
 // The two things that can happen to a truck waiting in the queue:
-//   EnterTruckSheet      let it in: the driver signs on the way in
+//   EnterTruckSheet      let it in: the driver signs on the way in (or the signature on file is used)
 //   LeaveQueueSheet      it gave up and left: say why (free text)
 import { useEffect, useRef, useState } from "react";
 import type { TruckEntry } from "@/api/schemas";
@@ -9,9 +9,10 @@ import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { PlateChip } from "@/components/ui/PlateChip";
+import { Spinner } from "@/components/ui/Spinner";
 import { TextField } from "@/components/ui/TextField";
 import { SIGNATURE_MAX_BYTES } from "@/config/env";
-import { errorMessage } from "@/exceptions/errors";
+import { ErrorCode, errorMessage, hasCode } from "@/exceptions/errors";
 import { formatDuration, formatTime } from "@/lib/dates";
 import * as truckService from "@/services/truckService";
 
@@ -54,26 +55,51 @@ export function EnterTruckSheet({ truck, onClose, onDone }: SheetProps) {
   const [sigError, setSigError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Is a signature for this plate already on file? null = still asking.
+  const [onFile, setOnFile] = useState<boolean | null>(null);
+  const [resign, setResign] = useState(false); // sign again instead of using the one on file
   const pad = useRef<SignaturePadHandle>(null);
+  const plate = truck?.plate;
 
   useEffect(() => {
     setSigError(null);
     setError(null);
     setBusy(false);
-  }, [truck?.entryId]);
+    setResign(false);
+    setOnFile(null);
+    if (!plate) return;
+    let current = true;
+    truckService
+      .lookup(plate)
+      .then((found) => {
+        if (!current) return;
+        setOnFile("truck" in found ? found.truck.has_signature : false);
+      })
+      .catch(() => current && setOnFile(false)); // can't tell: show the pad, which always works
+    return () => {
+      current = false;
+    };
+  }, [truck?.entryId, plate]);
+
+  const usePad = onFile === false || resign;
 
   async function submit() {
     if (!truck) return;
-    const read = readPad(pad.current, SIGNATURE_MAX_BYTES);
-    const problem = "error" in read ? read.error : read.png ? null : "Ask the driver to sign.";
+    const read = usePad ? readPad(pad.current, SIGNATURE_MAX_BYTES) : { png: null };
+    const problem = "error" in read ? read.error : usePad && !read.png ? "Ask the driver to sign." : null;
     setSigError(problem);
-    if ("error" in read || !read.png) return;
+    if ("error" in read || problem) return;
     setError(null);
     setBusy(true);
     try {
       onDone(await truckService.enter(truck.entryId, read.png));
     } catch (e) {
-      setError(errorMessage(e));
+      if (hasCode(e, ErrorCode.InvalidSignature) && !usePad) {
+        setOnFile(false); // nothing usable on file after all: the driver signs now
+        setError("There is no signature on file. Ask the driver to sign.");
+      } else {
+        setError(errorMessage(e));
+      }
       setBusy(false);
     }
   }
@@ -89,21 +115,44 @@ export function EnterTruckSheet({ truck, onClose, onDone }: SheetProps) {
           }}
         >
           <Who truck={truck} />
-          <div className="field">
-            <span className="field__label">Driver signs to enter</span>
-            <SignaturePad ref={pad} disabled={busy} invalid={Boolean(sigError)} hint="Sign here to enter" />
-            {sigError && (
-              <p className="field__error" role="alert">
-                {sigError}
+          {onFile === null && <Spinner label="Checking for a signature on file" />}
+          {onFile === true && !resign && (
+            <div className="sig-onfile">
+              <span className="field__label">Driver's signature</span>
+              <p>
+                <strong>Signature on file.</strong> The driver does not need to sign again.
               </p>
-            )}
-          </div>
+              <div>
+                <Button variant="secondary" size="sm" onClick={() => setResign(true)} disabled={busy}>
+                  Sign again instead
+                </Button>
+              </div>
+            </div>
+          )}
+          {usePad && (
+            <div className="field">
+              <span className="field__label">Driver signs to enter</span>
+              <SignaturePad ref={pad} disabled={busy} invalid={Boolean(sigError)} hint="Sign here to enter" />
+              {sigError && (
+                <p className="field__error" role="alert">
+                  {sigError}
+                </p>
+              )}
+              {onFile === true && (
+                <div>
+                  <Button variant="ghost" size="sm" onClick={() => setResign(false)} disabled={busy}>
+                    Use the signature on file
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
           {error && <Banner tone="error">{error}</Banner>}
           <div className="modal__footer">
             <Button variant="ghost" onClick={onClose} disabled={busy}>
               Cancel
             </Button>
-            <Button type="submit" variant="dark" loading={busy}>
+            <Button type="submit" variant="dark" loading={busy} disabled={onFile === null}>
               Let truck in
             </Button>
           </div>

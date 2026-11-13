@@ -1,8 +1,8 @@
 // frontend/src/components/entries/SignOutSheet.tsx
 // Sign anyone out: time in, how long they were inside, their signature, and for
 // trucks the gas they bought. Slides up from the bottom on phones.
-// Visitors and staff already signed on the way in, so by default that signature is used
-// (shown here) and nobody has to be present; "Let them sign instead" opens the pad.
+// Everyone already signed on the way in, so by default that signature is used (shown
+// here) and nobody has to be present; "Let them sign instead" opens the pad.
 import { useEffect, useRef, useState } from "react";
 import type { AnyEntry } from "@/api/schemas";
 import { SignaturePad, readPad, type SignaturePadHandle } from "@/components/signature/SignaturePad";
@@ -48,9 +48,9 @@ export function SignOutSheet({ target, onClose, onDone }: SignOutSheetProps) {
   const [sigError, setSigError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [redraw, setRedraw] = useState(false); // visitors/staff: sign again instead of reusing
+  const [redraw, setRedraw] = useState(false); // sign again instead of reusing
   const pad = useRef<SignaturePadHandle>(null);
-  const reusable = target !== null && target.kind !== "trucks";
+  const reusable = target !== null;
   const onFile = useSignature(target?.kind ?? "visitors", target?.entryId ?? "", reusable, "in");
   // No sign-in signature to reuse (an old line): they have to sign now.
   const mustSign = !reusable || redraw || onFile.kind === "none" || onFile.kind === "error";

@@ -33,7 +33,7 @@ name), and **×** removes a row. A row left completely empty is ignored; a half-
 ## Signatures are kept and reused
 
 Visitors and staff are not made to sign twice or sign again on every visit. The rules (all in
-`entry_service.py`, shared by both logs; trucks are unchanged and still need a fresh signature):
+`entry_service.py`, shared by both logs; trucks use them too):
 
 - **Sign-out reuses the sign-in signature.** Leave `signature` out of `POST .../sign-out` and the
   server copies the signature given at sign-in into the sign-out. The sign-out sheet shows that
@@ -50,6 +50,14 @@ Visitors and staff are not made to sign twice or sign again on every visit. The 
   signatures were required) the request is refused with `422 invalid_signature` and the form shows the
   pad. A signature is never borrowed from another facility.
 - A signature that is sent is checked as before (PNG, at most 200 KB).
+- **Reused is recorded.** Every entry says whether each signature was drawn or copied:
+  `signature_in_reused` (copied from one on file) and `signature_out_reused` (copied from sign-in).
+  The detail dialog notes it under the signature and the CSV says `yes (reused)`. Migration
+  `b4e6a8c0d2f3` adds the two flags (all existing rows are `false`: they were drawn).
+- **Trucks follow the same rules** with the plate as the identity instead of the phone: see
+  [trucks-and-duty.md](trucks-and-duty.md#signatures-are-kept-and-reused).
+
+## Phone numbers
 
 A phone number is the closest thing to an ID we have, so it is how we recognise a returning person.
 It is stored as digits only: `+234 803 123 4567` and `2348031234567` both become `08031234567`.

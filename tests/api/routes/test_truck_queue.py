@@ -21,9 +21,9 @@ def register(client, who, **over):
     return client.post("/api/trucks/entries", json=body, headers=who.headers)
 
 
-def enter(client, who, entry_id, signature=PNG_B64):
-    return client.post(f"/api/trucks/entries/{entry_id}/enter",
-                       json={"signature": signature}, headers=who.headers)
+def enter(client, who, entry_id, signature: str | None = PNG_B64):
+    body = {} if signature is None else {"signature": signature}
+    return client.post(f"/api/trucks/entries/{entry_id}/enter", json=body, headers=who.headers)
 
 
 def leave(client, who, entry_id, reason="No CNG left"):
@@ -262,3 +262,16 @@ def test_a_gate_that_was_never_manned_is_not_reported(client, admin):
     make_actor(client, code="OFF-001", facility="CNG-A", on_duty=False)
     with create_session() as db:
         assert event_service.check_warnings(db) == []
+
+
+def test_a_queued_truck_is_let_in_on_the_signature_on_file(client, officer_a):
+    plate = "rep-777 zz"
+    first = register(client, officer_a, plate_number=plate).json()
+    assert enter(client, officer_a, first["id"], signature=None).status_code == 422  # none yet
+    drawn = enter(client, officer_a, first["id"]).json()
+    assert drawn["signature_in_reused"] is False
+    client.post(f"/api/trucks/entries/{first['id']}/sign-out", json={}, headers=officer_a.headers)
+    again = register(client, officer_a, plate_number=plate).json()
+    e = enter(client, officer_a, again["id"], signature=None).json()
+    assert e["status"] == "on_site" and e["has_signature"] is True
+    assert e["signature_in_reused"] is True
