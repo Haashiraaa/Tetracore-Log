@@ -181,18 +181,53 @@ def test_sign_out_signature_round_trip(client, officer_a):
     assert got.status_code == 200 and got.content == PNG
 
 
-def test_signatures_are_required_both_ways(client, officer_a):
+def test_a_new_truck_has_to_sign_and_a_blank_signature_is_not_one(client, officer_a):
     body = payload()
-    del body["signature"]
-    assert client.post("/api/trucks/entries", json=body,
-                       headers=officer_a.headers).status_code == 422
+    del body["signature"]  # never seen here: nothing on file to use
+    r = client.post("/api/trucks/entries", json=body, headers=officer_a.headers)
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "invalid_signature"
     eid = sign_in(client, officer_a).json()["id"]
-    assert client.post(f"/api/trucks/entries/{eid}/sign-out", json={},
-                       headers=officer_a.headers).status_code == 422
-    assert client.post(f"/api/trucks/entries/{eid}/sign-out", json={"signature": ""},
-                       headers=officer_a.headers).status_code == 422
+    bad = client.post(f"/api/trucks/entries/{eid}/sign-out", json={"signature": "!!"},
+                      headers=officer_a.headers)
+    assert bad.status_code == 422
     assert client.get("/api/trucks/entries", params={"open": True},
                       headers=officer_a.headers).json()[0]["signed_out_at"] is None
+
+
+def test_sign_out_without_a_signature_reuses_the_one_from_the_way_in(client, officer_a):
+    eid = sign_in(client, officer_a).json()["id"]
+    r = client.post(f"/api/trucks/entries/{eid}/sign-out", json={}, headers=officer_a.headers)
+    e = r.json()
+    assert r.status_code == 200 and e["status"] == "departed"
+    assert (e["has_signature_out"], e["signature_out_reused"], e["signature_in_reused"]) == (
+        True, True, False)
+    got = client.get(f"/api/trucks/entries/{eid}/signature", params={"side": "out"},
+                     headers=officer_a.headers)
+    assert got.content == PNG
+
+
+def test_a_drawn_signature_is_not_marked_reused(client, officer_a):
+    eid = sign_in(client, officer_a).json()["id"]
+    e = sign_out(client, officer_a, eid).json()
+    assert (e["signature_in_reused"], e["signature_out_reused"]) == (False, False)
+
+
+def test_a_returning_truck_does_not_sign_again(client, officer_a, officer_b):
+    first = sign_in(client, officer_a).json()
+    sign_out(client, officer_a, first["id"])
+    assert lookup(client, officer_a).json()["has_signature"] is True
+    assert lookup(client, officer_b).json() is None  # another facility has never seen it
+    body = payload(driver_name="Ali Danjuma")  # a different driver: still the truck's signature
+    del body["signature"]
+    r = client.post("/api/trucks/entries", json=body, headers=officer_a.headers)
+    e = r.json()
+    assert r.status_code == 201 and e["has_signature"] is True and e["signature_in_reused"] is True
+    got = client.get(f"/api/trucks/entries/{e['id']}/signature", headers=officer_a.headers)
+    assert got.content == PNG
+    other = payload()
+    del other["signature"]  # facility B has no signature for this plate
+    assert client.post("/api/trucks/entries", json=other,
+                       headers=officer_b.headers).status_code == 422
 
 
 def test_the_driver_needs_a_full_name(client, officer_a):

@@ -128,17 +128,25 @@ def latest_by_phone(
         .limit(1))
 
 
+def latest_signature(
+    db: Session, model: Model, facility_id: uuid.UUID, *same_subject: ColumnElement[bool]
+) -> bytes | None:
+    """The signature most recently given on the way IN by whoever `same_subject` picks out
+    (a phone, a truck), or None if there never was one. Always within one facility."""
+    return db.scalar(
+        select(model.signature_in)
+        .where(model.facility_id == facility_id, *same_subject,
+               model.signature_in.is_not(None))
+        .order_by(model.signed_in_at.desc(), model.id)
+        .limit(1))
+
+
 def latest_signature_by_phone(
     db: Session, model: Model, facility_id: uuid.UUID, phone: str
 ) -> bytes | None:
     """The signature this person most recently gave on the way IN at this facility, or
     None if they never gave one. Facility-scoped, like everything else about a phone."""
-    return db.scalar(
-        select(model.signature_in)
-        .where(model.facility_id == facility_id, model.phone == phone,
-               model.signature_in.is_not(None))
-        .order_by(model.signed_in_at.desc(), model.id)
-        .limit(1))
+    return latest_signature(db, model, facility_id, model.phone == phone)
 
 
 def phones_with_signature(

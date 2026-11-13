@@ -37,6 +37,7 @@ from backend.src.db.orm._helpers import normalize_plate
 from backend.src.db.orm.tables import TruckEntry
 from backend.src.db.queries import trucks as q
 from backend.src.exceptions.errors import (
+    InvalidSignatureError,
     InvalidTruckStateError,
     NotFoundError,
     TruckAlreadyInsideError,
@@ -55,6 +56,7 @@ def lookup_by_plate(
         return None
     open_entry = q.find_open_entry(db, facility_id, truck.id)
     return TruckLookupOut(
+        has_signature=q.has_signature(db, facility_id, truck.id),
         truck_id=truck.id,
         plate_number=truck.plate_number,
         driver_name=truck.driver_name,
@@ -63,6 +65,20 @@ def lookup_by_plate(
         open_entry_id=None if open_entry is None else open_entry[0],
         open_entry_status=None if open_entry is None else open_entry[1],
     )
+
+
+def _signature_to_use(
+    db: Session, facility_id: uuid.UUID, plate: str, drawn: bytes | None
+) -> tuple[bytes, bool]:
+    """(signature, reused). The one drawn now, else the one on file for this plate at this
+    facility. Refused when there is neither: a truck is never let in unsigned."""
+    if drawn is not None:
+        return drawn, False
+    truck = q.find_truck(db, facility_id, plate)
+    on_file = None if truck is None else q.latest_signature(db, facility_id, truck.id)
+    if on_file is None:
+        raise InvalidSignatureError("No signature on file for this truck. Ask the driver to sign.")
+    return on_file, True
 
 
 def _register_truck(db: Session, facility_id: uuid.UUID, data: TruckSignInRequest) -> uuid.UUID:
@@ -89,11 +105,14 @@ def sign_in(
     """Register a truck: into the queue, or straight in with `enter_now`. Returns
     (entry, created). A retry with the same id returns the stored entry untouched."""
     facility_id = facility_of(officer)
-    signature = decode_signature_png(data.signature)  # validate before any DB work
+    drawn = decode_signature_png(data.signature)  # validate before any DB work
 
     stored = stored_entry(db, TruckEntry, data.id, facility_id)
     if stored is not None:
         return TruckEntryOut.from_row(stored), False
+    signature, reused = None, False
+    if data.enter_now:  # letting it in needs a signature: drawn, or this plate's on file
+        signature, reused = _signature_to_use(db, facility_id, data.plate_number, drawn)
 
     gate = require_gate(db, officer)
     plate = normalize_plate(data.plate_number)
@@ -115,7 +134,7 @@ def sign_in(
         signed_in_by=officer.officer_id, device_id=data.device_id, queued_gate=gate)
     if data.enter_now:
         values.update(status="on_site", entered_at=now, entered_by=officer.officer_id,
-                      gate_in=gate, signature_in=signature)
+                      gate_in=gate, signature_in=signature, signature_in_reused=reused)
     else:
         values.update(status="queued")
     created = q.insert_entry(db, **values)
@@ -153,14 +172,16 @@ def enter(
     """Let a queued truck in. Idempotent: a truck already on site (or gone) comes back as
     stored; first one wins."""
     facility_id = facility_of(officer)
-    signature = decode_signature_png(data.signature)
+    drawn = decode_signature_png(data.signature)
     visit = _visit(db, facility_id, entry_id)
     if visit.status == "queued":
+        signature, reused = _signature_to_use(db, facility_id, visit.plate_number, drawn)
         gate = require_gate(db, officer)
         moved = q.update_open_entry(
             db, entry_id=entry_id, facility_id=facility_id, from_status="queued",
             status="on_site", entered_at=data.entered_at or utcnow(),
-            entered_by=officer.officer_id, gate_in=gate, signature_in=signature)
+            entered_by=officer.officer_id, gate_in=gate, signature_in=signature,
+            signature_in_reused=reused)
         event = None
         if moved:
             event = event_service.record(
@@ -226,5 +247,6 @@ def sign_out(
     row = close_entry(
         db, officer=officer, model=TruckEntry, entry_id=entry_id,
         signed_out_at=data.signed_out_at, signature=data.signature, extra=extra,
-        require=[TruckEntry.status == "on_site"], not_found=_NOT_FOUND)
+        require=[TruckEntry.status == "on_site"], not_found=_NOT_FOUND,
+        reuse_signature=True)
     return TruckEntryOut.from_row(row)

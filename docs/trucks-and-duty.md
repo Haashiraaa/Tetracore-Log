@@ -20,11 +20,28 @@ Queued  ──let in (driver signs)──>  On site  ──sign out (driver sign
 | `left_queue` | Gave up before entering | none. A **free-text reason** is required (2 to 300 characters) |
 
 - **Register** (`POST /trucks/entries`): by default the truck joins the queue and needs no signature.
-  With `enter_now: true` it is let in on the spot, which needs the driver's signature.
-- **Let in** (`POST /trucks/entries/{id}/enter`): `queued` -> `on_site`, signature required.
+  With `enter_now: true` it is let in on the spot, which needs the driver's signature (drawn, or the
+  one on file, see below).
+- **Let in** (`POST /trucks/entries/{id}/enter`): `queued` -> `on_site`, signature drawn or on file.
 - **Left queue** (`POST /trucks/entries/{id}/leave-queue`): `queued` -> `left_queue`, `reason` required.
-- **Sign out** (`POST /trucks/entries/{id}/sign-out`): only from `on_site`. A queued truck gets `409 invalid_truck_state`:
+- **Sign out** (`POST /trucks/entries/{id}/sign-out`): only from `on_site`. The signature may be left out:
+  the one given when it was let in is used. A queued truck gets `409 invalid_truck_state`:
   let it in or mark it as left first. A repeat sign-out returns the stored row.
+
+### Signatures are kept and reused
+
+Trucks come back, so a driver should not have to sign every time. The rules are the same as for
+visitors and staff ([people-logs.md](people-logs.md#signatures-are-kept-and-reused)), with the **plate**
+(within one facility) as the identity:
+
+- Letting a truck in (`enter_now`, or `/enter`) with no `signature` uses the latest signature given
+  at this facility on a visit of the same truck, whoever the driver was this time. The new visit
+  stores its own copy and is flagged `signature_in_reused`.
+- Signing out with no `signature` copies the sign-in one (`signature_out_reused`).
+- `GET /trucks/lookup` returns `has_signature`. With nothing on file (a new plate, or another
+  facility's truck) leaving the signature out is refused with `422 invalid_signature`.
+- Queuing a truck still needs no signature at all.
+
 - A plate has **one open visit** (queued or on site). Registering it again is refused with `409
   truck_already_inside` and raises the `already_inside` warning. A truck that left the queue or departed can queue again.
 - Time columns: `signed_in_at` is when the truck **joined the queue** (kept as the first time it was logged),

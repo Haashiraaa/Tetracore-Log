@@ -174,11 +174,17 @@ const OWN_COLUMNS: Record<LogKind, Column[]> = {
   ],
 };
 
+/** "yes", "no", or "yes (reused)" when nobody drew it this time. */
+function signatureCell(has: boolean, reused: boolean): string {
+  if (!has) return "no";
+  return reused ? "yes (reused)" : "yes";
+}
+
 const SHARED_COLUMNS: Column[] = [
   ["Time in", (e) => formatDateTime(e.signed_in_at, true)],
-  ["Signed in", (e) => (e.has_signature ? "yes" : "no")],
+  ["Signed in", (e) => signatureCell(e.has_signature, e.signature_in_reused)],
   ["Time out", (e) => (e.signed_out_at ? formatDateTime(e.signed_out_at, true) : "")],
-  ["Signed out", (e) => (e.has_signature_out ? "yes" : "no")],
+  ["Signed out", (e) => signatureCell(e.has_signature_out, e.signature_out_reused)],
   ["Signed in by", (e) => e.signed_in_by_name],
   ["Signed out by", (e) => e.signed_out_by_name ?? ""],
   ["Gate in", (e) => (e.gate_in ? String(e.gate_in) : "")],

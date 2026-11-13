@@ -20,11 +20,17 @@ function SignatureView({ kind, entry, side }: { kind: LogKind; entry: AnyEntry; 
   const has = side === "in" ? entry.has_signature : entry.has_signature_out;
   const sig = useSignature(kind, entry.id, has, side);
   const label = side === "in" ? "Signed in" : "Signed out";
+  const reused = side === "in" ? entry.signature_in_reused : entry.signature_out_reused;
   return (
     <div className="sig-slot">
       <p className="field__label">{label}</p>
       {sig.kind === "loading" && <Spinner label="Loading signature" />}
       {sig.kind === "ready" && <img className="sig-view" src={sig.url} alt={`Signature: ${label.toLowerCase()}`} />}
+      {sig.kind === "ready" && reused && (
+        <p className="muted">
+          {side === "in" ? "Signature on file, not drawn this visit." : "Sign-in signature reused, not drawn at sign-out."}
+        </p>
+      )}
       {sig.kind === "none" && <p className="sig-slot__none">No signature</p>}
       {sig.kind === "error" && <Banner tone="error">{sig.message}</Banner>}
     </div>

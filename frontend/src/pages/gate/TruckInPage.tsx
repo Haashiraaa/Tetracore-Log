@@ -27,7 +27,14 @@ import { TruckSignInForm, type SignInInitial } from "./TruckSignInForm";
 type Stage =
   | { kind: "idle" }
   | { kind: "looking" }
-  | { kind: "form"; mode: "new" | "returning"; plate: string; entryId: string; initial: SignInInitial }
+  | {
+      kind: "form";
+      mode: "new" | "returning";
+      plate: string;
+      entryId: string;
+      initial: SignInInitial;
+      hasSignature: boolean;
+    }
   | { kind: "queued"; truck: TruckLookup }
   | { kind: "inside"; truck: TruckLookup };
 
@@ -36,13 +43,14 @@ const BLANK: SignInInitial = { driverName: "", driverPhone: "", company: "" };
 function stageFor(result: truckService.LookupResult): Stage {
   switch (result.kind) {
     case "new":
-      return { kind: "form", mode: "new", plate: result.plate, entryId: uuid(), initial: BLANK };
+      return { kind: "form", mode: "new", plate: result.plate, entryId: uuid(), initial: BLANK, hasSignature: false };
     case "returning":
       return {
         kind: "form",
         mode: "returning",
         plate: result.truck.plate_number,
         entryId: uuid(), // one id per form open, reused on retry
+        hasSignature: result.truck.has_signature,
         initial: {
           driverName: result.truck.driver_name,
           driverPhone: result.truck.driver_phone ?? "",
@@ -173,6 +181,7 @@ export default function TruckInPage() {
           mode={stage.mode}
           entryId={stage.entryId}
           initial={stage.initial}
+          hasSignature={stage.hasSignature}
           onDone={onSignedIn}
           onCancel={() => reset(null)}
           onAlreadyInside={() => void runLookup(stage.plate)}

@@ -110,6 +110,9 @@ export interface EntryBase {
   /** Signed on the way in. */
   has_signature: boolean;
   has_signature_out: boolean;
+  /** Nobody drew it: copied from one on file (sign-in) or from the sign-in signature (sign-out). */
+  signature_in_reused: boolean;
+  signature_out_reused: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -164,6 +167,8 @@ export interface TruckLookup {
   /** Set when the truck is in the middle of a visit: queued or on site. */
   open_entry_id: string | null;
   open_entry_status: "queued" | "on_site" | null;
+  /** A driver's signature from an earlier visit is on file for this plate. */
+  has_signature: boolean;
 }
 
 /** Register a truck. Without `enter_now` it joins the queue and needs no signature;
@@ -178,10 +183,10 @@ export interface TruckSignInRequest extends Omit<EntrySignInBase, "signature"> {
   enter_now?: boolean;
 }
 
-/** Let a queued truck in: the driver signs. */
+/** Let a queued truck in: the driver signs, or leave the signature out to use the one on file. */
 export interface TruckEnterRequest {
   entered_at?: string | null;
-  signature: string;
+  signature?: string | null;
 }
 
 /** A queued truck gave up. A reason is required. */
@@ -190,7 +195,7 @@ export interface TruckLeaveQueueRequest {
   left_at?: string | null;
 }
 
-export interface TruckSignOutRequest extends EntrySignOutRequest {
+export interface TruckSignOutRequest extends PersonSignOutRequest {
   scm_purchased?: string | null;
 }
 
