@@ -118,13 +118,19 @@ export interface EntrySignInBase {
   id: string; // generated here, once per form open; makes retries idempotent
   /** Omit while online: the server stamps its own clock, so phone drift cannot skew the log. */
   signed_in_at?: string | null;
-  signature: string; // PNG data URL. Always required: nobody is signed in without it
+  signature: string; // PNG data URL. Trucks always need one; visitors and staff may reuse theirs
   device_id?: string | null;
 }
 
 export interface EntrySignOutRequest {
   signed_out_at?: string | null;
-  signature: string; // PNG data URL. Always required: nobody is signed out without it
+  signature: string; // PNG data URL. Trucks always need a fresh one
+}
+
+/** Visitors and staff may leave the signature out: the one given at sign-in is used. */
+export interface PersonSignOutRequest {
+  signed_out_at?: string | null;
+  signature?: string | null;
 }
 
 export type SignatureSide = "in" | "out";
@@ -211,24 +217,36 @@ export interface PersonLookup {
   phone: string;
   /** Set when they are inside right now. */
   open_entry_id: string | null;
+  /** A signature from an earlier visit is on file, so they need not sign in again. */
+  has_signature: boolean;
 }
 
 export interface VisitorLookup extends PersonLookup {
   company: string | null;
 }
 
-export interface VisitorSignInRequest extends EntrySignInBase {
+/** One thing a visitor brought. Quantity is free text: "2 boxes". */
+export interface VisitorItem {
+  name: string;
+  quantity: string;
+}
+
+export interface VisitorSignInRequest extends Omit<EntrySignInBase, "signature"> {
   full_name: string;
   company?: string | null;
   purpose?: string | null;
-  items_received?: string | null;
+  items?: VisitorItem[];
   phone: string; // identifies a returning visitor
+  /** Leave out to use the one on file for this phone number. */
+  signature?: string | null;
 }
 
 export interface VisitorEntry extends EntryBase {
   full_name: string;
   company: string | null;
   purpose: string | null;
+  items: VisitorItem[];
+  /** Old free text, only on lines written before `items` existed. */
   items_received: string | null;
   phone: string | null;
 }
@@ -239,10 +257,12 @@ export interface StaffLookup extends PersonLookup {
   capacity: string | null;
 }
 
-export interface StaffSignInRequest extends EntrySignInBase {
+export interface StaffSignInRequest extends Omit<EntrySignInBase, "signature"> {
   full_name: string;
   capacity: string; // the capacity they work in, free text
   phone: string; // identifies a returning staff member
+  /** Leave out to use the one on file for this phone number. */
+  signature?: string | null;
 }
 
 export interface StaffEntry extends EntryBase {

@@ -21,7 +21,7 @@ from backend.src.api.routes._entries import (
 )
 from backend.src.api.schemas import (
     CurrentOfficer,
-    EntrySignOutRequest,
+    PersonSignOutRequest,
     StaffEntryOut,
     StaffLookupOut,
     StaffSignInRequest,
@@ -69,7 +69,7 @@ def sign_in(
 @router.post("/entries/{entry_id}/sign-out", response_model=StaffEntryOut)
 def sign_out(
     entry_id: uuid.UUID,
-    body: EntrySignOutRequest,
+    body: PersonSignOutRequest,
     officer: CurrentOfficer = Depends(require_entry_writer),
     db: Session = Depends(get_db),
 ) -> StaffEntryOut:

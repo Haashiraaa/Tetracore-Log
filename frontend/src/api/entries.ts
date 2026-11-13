@@ -3,7 +3,7 @@
 
 import type { LogKind } from "@/models";
 import { request, requestAuthedBlob } from "./client";
-import type { AnyEntry, EntryQuery, EntrySignOutRequest, SignatureSide } from "./schemas";
+import type { AnyEntry, EntryQuery, PersonSignOutRequest, SignatureSide } from "./schemas";
 
 /** 201 = created, 200 = replay of the same id. Both return the stored entry. */
 export function signIn<T extends AnyEntry>(kind: LogKind, body: object): Promise<T> {
@@ -23,7 +23,7 @@ export function searchByPhone<T>(kind: "visitors" | "staff", typed: string): Pro
 export function signOut<T extends AnyEntry>(
   kind: LogKind,
   entryId: string,
-  body: EntrySignOutRequest & { scm_purchased?: string | null },
+  body: PersonSignOutRequest & { scm_purchased?: string | null },
 ): Promise<T> {
   return request<T>(`/${kind}/entries/${entryId}/sign-out`, { method: "POST", body });
 }

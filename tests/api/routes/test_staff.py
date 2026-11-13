@@ -148,7 +148,7 @@ def test_capacity_is_free_text_and_required(client, officer_a):
 def test_full_name_phone_and_signature_are_required(client, officer_a):
     assert sign_in(client, officer_a, full_name="Ada").status_code == 422
     assert sign_in(client, officer_a, phone="").status_code == 422
-    for missing in ("full_name", "phone", "signature"):
+    for missing in ("full_name", "phone", "signature"):  # a new phone has no signature on file
         body = payload()
         del body[missing]
         assert client.post(URL, json=body, headers=officer_a.headers).status_code == 422
@@ -177,10 +177,20 @@ def test_one_sign_in_at_a_time(client, officer_a):
     assert sign_in(client, officer_a, phone="08031112222").status_code == 201
 
 
-def test_signatures_are_required_both_ways(client, officer_a):
-    eid = sign_in(client, officer_a).json()["id"]
-    out = f"{URL}/{eid}/sign-out"
-    assert client.post(out, json={}, headers=officer_a.headers).status_code == 422
+def test_signatures_are_kept_and_reused(client, officer_a):
+    phone = fresh_phone()
+    eid = sign_in(client, officer_a, phone=phone).json()["id"]
+    out = client.post(f"{URL}/{eid}/sign-out", json={}, headers=officer_a.headers)
+    assert out.status_code == 200 and out.json()["has_signature_out"] is True  # sign-in one reused
+    body = payload(phone=phone)
+    del body["signature"]  # next day: no need to sign in again
+    back = client.post(URL, json=body, headers=officer_a.headers)
+    assert back.status_code == 201 and back.json()["has_signature"] is True
+    fresh = payload()
+    del fresh["signature"]  # a phone never seen here still has to sign
+    assert client.post(URL, json=fresh, headers=officer_a.headers).status_code == 422
+    seen = client.get("/api/staff/lookup", params={"phone": phone}, headers=officer_a.headers)
+    assert seen.json()["has_signature"] is True
 
 
 def test_search_finds_people_as_the_number_is_typed(client, officer_a, officer_b):

@@ -29,19 +29,21 @@ export function lookup(phone: string): Promise<StaffLookup | null> {
 
 type Field = "fullName" | "capacity" | "signature";
 
-/** `phone` is already canonical (it came from the lookup step). */
+/** `phone` is already canonical (it came from the lookup step). `signatureOnFile`: the server
+ *  already has this person's signature, so none is needed (null `signaturePng` reuses it). */
 export function buildSignInRequest(
   entryId: string,
   phone: string,
   form: StaffForm,
   signaturePng: string | null,
+  signatureOnFile = false,
 ): { ok: true; value: StaffSignInRequest } | { ok: false; errors: FieldErrors<Field> } {
   const errors: FieldErrors<Field> = {};
   const nameProblem = fullNameError(form.fullName, "the staff member's");
   if (nameProblem) errors.fullName = nameProblem;
   if (form.capacity.trim().length < 2) errors.capacity = "Enter the capacity they work in, such as Cashier.";
-  if (!signaturePng) errors.signature = "Ask them to sign.";
-  if (Object.keys(errors).length > 0 || !signaturePng) return { ok: false, errors };
+  if (!signaturePng && !signatureOnFile) errors.signature = "Ask them to sign.";
+  if (Object.keys(errors).length > 0) return { ok: false, errors };
 
   return {
     ok: true,

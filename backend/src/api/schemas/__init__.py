@@ -25,7 +25,13 @@ from backend.src.api.schemas.auth import (
     RefreshResponse,
     RefreshResult,
 )
-from backend.src.api.schemas.common import EntryOut, EntrySignInRequest, EntrySignOutRequest
+from backend.src.api.schemas.common import (
+    EntryOut,
+    EntrySignInRequest,
+    EntrySignOutRequest,
+    PersonSignInRequest,
+    PersonSignOutRequest,
+)
 from backend.src.api.schemas.duty import (
     DutyChangeGateRequest,
     DutyEntryOut,
@@ -72,4 +78,5 @@ __all__ = [
     "TruckLookupOut", "TruckSignInRequest", "TruckSignOutRequest",
     "TruckEnterRequest", "TruckLeaveQueueRequest",
     "VisitorEntryOut", "VisitorLookupOut", "VisitorSignInRequest",
+    "PersonSignInRequest", "PersonSignOutRequest",
 ]

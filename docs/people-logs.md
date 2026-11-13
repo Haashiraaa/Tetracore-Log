@@ -11,9 +11,45 @@ the screens are `PersonInPage` and `lib/people.ts` in the frontend.
 | Full name | yes | yes | At least two words (first and last name). Always labelled **Full name** |
 | Phone | yes | yes | Required. See [Phone numbers](#phone-numbers) |
 | Capacity | no | yes | Free text, at least 2 characters, e.g. `Cashier`. The role the person works in |
-| Signature | yes | yes | Drawn on **sign-in and sign-out**, both required |
+| Items brought | yes | no | Optional list of **name + quantity** rows. See [Items brought](#items-brought-visitors) |
+| Signature | yes | yes | Both a sign-in and a sign-out signature are stored, but nobody has to draw twice. See [Signatures are kept and reused](#signatures-are-kept-and-reused) |
 
-## Phone numbers
+## Items brought (visitors)
+
+A visitor can bring nothing, or several things. On the sign-in form the field is collapsed to a
+single **+ Add item** button; each tap adds one **name + quantity** row (the cursor lands in the
+name), and **×** removes a row. A row left completely empty is ignored; a half-filled row is refused
+("Give each item a name and a quantity, or remove it").
+
+- Stored as `visitor_entries.items`, a JSON list of `{"name", "quantity"}` in the order given.
+  Name is up to 100 characters, quantity is free text up to 30 (`"2 boxes"`), at most 30 items.
+  Nothing brought is stored as null and comes back as `[]`.
+- The detail dialog lists them; the CSV has one **Items brought** column: `Oil filters (2 boxes); Gloves (10)`.
+- Lines written before this change keep their free text in `items_received` (the column stays, new
+  lines never write it). The API still returns it and the screens show it when `items` is empty.
+  `items_received` is no longer accepted on sign-in; an old client that still sends it is ignored.
+- Migration `a3d5f7b9c1e2` adds the column. Run `alembic upgrade head` on the server.
+
+## Signatures are kept and reused
+
+Visitors and staff are not made to sign twice or sign again on every visit. The rules (all in
+`entry_service.py`, shared by both logs; trucks are unchanged and still need a fresh signature):
+
+- **Sign-out reuses the sign-in signature.** Leave `signature` out of `POST .../sign-out` and the
+  server copies the signature given at sign-in into the sign-out. The sign-out sheet shows that
+  signature and a **Sign out** button, so the officer can sign someone out who is no longer at the
+  gate. **Let them sign instead** opens the pad; a drawn signature is stored as given.
+- **A returning person need not sign in again.** Signatures are stored per entry, and the latest
+  sign-in signature for a phone number **in the same facility** is the one on file. Leave `signature`
+  out of `POST .../entries` and it is used. Name, company, capacity and the rest are still
+  typed or corrected as usual; only the signature carries over. **Sign again instead** replaces it
+  (the new one becomes the one on file).
+- `GET .../lookup` and `GET .../search` return `has_signature`: whether one is on file for that
+  number, which is how the form knows to skip the pad.
+- **When there is nothing to reuse** (a number never seen at this facility, or an old line from before
+  signatures were required) the request is refused with `422 invalid_signature` and the form shows the
+  pad. A signature is never borrowed from another facility.
+- A signature that is sent is checked as before (PNG, at most 200 KB).
 
 A phone number is the closest thing to an ID we have, so it is how we recognise a returning person.
 It is stored as digits only: `+234 803 123 4567` and `2348031234567` both become `08031234567`.
@@ -41,8 +77,8 @@ inside is refused with `409 already_inside`; sign them out first.
 ## Sign in and sign out
 
 The officer must be **on duty** (see [trucks-and-duty.md](trucks-and-duty.md)); the gate they stand at is recorded as `gate_in` / `gate_out`.
-Both need a signature. Older rows from before this rule may have none, so the database columns stay
-nullable; the API does not.
+Both need a signature, drawn now or reused (see [above](#signatures-are-kept-and-reused)). Older rows
+from before this rule may have none, so the database columns stay nullable; the API does not.
 
 ## Inside page
 

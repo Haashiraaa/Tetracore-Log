@@ -22,6 +22,7 @@ from backend.src.db.queries import duty as duty_q
 from backend.src.exceptions.errors import (
     AlreadyInsideError,
     ConflictError,
+    InvalidSignatureError,
     NotFoundError,
     NotOnDutyError,
     PermissionDeniedError,
@@ -84,6 +85,13 @@ def search_by_phone(
     return _entries.search_by_phone(db, model, facility_of(officer), digits, limit)
 
 
+def phones_with_signature(
+    db: Session, *, officer: CurrentOfficer, model: Any, phones: Sequence[str]
+) -> set[str]:
+    """Which of these phones already have a signature on file in this officer's facility."""
+    return _entries.phones_with_signature(db, model, facility_of(officer), phones)
+
+
 def refuse_if_inside(
     db: Session, *, facility_id: uuid.UUID, model: Any, phone: str, entry_id: uuid.UUID
 ) -> None:
@@ -101,14 +109,23 @@ def create_entry(
     model: Any,
     data: Any,
     fields: dict[str, Any],
+    reuse_signature: bool = False,
 ) -> tuple[Any, bool]:
     """Sign someone in. `data` is the request (an EntrySignInRequest), `fields` the log's own
-    columns. Returns (row, created); a retry with the same id returns the stored row."""
+    columns. Returns (row, created); a retry with the same id returns the stored row.
+    `reuse_signature` (people logs): no signature in the request means "use the one this
+    phone gave last time"; if there is none on file the request is refused."""
     facility_id = facility_of(officer)
     signature = decode_signature_png(data.signature)  # validate before any DB work
     stored = stored_entry(db, model, data.id, facility_id)
     if stored is not None:
         return stored, False
+    if signature is None and reuse_signature and fields.get("phone"):
+        signature = _entries.latest_signature_by_phone(
+            db, model, facility_id, fields["phone"])
+    if signature is None:
+        raise InvalidSignatureError(
+            "No signature on file for this phone number. Ask them to sign.")
     gate = require_gate(db, officer)
     if fields.get("phone"):  # people are found by phone: only one open sign-in each
         try:
@@ -151,9 +168,11 @@ def close_entry(
     extra: Optional[dict[str, Any]] = None,
     require: Sequence[ColumnElement[bool]] = (),
     not_found: str = "Entry not found.",
+    reuse_signature: bool = False,
 ) -> Any:
     """Sign someone out. Idempotent: a repeat returns the stored row, first sign-out wins
-    (and needs no duty: it changes nothing)."""
+    (and needs no duty: it changes nothing). `reuse_signature` (people logs): no signature
+    in the request means "use the one given at sign-in"."""
     facility_id = facility_of(officer)
     png = decode_signature_png(signature)
     row = _entries.get_entry(db, model, entry_id, facility_id)
@@ -162,6 +181,12 @@ def close_entry(
     if row[0].signed_out_at is not None:
         return row
     gate = require_gate(db, officer)
+    if png is None and reuse_signature:
+        sig_row = _entries.get_signature(db, model, entry_id, facility_id, "in")
+        png = sig_row[0] if sig_row is not None else None
+        if png is None:
+            raise InvalidSignatureError(
+                "There is no sign-in signature to reuse. Ask them to sign.")
     closed = _entries.sign_out_entry(
         db, model, entry_id=entry_id, facility_id=facility_id,
         officer_id=officer.officer_id, signed_out_at=signed_out_at or utcnow(),

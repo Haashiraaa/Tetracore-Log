@@ -5,6 +5,8 @@
 //   type the phone  -> never seen here: blank form
 //                   -> seen before: name (and company / capacity) filled in, to CONFIRM
 //                   -> inside right now: offer sign-out instead
+// A returning person's signature is kept: when one is on file the form says so and they do
+// not sign again (the officer can still choose "Sign again" if they want to replace it).
 // `entryId` is made once per form open and reused on retry, so a retry after a lost reply
 // returns the stored entry instead of creating a duplicate.
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
@@ -14,6 +16,7 @@ import { SignOutSheet, type SignOutTarget } from "@/components/entries/SignOutSh
 import { SignaturePad, readPad, type SignaturePadHandle } from "@/components/signature/SignaturePad";
 import { Badge } from "@/components/ui/Badge";
 import { Banner } from "@/components/ui/Banner";
+import { ItemsEditor } from "@/components/entries/ItemsEditor";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { TextField } from "@/components/ui/TextField";
@@ -24,7 +27,7 @@ import { uuid } from "@/lib/ids";
 import { PHONE_ERROR, cleanPhone, phoneSearchDigits } from "@/lib/people";
 import * as staffService from "@/services/staffService";
 import * as visitorService from "@/services/visitorService";
-import { PURPOSE_PICKS } from "@/services/visitorService";
+import { PURPOSE_PICKS, type ItemRow } from "@/services/visitorService";
 
 type PersonKind = "visitors" | "staff";
 
@@ -32,16 +35,16 @@ interface Fields {
   fullName: string;
   company: string;
   purpose: string;
-  itemsReceived: string;
+  items: ItemRow[];
   capacity: string;
 }
 
-const BLANK: Fields = { fullName: "", company: "", purpose: "", itemsReceived: "", capacity: "" };
+const BLANK: Fields = { fullName: "", company: "", purpose: "", items: [], capacity: "" };
 
 type Stage =
   | { kind: "idle" }
   | { kind: "looking" }
-  | { kind: "form"; returning: boolean; phone: string; entryId: string }
+  | { kind: "form"; returning: boolean; phone: string; entryId: string; hasSignature: boolean }
   | { kind: "inside"; phone: string; name: string; entryId: string };
 
 /** Wait this long after the last keystroke before asking the server. */
@@ -64,7 +67,8 @@ export default function PersonInPage({ kind }: { kind: PersonKind }) {
   const [stage, setStage] = useState<Stage>({ kind: "idle" });
   const [matches, setMatches] = useState<(VisitorLookup | StaffLookup)[]>([]);
   const [fields, setFields] = useState<Fields>(BLANK);
-  const [errors, setErrors] = useState<{ fullName?: string; capacity?: string; signature?: string }>({});
+  const [errors, setErrors] = useState<{ fullName?: string; capacity?: string; items?: string; signature?: string }>({});
+  const [resign, setResign] = useState(false); // sign again even though one is on file
   const [error, setError] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -91,7 +95,14 @@ export default function PersonInPage({ kind }: { kind: PersonKind }) {
           }
         : BLANK,
     );
-    setStage({ kind: "form", returning: found !== null, phone, entryId: uuid() });
+    setResign(false);
+    setStage({
+      kind: "form",
+      returning: found !== null,
+      phone,
+      entryId: uuid(),
+      hasSignature: found?.has_signature ?? false,
+    });
   }, []);
 
   const runLookup = useCallback(
@@ -152,6 +163,7 @@ export default function PersonInPage({ kind }: { kind: PersonKind }) {
     setError(null);
     setErrors({});
     setFields(BLANK);
+    setResign(false);
     setOutcome(message);
     phoneRef.current?.focus();
   }
@@ -159,15 +171,17 @@ export default function PersonInPage({ kind }: { kind: PersonKind }) {
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (stage.kind !== "form") return;
-    const read = readPad(pad.current, SIGNATURE_MAX_BYTES);
+    // A signature on file is used unless the officer chose to sign again.
+    const onFile = stage.hasSignature && !resign;
+    const read = onFile ? { png: null } : readPad(pad.current, SIGNATURE_MAX_BYTES);
     if ("error" in read) {
       setErrors({ signature: read.error });
       return;
     }
     const built =
       kind === "visitors"
-        ? visitorService.buildSignInRequest(stage.entryId, stage.phone, fields, read.png)
-        : staffService.buildSignInRequest(stage.entryId, stage.phone, fields, read.png);
+        ? visitorService.buildSignInRequest(stage.entryId, stage.phone, fields, read.png, onFile)
+        : staffService.buildSignInRequest(stage.entryId, stage.phone, fields, read.png, onFile);
     if (!built.ok) {
       setErrors(built.errors);
       return;
@@ -328,25 +342,44 @@ export default function PersonInPage({ kind }: { kind: PersonKind }) {
                   ))}
                 </div>
               </div>
-              <TextField
-                label="Items received"
-                value={fields.itemsReceived}
-                onChange={(e) => set({ itemsReceived: e.target.value })}
-                autoComplete="off"
-                disabled={busy}
-              />
             </div>
           )}
 
-          <div className="field">
-            <span className="field__label">{copy.signs}</span>
-            <SignaturePad ref={pad} disabled={busy} invalid={Boolean(errors.signature)} hint="Sign here" />
-            {errors.signature && (
-              <p className="field__error" role="alert">
-                {errors.signature}
+          {kind === "visitors" && (
+            <ItemsEditor items={fields.items} onChange={(items) => set({ items })} error={errors.items} disabled={busy} />
+          )}
+
+          {stage.hasSignature && !resign ? (
+            <div className="sig-onfile">
+              <span className="field__label">Signature</span>
+              <p>
+                <strong>Signature on file.</strong> They do not need to sign again; it is used for this sign-in and
+                for sign-out.
               </p>
-            )}
-          </div>
+              <div>
+                <Button variant="secondary" size="sm" onClick={() => setResign(true)} disabled={busy}>
+                  Sign again instead
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="field">
+              <span className="field__label">{copy.signs}</span>
+              <SignaturePad ref={pad} disabled={busy} invalid={Boolean(errors.signature)} hint="Sign here" />
+              {errors.signature && (
+                <p className="field__error" role="alert">
+                  {errors.signature}
+                </p>
+              )}
+              {stage.hasSignature && (
+                <div>
+                  <Button variant="ghost" size="sm" onClick={() => setResign(false)} disabled={busy}>
+                    Use the signature on file
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="row">
             <Button type="submit" className="btn--lead" loading={busy}>
