@@ -1,13 +1,15 @@
 // frontend/src/components/layout/AppShell.tsx
 // The frame around every logged-in screen. On a desktop it is a black sidebar;
 // on a phone it is a slim top bar plus thumb-reach navigation at the bottom.
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { useAuth, useOfficer } from "@/auth/AuthContext";
 import { canWriteEntries, isAdmin } from "@/auth/permissions";
 import { DutyProvider, useDuty } from "@/components/duty/DutyContext";
 import { NotificationsProvider, useNotifications } from "@/components/notifications/NotificationsContext";
+import { useInterval } from "@/hooks/useInterval";
 import { roleLabel } from "@/lib/format";
+import { applyTheme, readThemeChoice, saveThemeChoice, THEME_CHOICES, type ThemeChoice } from "@/lib/theme";
 
 interface NavItem {
   to: string;
@@ -57,6 +59,15 @@ export function AppShell() {
   const { logout } = useAuth();
   const menu = useRef<HTMLDetailsElement>(null);
 
+  // Day or night. On Auto the clock decides, so it is checked again every minute.
+  const [theme, setTheme] = useState<ThemeChoice>(readThemeChoice);
+  useEffect(() => applyTheme(theme), [theme]);
+  useInterval(() => applyTheme(theme), 60_000);
+  function chooseTheme(choice: ThemeChoice) {
+    saveThemeChoice(choice);
+    setTheme(choice);
+  }
+
   const links = [canWriteEntries(profile) ? GATE : null, INSIDE, LOG, DUTY, isAdmin(profile) ? ALERTS : null, isAdmin(profile) ? ADMIN : null].filter(
     (l): l is NavItem => l !== null,
   );
@@ -100,6 +111,19 @@ export function AppShell() {
               {roleLabel(profile.role)}, {profile.officer_code}
             </p>
             {profile.facility_name && <p className="account__line">{profile.facility_name}</p>}
+            <div className="account__theme" role="group" aria-label="Theme">
+              {THEME_CHOICES.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  className="account__choice"
+                  aria-pressed={theme === c.value}
+                  onClick={() => chooseTheme(c.value)}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
             <Link to="/change-pin" className="account__action" onClick={closeMenu}>
               Change PIN
             </Link>

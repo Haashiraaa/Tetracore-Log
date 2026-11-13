@@ -61,6 +61,13 @@ Security officers log **themselves**, from their own login, on the **Duty** page
 - Reads: `GET /duty/now` (who is on duty, scoped like every read), `GET /duty/entries` (the log, same filters as the
   other logs), `GET /duty/entries/{id}/signature?side=in|out`.
 
+On the Inside page, trucks get three counters above the lists: **Queued**, **On site** and **Left today**
+(signed out since midnight in Lagos, whichever day the truck arrived; it is counted from the 200 newest
+truck entries). The numbers roll as trucks move. A queued line has a bar that fills over 6 hours and an
+on-site line one that fills over 12, matching `QUEUED_WARN_HOURS` and `LEFT_INSIDE_HOURS`. Letting a truck in,
+signing it out or marking it as having left the queue stamps the line ("In", "Signed out", "Left queue") with
+the time the server recorded.
+
 The app shows **On duty, gate N** / **Off duty** in the menu, and sends an off-duty officer who opens a gate
 page to the Duty page first. The server is the real check; the app only saves the trip.
 

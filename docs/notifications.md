@@ -91,9 +91,9 @@ Things to know:
 | Variable | Default | Meaning |
 |---|---|---|
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | unset | Browser push. All three or it stays off |
-| `LEFT_INSIDE_HOURS` | 12 | Hours after sign-in before "left inside" |
+| `LEFT_INSIDE_HOURS` | 12 | Hours after sign-in before "left inside". The Inside page's bar fills over the same 12 hours: if you change this, change `STAY_LIMIT_HOURS` in `frontend/src/config/env.ts` too |
 | `LEFT_INSIDE_CHECK_MINUTES` | 10 | How often the server looks for all the warnings below. 0 = off |
-| `QUEUED_WARN_HOURS` | 6 | Hours a truck may wait in the queue before the warning. 0 = off |
+| `QUEUED_WARN_HOURS` | 6 | Hours a truck may wait in the queue before the warning. 0 = off. Mirrored by `QUEUE_LIMIT_HOURS` in `frontend/src/config/env.ts` |
 | `DUTY_WARN_HOURS` | 14 | Hours a shift may run before the warning. 0 = off |
 | `GATE_UNMANNED_MINUTES` | 15 | Minutes a manned gate may be empty before the warning. 0 = off |
 

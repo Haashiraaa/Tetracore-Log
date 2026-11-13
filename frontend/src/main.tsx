@@ -13,12 +13,17 @@ import "@/styles/tokens.css";
 import "@/styles/base.css";
 import "@/styles/components.css";
 import "@/styles/layout.css";
+import "@/styles/live.css";
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { AuthProvider } from "./auth/AuthContext";
+import { applyTheme } from "./lib/theme";
+
+// Before the first paint, so a night shift never gets a white flash.
+applyTheme();
 
 createRoot(document.getElementById("root") as HTMLElement).render(
   <StrictMode>

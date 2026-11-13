@@ -1,19 +1,25 @@
 // frontend/src/pages/gate/GateHomePage.tsx
-// Where a shift starts: how many are inside, three big sign-in buttons, and the
-// last few things that happened at the gate.
-import type { ReactNode } from "react";
+// Where a shift starts: how many are inside (the number rolls when it changes), today hour
+// by hour, three big sign-in buttons, and the last few things that happened at the gate,
+// which slide in as they happen.
+import { useEffect, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { AnyEntry } from "@/api/schemas";
 import { useOfficer } from "@/auth/AuthContext";
 import { useDuty } from "@/components/duty/DutyContext";
+import { DayStrip } from "@/components/entries/DayStrip";
 import { Badge } from "@/components/ui/Badge";
 import { Banner } from "@/components/ui/Banner";
+import { LiveDot } from "@/components/ui/LiveDot";
 import { PlateChip } from "@/components/ui/PlateChip";
-import { INSIDE_REFRESH_MS } from "@/config/env";
+import { RollingNumber } from "@/components/ui/RollingNumber";
+import { INSIDE_REFRESH_MS, TODAY_MAX_ROWS, TODAY_REFRESH_MS } from "@/config/env";
 import { errorMessage } from "@/exceptions/errors";
 import { useAsync } from "@/hooks/useAsync";
+import { useFreshKeys } from "@/hooks/useFreshKeys";
 import { useInterval } from "@/hooks/useInterval";
-import { formatTime } from "@/lib/dates";
+import { cx } from "@/lib/cx";
+import { formatTime, lagosHour } from "@/lib/dates";
 import { LOG_KINDS, type LogKind } from "@/models";
 import * as entryService from "@/services/entryService";
 
@@ -76,7 +82,11 @@ function Tile({
       </span>
       <span className="tile__bottom">
         {hint && <span>{hint}</span>}
-        <span className="mono">{count === null ? "" : `${count} in`}</span>
+        {count !== null && (
+          <span className="mono">
+            <RollingNumber value={count} /> in
+          </span>
+        )}
       </span>
     </Link>
   );
@@ -94,20 +104,38 @@ export default function GateHomePage() {
     inside.reload();
     recent.reload();
   }, INSIDE_REFRESH_MS);
+  const today = useAsync((signal) => Promise.all(LOG_KINDS.map((k) => entryService.fetchToday(k, signal))), []);
+  useInterval(today.reload, TODAY_REFRESH_MS);
 
   const counts = inside.data ? inside.data.map((rows) => rows.length) : null;
   const total = counts ? counts.reduce((a, b) => a + b, 0) : null;
   const events = recent.data ? latestEvents(recent.data) : [];
   const failure = inside.error ?? recent.error;
+  const fresh = useFreshKeys(
+    events.map((ev) => ev.key),
+    recent.data !== null,
+  );
+
+  // Somebody came or went: bring today's strip up to date without waiting for its own timer.
+  const reloadToday = today.reload;
+  useEffect(() => {
+    if (total !== null) reloadToday();
+  }, [total, reloadToday]);
+  const signedInToday = today.data ? today.data.flat() : null;
 
   return (
     <div className="gate-grid">
       <div className="stack stack--lg">
         <section className="hero" aria-label="Inside right now">
-          <p className="hero__where mono">{profile.facility_code}</p>
+          <div className="hero__top">
+            <p className="hero__where mono">{profile.facility_code}</p>
+            <LiveDot updatedAt={inside.updatedAt} failed={inside.error !== null} />
+          </div>
           <div className="hero__row">
             <p className="hero__count">
-              <span className="hero__number">{total ?? "–"}</span>
+              <span className="hero__number">
+                <RollingNumber value={total} />
+              </span>
               <span className="hero__label">
                 Inside
                 <br />
@@ -118,6 +146,14 @@ export default function GateHomePage() {
               See all
             </Link>
           </div>
+          {signedInToday && (
+            <DayStrip
+              hours={entryService.signInsByHour(signedInToday)}
+              nowHour={lagosHour()}
+              total={signedInToday.length}
+              capped={today.data !== null && today.data.some((rows) => rows.length >= TODAY_MAX_ROWS)}
+            />
+          )}
         </section>
 
         {duty && duty.status !== null && !duty.onDuty && (
@@ -183,7 +219,7 @@ export default function GateHomePage() {
             {events.map((ev) => {
               const face = entryService.faceOf(ev.entry);
               return (
-                <li key={ev.key} className="activity__row">
+                <li key={ev.key} className={cx("activity__row", fresh.has(ev.key) && "activity__row--new")}>
                   <span className="activity__time mono">{formatTime(ev.at)}</span>
                   {face.plate && <PlateChip plate={face.plate} />}
                   <span className="activity__who">
