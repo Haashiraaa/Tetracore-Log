@@ -1,4 +1,4 @@
-// Tetracore Log: service worker. It does one job: show a notification when the server pushes
+// Log Book: service worker. It does one job: show a notification when the server pushes
 // one, and open the Notifications page when it is tapped. It caches nothing.
 
 self.addEventListener("install", () => self.skipWaiting());
@@ -12,7 +12,7 @@ self.addEventListener("push", (event) => {
     data = { body: event.data ? event.data.text() : "" };
   }
   event.waitUntil(
-    self.registration.showNotification(data.title || "Tetracore Log", {
+    self.registration.showNotification(data.title || "Log Book", {
       body: data.body || "",
       tag: data.tag, // the same event never shows twice
       data: { url: data.url || "/notifications" },

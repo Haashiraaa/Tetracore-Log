@@ -81,7 +81,7 @@ def needs_rehash(pin_hash: str) -> bool:
 
 @lru_cache(maxsize=1)
 def _dummy_hash() -> str:
-    return _hasher.hash("tetracore-dummy-pin")
+    return _hasher.hash("log-book-dummy-pin")
 
 
 def burn_verify_time(pin: str) -> None:

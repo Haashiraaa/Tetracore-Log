@@ -8,16 +8,16 @@ resetting an officer's PIN) is done by admins on the **Accounts** page of the ap
 which only reads.
 
 ```bash
-tetracore-admin list                 # admins only
-tetracore-admin list --all           # every account
-tetracore-admin create --code ADM-01 --name "Ada Obi"
-tetracore-admin grant --code OFF-003 --facility CNG-LAG-01
-tetracore-admin revoke --code ADM-01
-tetracore-admin reset-pin --code ADM-01
+log-book-admin list                  # admins only
+log-book-admin list --all            # every account
+log-book-admin create --code ADM-01 --name "Ada Obi"
+log-book-admin grant --code OFF-003 --facility CNG-LAG-01
+log-book-admin revoke --code ADM-01
+log-book-admin reset-pin --code ADM-01
 ```
 
-`tetracore-admin` is a command registered in `pyproject.toml` (`[project.scripts]`, next to
-`tetracore-log`). It exists once the project is installed: run `pip install -e .` in the
+`log-book-admin` is a command registered in `pyproject.toml` (`[project.scripts]`, next to
+`log-book`). It exists once the project is installed: run `pip install -e .` in the
 virtualenv, once, and again after pulling a change that touches `pyproject.toml`. If the command is
 not found, that is the reason (or the virtualenv is not active). `python -m scripts.admin_manager`
 does exactly the same and needs no install.

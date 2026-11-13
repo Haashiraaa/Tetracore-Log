@@ -5,11 +5,11 @@
 from __future__ import annotations
 
 
-class TetracoreLogError(Exception):
-    """Base class for all Tetracore Log errors."""
+class LogBookError(Exception):
+    """Base class for all Log Book errors."""
 
 
-class EnvVariableError(TetracoreLogError):
+class EnvVariableError(LogBookError):
     """Raised when an environment variable is missing or invalid."""
 
 
@@ -19,7 +19,7 @@ class EnvVariableError(TetracoreLogError):
 # --------------------------------------------------------------------------
 
 
-class DomainError(TetracoreLogError):
+class DomainError(LogBookError):
     code = "error"
     message = "Request failed."
 

@@ -27,16 +27,16 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: tetracore
+          POSTGRES_USER: log_book
           POSTGRES_PASSWORD: ci_only_password
           # The test suite refuses any database whose name lacks "test" (it DROPS the schema
           # and rebuilds it from the migrations), and it does not create the database itself.
           # So CI has one throwaway database and points both URLs at it.
-          POSTGRES_DB: tetracore_test
+          POSTGRES_DB: log_book_test
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U tetracore"
+          --health-cmd "pg_isready -U log_book"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -44,8 +44,8 @@ jobs:
     env:
       # Throwaway values for the throwaway database above. Nothing here is a real secret.
       # JWT_SECRET and PIN_PEPPER are set by tests/conftest.py itself.
-      DATABASE_URL: postgresql+psycopg://tetracore:ci_only_password@localhost:5432/tetracore_test
-      TEST_DATABASE_URL: postgresql+psycopg://tetracore:ci_only_password@localhost:5432/tetracore_test
+      DATABASE_URL: postgresql+psycopg://log_book:ci_only_password@localhost:5432/log_book_test
+      TEST_DATABASE_URL: postgresql+psycopg://log_book:ci_only_password@localhost:5432/log_book_test
 
     steps:
       - uses: actions/checkout@v4
