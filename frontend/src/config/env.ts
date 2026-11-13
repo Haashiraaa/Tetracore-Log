@@ -43,3 +43,7 @@ export const NOTIFICATIONS_POLL_MS = 5_000;
 /** Mirrors validate_pin_policy in backend/src/security/passwords.py. */
 export const PIN_MIN_LENGTH = 6;
 export const PIN_MAX_LENGTH = 10;
+
+/** The Events log: how long a note may be. Mirrors MIN/MAX in backend/src/api/schemas/occurrences.py. */
+export const NOTE_MIN_LENGTH = 3;
+export const NOTE_MAX_LENGTH = 2000;

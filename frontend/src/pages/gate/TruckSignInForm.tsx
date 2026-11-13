@@ -20,6 +20,7 @@ export interface SignInInitial {
   driverName: string;
   driverPhone: string;
   company: string;
+  cabNumber: string;
 }
 
 interface SignInFormProps {
@@ -47,6 +48,7 @@ export function TruckSignInForm({
   const [driverName, setDriverName] = useState(initial.driverName);
   const [driverPhone, setDriverPhone] = useState(initial.driverPhone);
   const [company, setCompany] = useState(initial.company);
+  const [cabNumber, setCabNumber] = useState(initial.cabNumber);
   const [errors, setErrors] = useState<{ driverName?: string; driverPhone?: string; signature?: string }>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -66,7 +68,7 @@ export function TruckSignInForm({
 
     const built = truckService.buildSignInRequest(
       entryId,
-      { plate, driverName, driverPhone, company },
+      { plate, driverName, driverPhone, company, cabNumber },
       { enterNow: letIn, signaturePng: read.png, signatureOnFile: onFile },
     );
     if (!built.ok) {
@@ -134,6 +136,15 @@ export function TruckSignInForm({
           value={company}
           onChange={(e) => setCompany(e.target.value)}
           autoComplete="off"
+          disabled={busy}
+        />
+        <TextField
+          label="Cab number"
+          hint="Optional. Only some trucks have one."
+          value={cabNumber}
+          onChange={(e) => setCabNumber(e.target.value)}
+          autoComplete="off"
+          maxLength={20}
           disabled={busy}
         />
       </div>

@@ -13,7 +13,7 @@ import { formatDateTime, formatDuration } from "@/lib/dates";
 import { formatScm } from "@/lib/format";
 import { formatPhone } from "@/lib/people";
 import { LOG_LABEL, type LogKind } from "@/models";
-import { faceOf, isTruck, isVisitor } from "@/services/entryService";
+import { faceOf, isTruck, isVisitor, isWaybill } from "@/services/entryService";
 import { quantityLabel } from "@/services/visitorService";
 import { EntryStatus } from "./EntryStatus";
 import { STATUS_LABEL } from "@/services/truckService";
@@ -51,6 +51,8 @@ function OwnFacts({ entry }: { entry: AnyEntry }) {
         <dd>{entry.driver_phone ? formatPhone(entry.driver_phone) : "—"}</dd>
         <dt>Company</dt>
         <dd>{entry.company ?? "—"}</dd>
+        <dt>Cab number</dt>
+        <dd>{entry.cab_number ?? "—"}</dd>
         <dt>Gas bought</dt>
         <dd>{entry.scm_purchased ? `${formatScm(entry.scm_purchased)} SCM` : "—"}</dd>
         {entry.status === "left_queue" && (
@@ -85,6 +87,28 @@ function OwnFacts({ entry }: { entry: AnyEntry }) {
             (entry.items_received ?? "—")
           )}
         </dd>
+        <dt>Phone number</dt>
+        <dd>{entry.phone ? formatPhone(entry.phone) : "—"}</dd>
+      </>
+    );
+  }
+  if (isWaybill(entry)) {
+    return (
+      <>
+        <dt>Courier</dt>
+        <dd>{entry.full_name}</dd>
+        <dt>Items</dt>
+        <dd>
+          <ul className="detail-items">
+            {entry.items.map((item, i) => (
+              <li key={i}>
+                {item.name} <span className="muted">× {quantityLabel(item)}</span>
+              </li>
+            ))}
+          </ul>
+        </dd>
+        <dt>Vehicle</dt>
+        <dd>{entry.came_by_vehicle ? (entry.plate_number ?? "Came by vehicle") : "On foot"}</dd>
         <dt>Phone number</dt>
         <dd>{entry.phone ? formatPhone(entry.phone) : "—"}</dd>
       </>

@@ -29,6 +29,7 @@ const GATE: NavItem = { to: "/gate", label: "Gate", icon: <Icon><path d="M4 20V6
 const DUTY: NavItem = { to: "/duty", label: "Duty", icon: <Icon><path d="M12 3l7 3v5c0 4.500-3 8-7 10-4-2-7-5.500-7-10V6z" /><path d="M9 12l2 2 4-4" /></Icon> };
 const INSIDE: NavItem = { to: "/inside", label: "Inside", icon: <Icon><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="2.5" /></Icon> };
 const LOG: NavItem = { to: "/log", label: "Log", icon: <Icon><path d="M6 4h12v16H6zM9 9h6M9 13h6M9 17h3" /></Icon> };
+const EVENTS: NavItem = { to: "/events", label: "Events", icon: <Icon><path d="M5 4h14v12H9l-4 4zM9 8h6M9 12h4" /></Icon> };
 const ALERTS: NavItem = { to: "/notifications", label: "Alerts", icon: <Icon><path d="M6 17V11a6 6 0 0 1 12 0v6l1.500 2h-15zM10 21h4" /></Icon> };
 const ADMIN: NavItem = { to: "/admin", label: "Accounts", icon: <Icon><circle cx="12" cy="8" r="3.5" /><path d="M5 20c.8-3.6 3.5-5.5 7-5.5s6.200 1.900 7 5.500" /></Icon> };
 
@@ -68,7 +69,7 @@ export function AppShell() {
     setTheme(choice);
   }
 
-  const links = [canWriteEntries(profile) ? GATE : null, INSIDE, LOG, DUTY, isAdmin(profile) ? ALERTS : null, isAdmin(profile) ? ADMIN : null].filter(
+  const links = [canWriteEntries(profile) ? GATE : null, INSIDE, LOG, EVENTS, DUTY, isAdmin(profile) ? ALERTS : null, isAdmin(profile) ? ADMIN : null].filter(
     (l): l is NavItem => l !== null,
   );
   const where = profile.facility_code ?? "All facilities";

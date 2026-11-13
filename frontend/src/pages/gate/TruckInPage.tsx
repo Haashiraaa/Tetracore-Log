@@ -39,7 +39,7 @@ type Stage =
   | { kind: "queued"; truck: TruckLookup }
   | { kind: "inside"; truck: TruckLookup };
 
-const BLANK: SignInInitial = { driverName: "", driverPhone: "", company: "" };
+const BLANK: SignInInitial = { driverName: "", driverPhone: "", company: "", cabNumber: "" };
 
 function stageFor(result: truckService.LookupResult): Stage {
   switch (result.kind) {
@@ -56,6 +56,7 @@ function stageFor(result: truckService.LookupResult): Stage {
           driverName: result.truck.driver_name,
           driverPhone: formatPhone(result.truck.driver_phone),
           company: result.truck.company ?? "",
+          cabNumber: result.truck.cab_number ?? "",
         },
       };
     case "queued":

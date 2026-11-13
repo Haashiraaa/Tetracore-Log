@@ -10,13 +10,13 @@ export function signIn<T extends AnyEntry>(kind: LogKind, body: object): Promise
   return request<T>(`/${kind}/entries`, { method: "POST", body });
 }
 
-/** Visitors and staff: who has this phone number signed in before? null = nobody. */
-export function lookupByPhone<T>(kind: "visitors" | "staff", phone: string): Promise<T | null> {
+/** Visitors, staff and couriers: who has this phone number signed in before? null = nobody. */
+export function lookupByPhone<T>(kind: "visitors" | "staff" | "waybill", phone: string): Promise<T | null> {
   return request<T | null>(`/${kind}/lookup`, { query: { phone } });
 }
 
 /** The part of a number typed so far (3+ digits): matching people, best match first. */
-export function searchByPhone<T>(kind: "visitors" | "staff", typed: string): Promise<T[]> {
+export function searchByPhone<T>(kind: "visitors" | "staff" | "waybill", typed: string): Promise<T[]> {
   return request<T[]>(`/${kind}/search`, { query: { q: typed } });
 }
 

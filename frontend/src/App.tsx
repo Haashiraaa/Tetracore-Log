@@ -7,6 +7,7 @@ import { canWriteEntries, homePathFor, isAdmin } from "@/auth/permissions";
 import { AppShell } from "@/components/layout/AppShell";
 import AdminPage from "@/pages/admin/AdminPage";
 import DutyPage from "@/pages/duty/DutyPage";
+import EventsPage from "@/pages/events/EventsPage";
 import ChangePinPage from "@/pages/ChangePinPage";
 import GateHomePage from "@/pages/gate/GateHomePage";
 import PersonInPage from "@/pages/gate/PersonInPage";
@@ -39,12 +40,14 @@ export default function App() {
               <Route path="gate/truck" element={<TruckInPage />} />
               <Route path="gate/visitor" element={<PersonInPage kind="visitors" />} />
               <Route path="gate/staff" element={<PersonInPage kind="staff" />} />
+              <Route path="gate/waybill" element={<PersonInPage kind="waybill" />} />
             </Route>
           </Route>
 
           <Route path="duty" element={<DutyPage />} />
           <Route path="inside" element={<InsidePage />} />
           <Route path="log" element={<LogPage />} />
+          <Route path="events" element={<EventsPage />} />
 
           <Route element={<RequireAccess allow={isAdmin} />}>
             <Route path="admin" element={<AdminPage />} />

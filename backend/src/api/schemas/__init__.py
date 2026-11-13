@@ -48,6 +48,11 @@ from backend.src.api.schemas.events import (
     PushTestOut,
     PushUnsubscribeRequest,
 )
+from backend.src.api.schemas.occurrences import (
+    OccurrenceCreateRequest,
+    OccurrenceOut,
+    SignatureOnFileOut,
+)
 from backend.src.api.schemas.staff import StaffEntryOut, StaffLookupOut, StaffSignInRequest
 from backend.src.api.schemas.trucks import (
     TruckEnterRequest,
@@ -61,6 +66,11 @@ from backend.src.api.schemas.visitors import (
     VisitorEntryOut,
     VisitorLookupOut,
     VisitorSignInRequest,
+)
+from backend.src.api.schemas.waybill import (
+    WaybillEntryOut,
+    WaybillLookupOut,
+    WaybillSignInRequest,
 )
 
 __all__ = [
@@ -78,5 +88,7 @@ __all__ = [
     "TruckLookupOut", "TruckSignInRequest", "TruckSignOutRequest",
     "TruckEnterRequest", "TruckLeaveQueueRequest",
     "VisitorEntryOut", "VisitorLookupOut", "VisitorSignInRequest",
+    "WaybillEntryOut", "WaybillLookupOut", "WaybillSignInRequest",
+    "OccurrenceCreateRequest", "OccurrenceOut", "SignatureOnFileOut",
     "PersonSignInRequest", "PersonSignOutRequest",
 ]

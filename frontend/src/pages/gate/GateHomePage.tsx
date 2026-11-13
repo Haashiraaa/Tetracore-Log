@@ -158,7 +158,7 @@ export default function GateHomePage() {
 
         {duty && duty.status !== null && !duty.onDuty && (
           <Banner tone="warn">
-            You are off duty. <Link to="/duty">Go on duty</Link> to sign trucks, visitors and staff in or out.
+            You are off duty. <Link to="/duty">Go on duty</Link> to sign trucks, visitors, staff and couriers in or out, or to write an event.
           </Banner>
         )}
 
@@ -203,6 +203,32 @@ export default function GateHomePage() {
                   <rect x="4" y="5" width="16" height="15" rx="2" />
                   <path d="M9 5V3h6v2M8 16.500c.6-1.800 2-2.600 4-2.600s3.400.800 4 2.600" />
                   <circle cx="12" cy="10.500" r="1.800" />
+                </>
+              }
+            />
+          </div>
+          <div className="tiles">
+            <Tile
+              to="/gate/waybill"
+              title="Waybill"
+              hint="Courier with goods"
+              count={counts ? counts[3] : null}
+              icon={
+                <>
+                  <path d="M4 8l8-4 8 4v8l-8 4-8-4z" />
+                  <path d="M4 8l8 4 8-4M12 12v8" />
+                </>
+              }
+            />
+            <Tile
+              to="/events"
+              title="Events"
+              hint="Write what you noticed"
+              count={null}
+              icon={
+                <>
+                  <path d="M5 4h14v12H9l-4 4z" />
+                  <path d="M9 8h6M9 12h4" />
                 </>
               }
             />

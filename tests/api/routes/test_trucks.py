@@ -328,3 +328,32 @@ def test_a_driver_phone_is_kept_as_a_real_number(client, officer_a):
     for bad in ("12345", "abc", "0803000000"):
         assert sign_in(client, officer_a, plate_number="BAD-1 PH",
                        driver_phone=bad).status_code == 422, bad
+
+
+# ---- cab number: optional, only some trucks have one ----
+
+def test_cab_number_is_optional_and_kept(client, officer_a):
+    with_cab = sign_in(client, officer_a, plate_number="CAB111AA", cab_number=" C-12 ").json()
+    without = sign_in(client, officer_a, plate_number="CAB222AA").json()
+    blank = sign_in(client, officer_a, plate_number="CAB333AA", cab_number="  ").json()
+    assert with_cab["cab_number"] == "C-12"
+    assert without["cab_number"] is None and blank["cab_number"] is None
+
+
+def test_cab_number_is_prefilled_for_a_returning_truck_and_can_change(client, officer_a):
+    first = sign_in(client, officer_a, plate_number="CAB444AA", cab_number="C-7").json()
+    client.post(f"/api/trucks/entries/{first['id']}/sign-out",
+                json={"signature": PNG_B64}, headers=officer_a.headers)
+    found = client.get("/api/trucks/lookup", params={"plate": "cab444aa"},
+                       headers=officer_a.headers).json()
+    assert found["cab_number"] == "C-7"
+    second = sign_in(client, officer_a, plate_number="CAB444AA", cab_number="C-9").json()
+    assert second["cab_number"] == "C-9"
+    assert client.get("/api/trucks/lookup", params={"plate": "CAB444AA"},
+                      headers=officer_a.headers).json()["cab_number"] == "C-9"
+
+
+def test_cab_number_is_text_and_short(client, officer_a):
+    for bad in (12, True, ["x"], "x" * 21):
+        assert sign_in(client, officer_a, plate_number="CAB555AA",
+                       cab_number=bad).status_code == 422

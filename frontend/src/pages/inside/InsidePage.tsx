@@ -45,6 +45,7 @@ const SIGN_IN_PATH: Record<LogKind, string> = {
   trucks: "/gate/truck",
   visitors: "/gate/visitor",
   staff: "/gate/staff",
+  waybill: "/gate/waybill",
 };
 
 /** Inside this long and the duration turns orange, so a forgotten sign-out stands out. */
@@ -60,8 +61,8 @@ function cameInAt(e: AnyEntry): string {
   return entryService.isTruck(e) && e.entered_at ? e.entered_at : e.signed_in_at;
 }
 
-/** The server warns about visitors and trucks left inside, not staff, so staff get no bar. */
-const HAS_STAY_BAR: Record<LogKind, boolean> = { trucks: true, visitors: true, staff: false };
+/** The server warns about visitors, couriers and trucks left inside, not staff, so staff get no bar. */
+const HAS_STAY_BAR: Record<LogKind, boolean> = { trucks: true, visitors: true, staff: false, waybill: true };
 
 export default function InsidePage() {
   const profile = useOfficer();

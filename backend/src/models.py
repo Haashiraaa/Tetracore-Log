@@ -119,7 +119,8 @@ class AccessClaims:
 
 GATE_KINDS = (
     "truck_queued", "truck_in", "truck_out", "truck_left_queue",
-    "visitor_in", "visitor_out", "staff_in", "staff_out",
+    "visitor_in", "visitor_out", "staff_in", "staff_out", "waybill_in", "waybill_out",
+    "event_logged",
     "officer_on_duty", "officer_off_duty", "officer_gate_changed",
 )
 ADMIN_KINDS = (

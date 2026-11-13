@@ -8,13 +8,15 @@ export type Role = string;
 export const DEFAULT_ROLE: Role = "Officer";
 export const ROLE_MAX_LENGTH = 32;
 
-/** The three logs. The value is also the API path: /api/<kind>/entries. */
-export type LogKind = "trucks" | "visitors" | "staff";
+/** The four sign-in logs. The value is also the API path: /api/<kind>/entries.
+ *  (The Events log is not one of them: it has no sign-out, see api/occurrences.ts.) */
+export type LogKind = "trucks" | "visitors" | "staff" | "waybill";
 
-export const LOG_KINDS: readonly LogKind[] = ["trucks", "visitors", "staff"];
+export const LOG_KINDS: readonly LogKind[] = ["trucks", "visitors", "staff", "waybill"];
 
 export const LOG_LABEL: Record<LogKind, { many: string; one: string }> = {
   trucks: { many: "Trucks", one: "truck" },
   visitors: { many: "Visitors", one: "visitor" },
   staff: { many: "Staff", one: "staff member" },
+  waybill: { many: "Waybill", one: "courier" },
 };

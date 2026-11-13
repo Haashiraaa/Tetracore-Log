@@ -55,20 +55,21 @@ def has_signature(db: Session, facility_id: uuid.UUID, truck_id: uuid.UUID) -> b
 
 def upsert_truck(
     db: Session, *, facility_id: uuid.UUID, plate: str, driver_name: str,
-    driver_phone: Optional[str], company: Optional[str],
+    driver_phone: Optional[str], company: Optional[str], cab_number: Optional[str] = None,
 ) -> uuid.UUID:
     """Registry keeps the LATEST confirmed driver details. Core upserts skip
     the model's @validates, so the plate is normalized here."""
     stmt = pg_insert(Truck).values(
         id=uuid.uuid4(), facility_id=facility_id,
         plate_number=normalize_plate(plate), driver_name=driver_name,
-        driver_phone=driver_phone, company=company)
+        driver_phone=driver_phone, company=company, cab_number=cab_number)
     stmt = stmt.on_conflict_do_update(
         index_elements=["facility_id", "plate_number"],
         set_={
             "driver_name": stmt.excluded.driver_name,
             "driver_phone": stmt.excluded.driver_phone,
             "company": stmt.excluded.company,
+            "cab_number": stmt.excluded.cab_number,
             "updated_at": func.now(),
         },
     ).returning(Truck.id)

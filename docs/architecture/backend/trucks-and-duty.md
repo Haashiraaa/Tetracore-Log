@@ -50,6 +50,13 @@ visitors and staff ([people-logs.md](people-logs.md#signatures-are-kept-and-reus
 - `scm_purchased` is still recorded at sign-out.
 - Existing rows were migrated: signed out -> `departed`, still open -> `on_site` (with `entered_at` = `signed_in_at`).
 
+## Cab number
+
+Optional. Some trucks have a number on the cab as well as a plate; most do not. Free text, up to 20
+characters, blank means none. It is saved on the truck (so a returning truck is prefilled, and the
+latest value wins) and copied onto each visit like the other driver details. It shows in the
+Inside and Log lists ("Cab C-12"), the detail dialog and the CSV.
+
 ## Driver phone
 
 Optional on a truck sign-in. When given it follows the same rules as a person's phone (E.164, checked

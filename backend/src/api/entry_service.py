@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from backend.src.api import event_service
 from backend.src.api.schemas import CurrentOfficer
 from backend.src.api.signature import decode_signature_png
-from backend.src.db.orm.tables import StaffEntry, TruckEntry, VisitorEntry
+from backend.src.db.orm.tables import StaffEntry, TruckEntry, VisitorEntry, WaybillEntry
 from backend.src.db.queries import _entries
 from backend.src.db.queries import duty as duty_q
 from backend.src.exceptions.errors import (
@@ -29,13 +29,14 @@ from backend.src.exceptions.errors import (
 )
 from backend.src.security.tokens import utcnow
 
-_LOG_NAME = {TruckEntry: "truck", VisitorEntry: "visitor", StaffEntry: "staff"}
+_LOG_NAME = {TruckEntry: "truck", VisitorEntry: "visitor", StaffEntry: "staff",
+             WaybillEntry: "waybill"}
 
 
 def _who(entry: Any) -> str:
-    """How an entry reads in a notification: "Truck LAG123AB" or the person's full name."""
-    plate = getattr(entry, "plate_number", None)
-    return f"Truck {plate}" if plate else entry.full_name
+    """How an entry reads in a notification: the person's full name, or "Truck LAG123AB"."""
+    name = getattr(entry, "full_name", None)  # people logs, waybill couriers
+    return name if name else f"Truck {entry.plate_number}"
 
 
 def facility_of(officer: CurrentOfficer) -> uuid.UUID:

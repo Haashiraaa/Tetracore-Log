@@ -37,13 +37,13 @@ export const BLANK_VISITOR: VisitorForm = { fullName: "", company: "", purpose: 
 
 /** What a visit's items read like in a table cell or a CSV: "Oil filters (2 boxes); Gloves (10)".
  *  Lines from before items were a list keep their old free text. */
-export function itemsLabel(e: Pick<VisitorEntry, "items" | "items_received">): string {
+export function itemsLabel(e: Pick<VisitorEntry, "items"> & { items_received?: string | null }): string {
   if (e.items.length > 0) return e.items.map((i) => `${i.name} (${quantityLabel(i)})`).join("; ");
   return e.items_received ?? "";
 }
 
 /** The rows that carry something. A row left completely empty is dropped; a half-filled one is an error. */
-function cleanItems(rows: ItemRow[]): { items: VisitorItem[] } | { error: string } {
+export function cleanItems(rows: ItemRow[]): { items: VisitorItem[] } | { error: string } {
   const items: VisitorItem[] = [];
   for (const row of rows) {
     const name = row.name.trim();

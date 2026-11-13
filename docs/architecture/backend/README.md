@@ -24,6 +24,7 @@ for names and phone numbers), `facility_codes.py`.
 | Guide | About |
 |---|---|
 | [people-logs.md](people-logs.md) | Visitors and staff: full names, phone numbers, items, signatures, one sign-in at a time |
+| [waybill-and-events.md](waybill-and-events.md) | Couriers bringing goods (waybill), and the officers' own Events log |
 | [trucks-and-duty.md](trucks-and-duty.md) | A truck's visit, a facility's gates, the officers' duty log, and its warnings |
 | [notifications.md](notifications.md) | The global admin's live feed of every event, the warnings, and browser push |
 | [facility-codes.md](facility-codes.md) | How facility codes (`CNG-LAG-01`) are issued and why they never repeat |

@@ -62,6 +62,7 @@ def lookup_by_plate(
         driver_name=truck.driver_name,
         driver_phone=truck.driver_phone,
         company=truck.company,
+        cab_number=truck.cab_number,
         open_entry_id=None if open_entry is None else open_entry[0],
         open_entry_status=None if open_entry is None else open_entry[1],
     )
@@ -86,7 +87,7 @@ def _register_truck(db: Session, facility_id: uuid.UUID, data: TruckSignInReques
     truck_id = q.upsert_truck(
         db, facility_id=facility_id, plate=data.plate_number,
         driver_name=data.driver_name, driver_phone=data.driver_phone,
-        company=data.company)
+        company=data.company, cab_number=data.cab_number)
     open_entry = q.find_open_entry(db, facility_id, truck_id)
     if open_entry is not None:
         db.rollback()
@@ -130,7 +131,7 @@ def sign_in(
         entry_id=data.id, facility_id=facility_id, truck_id=truck_id,
         plate=data.plate_number, driver_name=data.driver_name,
         driver_phone=data.driver_phone, company=data.company,
-        scm_purchased=data.scm_purchased, signed_in_at=now,
+        cab_number=data.cab_number, scm_purchased=data.scm_purchased, signed_in_at=now,
         signed_in_by=officer.officer_id, device_id=data.device_id, queued_gate=gate)
     if data.enter_now:
         values.update(status="on_site", entered_at=now, entered_by=officer.officer_id,

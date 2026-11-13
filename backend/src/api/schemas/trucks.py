@@ -28,6 +28,7 @@ class TruckLookupOut(BaseModel):
     driver_name: str
     driver_phone: Optional[str]
     company: Optional[str]
+    cab_number: Optional[str] = None
     # Set when this truck is in the middle of a visit (so the app can offer the next step),
     # with that visit's status: "queued" or "on_site".
     open_entry_id: Optional[uuid.UUID]
@@ -46,6 +47,7 @@ class TruckSignInRequest(PersonSignInRequest):
     driver_name: str = Field(min_length=2, max_length=150)
     driver_phone: Optional[str] = Field(default=None, max_length=32)
     company: Optional[str] = Field(default=None, max_length=200)
+    cab_number: Optional[str] = Field(default=None, max_length=20)  # only some trucks have one
     scm_purchased: Optional[Gas] = Field(
         default=None, ge=0, max_digits=12, decimal_places=2)
 
@@ -57,7 +59,7 @@ class TruckSignInRequest(PersonSignInRequest):
             raise ValueError("Plate number must be 2-20 letters/digits.")
         return plate
 
-    _blank = field_validator("company")(blank_to_none)
+    _blank = field_validator("company", "cab_number")(blank_to_none)
     _driver_phone = field_validator("driver_phone")(optional_phone_field)
     _name = field_validator("driver_name")(full_name_field)
 
@@ -99,6 +101,7 @@ class TruckEntryOut(EntryOut):
     driver_name: str
     driver_phone: Optional[str]
     company: Optional[str]
+    cab_number: Optional[str]
     scm_purchased: Optional[Decimal]
     status: str  # queued | on_site | departed | left_queue
     entered_at: Optional[datetime]
@@ -112,7 +115,7 @@ class TruckEntryOut(EntryOut):
         return cls(
             **cls.common_fields(row), truck_id=e.truck_id,
             plate_number=e.plate_number, driver_name=e.driver_name,
-            driver_phone=e.driver_phone, company=e.company,
+            driver_phone=e.driver_phone, company=e.company, cab_number=e.cab_number,
             scm_purchased=e.scm_purchased, status=e.status, entered_at=e.entered_at,
             entered_by=e.entered_by,
             queued_gate=e.queued_gate, left_queue_reason=e.left_queue_reason,

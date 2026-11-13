@@ -1,6 +1,7 @@
 # People logs: visitors and staff
 
-Visitors and staff share one set of rules (the trucks log has its own, see the end).
+Visitors and staff share one set of rules (the trucks log has its own, see the end; couriers on the
+Waybill log follow the same rules, see [waybill-and-events.md](waybill-and-events.md)).
 The code lives in `backend/src/api/entry_service.py` and `backend/src/models.py`;
 the screens are `PersonInPage` and `lib/people.ts` in the frontend.
 

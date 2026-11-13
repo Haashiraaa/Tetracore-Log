@@ -11,7 +11,7 @@
 // returns the stored entry instead of creating a duplicate.
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import type { AnyEntry, StaffLookup, VisitorLookup } from "@/api/schemas";
+import type { AnyEntry, StaffLookup, VisitorLookup, WaybillLookup } from "@/api/schemas";
 import { SignOutSheet, type SignOutTarget } from "@/components/entries/SignOutSheet";
 import { SignaturePad, readPad, type SignaturePadHandle } from "@/components/signature/SignaturePad";
 import { Badge } from "@/components/ui/Badge";
@@ -27,9 +27,11 @@ import { uuid } from "@/lib/ids";
 import { PHONE_ERROR, cleanPhone, formatPhone, phoneSearchDigits } from "@/lib/people";
 import * as staffService from "@/services/staffService";
 import * as visitorService from "@/services/visitorService";
+import * as waybillService from "@/services/waybillService";
 import { PURPOSE_PICKS, type ItemRow } from "@/services/visitorService";
 
-type PersonKind = "visitors" | "staff";
+type PersonKind = "visitors" | "staff" | "waybill";
+type Found = VisitorLookup | StaffLookup | WaybillLookup;
 
 interface Fields {
   fullName: string;
@@ -37,9 +39,19 @@ interface Fields {
   purpose: string;
   items: ItemRow[];
   capacity: string;
+  cameByVehicle: boolean; // waybill: did the courier drive here?
+  plate: string;
 }
 
-const BLANK: Fields = { fullName: "", company: "", purpose: "", items: [], capacity: "" };
+const BLANK: Fields = {
+  fullName: "",
+  company: "",
+  purpose: "",
+  items: [],
+  capacity: "",
+  cameByVehicle: false,
+  plate: "",
+};
 
 type Stage =
   | { kind: "idle" }
@@ -53,10 +65,19 @@ const SEARCH_DELAY_MS = 200;
 const COPY = {
   visitors: { title: "Visitor in", who: "visitor", button: "Sign visitor in", signs: "Visitor signs in" },
   staff: { title: "Staff in", who: "staff member", button: "Sign staff in", signs: "Staff member signs in" },
+  waybill: { title: "Courier in", who: "courier", button: "Sign courier in", signs: "Courier signs in" },
 } as const;
 
-async function lookUp(kind: PersonKind, phone: string): Promise<VisitorLookup | StaffLookup | null> {
-  return kind === "visitors" ? visitorService.lookup(phone) : staffService.lookup(phone);
+async function lookUp(kind: PersonKind, phone: string): Promise<Found | null> {
+  if (kind === "visitors") return visitorService.lookup(phone);
+  if (kind === "waybill") return waybillService.lookup(phone);
+  return staffService.lookup(phone);
+}
+
+function searchFor(kind: PersonKind): (typed: string) => Promise<Found[]> {
+  if (kind === "visitors") return visitorService.search;
+  if (kind === "waybill") return waybillService.search;
+  return staffService.search;
 }
 
 export default function PersonInPage({ kind }: { kind: PersonKind }) {
@@ -65,9 +86,9 @@ export default function PersonInPage({ kind }: { kind: PersonKind }) {
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [stage, setStage] = useState<Stage>({ kind: "idle" });
-  const [matches, setMatches] = useState<(VisitorLookup | StaffLookup)[]>([]);
+  const [matches, setMatches] = useState<Found[]>([]);
   const [fields, setFields] = useState<Fields>(BLANK);
-  const [errors, setErrors] = useState<{ fullName?: string; capacity?: string; items?: string; signature?: string }>({});
+  const [errors, setErrors] = useState<{ fullName?: string; capacity?: string; items?: string; plate?: string; signature?: string }>({});
   const [resign, setResign] = useState(false); // sign again even though one is on file
   const [error, setError] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<string | null>(null);
@@ -79,7 +100,7 @@ export default function PersonInPage({ kind }: { kind: PersonKind }) {
   const set = (patch: Partial<Fields>) => setFields((f) => ({ ...f, ...patch }));
 
   /** Show what is known about `phone`: sign-out if inside, else the form (filled in if seen before). */
-  const openFound = useCallback((phone: string, found: VisitorLookup | StaffLookup | null) => {
+  const openFound = useCallback((phone: string, found: Found | null) => {
     setMatches([]);
     if (found?.open_entry_id) {
       setStage({ kind: "inside", phone, name: found.full_name, entryId: found.open_entry_id });
@@ -92,6 +113,9 @@ export default function PersonInPage({ kind }: { kind: PersonKind }) {
             fullName: found.full_name,
             company: "company" in found ? (found.company ?? "") : "",
             capacity: "capacity" in found ? (found.capacity ?? "") : "",
+            // a returning courier: the vehicle they last came with, to confirm
+            cameByVehicle: "came_by_vehicle" in found ? found.came_by_vehicle : false,
+            plate: "plate_number" in found ? (found.plate_number ?? "") : "",
           }
         : BLANK,
     );
@@ -136,8 +160,7 @@ export default function PersonInPage({ kind }: { kind: PersonKind }) {
     }
     let current = true;
     const timer = window.setTimeout(() => {
-      const search = kind === "visitors" ? visitorService.search : staffService.search;
-      search(digits)
+      searchFor(kind)(digits)
         .then((found) => current && setMatches(found))
         .catch(() => current && setMatches([])); // the Look up button still works and shows errors
     }, SEARCH_DELAY_MS);
@@ -147,7 +170,7 @@ export default function PersonInPage({ kind }: { kind: PersonKind }) {
     };
   }, [phoneInput, stage.kind, kind]);
 
-  function pick(found: VisitorLookup | StaffLookup) {
+  function pick(found: Found) {
     setOutcome(null);
     setPhoneError(null);
     setLookupError(null);
@@ -181,7 +204,9 @@ export default function PersonInPage({ kind }: { kind: PersonKind }) {
     const built =
       kind === "visitors"
         ? visitorService.buildSignInRequest(stage.entryId, stage.phone, fields, read.png, onFile)
-        : staffService.buildSignInRequest(stage.entryId, stage.phone, fields, read.png, onFile);
+        : kind === "waybill"
+          ? waybillService.buildSignInRequest(stage.entryId, stage.phone, fields, read.png, onFile)
+          : staffService.buildSignInRequest(stage.entryId, stage.phone, fields, read.png, onFile);
     if (!built.ok) {
       setErrors(built.errors);
       return;
@@ -194,7 +219,9 @@ export default function PersonInPage({ kind }: { kind: PersonKind }) {
       const entry =
         kind === "visitors"
           ? await visitorService.signIn(built.value as Parameters<typeof visitorService.signIn>[0])
-          : await staffService.signIn(built.value as Parameters<typeof staffService.signIn>[0]);
+          : kind === "waybill"
+            ? await waybillService.signIn(built.value as Parameters<typeof waybillService.signIn>[0])
+            : await staffService.signIn(built.value as Parameters<typeof staffService.signIn>[0]);
       reset(`${entry.full_name} signed in at ${formatTime(entry.signed_in_at)}.`);
     } catch (err) {
       if (hasCode(err, ErrorCode.AlreadyInside)) {
@@ -307,7 +334,7 @@ export default function PersonInPage({ kind }: { kind: PersonKind }) {
                 autoComplete="off"
                 disabled={busy}
               />
-            ) : (
+            ) : kind === "visitors" ? (
               <TextField
                 label="Company name"
                 value={fields.company}
@@ -315,8 +342,33 @@ export default function PersonInPage({ kind }: { kind: PersonKind }) {
                 autoComplete="off"
                 disabled={busy}
               />
-            )}
+            ) : null}
           </div>
+
+          {kind === "waybill" && (
+            <div className="stack stack--sm">
+              <label className="check">
+                <input
+                  type="checkbox"
+                  checked={fields.cameByVehicle}
+                  onChange={(e) => set({ cameByVehicle: e.target.checked })}
+                  disabled={busy}
+                />
+                Came with a vehicle (drove here)
+              </label>
+              {fields.cameByVehicle && (
+                <TextField
+                  label="Vehicle plate number"
+                  value={fields.plate}
+                  onChange={(e) => set({ plate: e.target.value })}
+                  error={errors.plate}
+                  autoComplete="off"
+                  autoCapitalize="characters"
+                  disabled={busy}
+                />
+              )}
+            </div>
+          )}
 
           {kind === "visitors" && (
             <div className="form-grid">
@@ -346,8 +398,14 @@ export default function PersonInPage({ kind }: { kind: PersonKind }) {
             </div>
           )}
 
-          {kind === "visitors" && (
-            <ItemsEditor items={fields.items} onChange={(items) => set({ items })} error={errors.items} disabled={busy} />
+          {kind !== "staff" && (
+            <ItemsEditor
+              items={fields.items}
+              onChange={(items) => set({ items })}
+              error={errors.items}
+              disabled={busy}
+              label={kind === "waybill" ? "Items delivered" : "Items brought"}
+            />
           )}
 
           {stage.hasSignature && !resign ? (

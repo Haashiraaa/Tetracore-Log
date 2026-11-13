@@ -39,6 +39,7 @@ from typing import Any, Optional
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -51,6 +52,7 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
     Uuid,
+    false,
     func,
     text,
 )
@@ -380,6 +382,8 @@ class Truck(TimestampMixin, Base):
     driver_phone: Mapped[Optional[str]] = mapped_column(
         String(32), nullable=True)
     company: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    # The cab's own number, for trucks that have one. Free text; most trucks have none.
+    cab_number: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
 
     __table_args__ = (
         UniqueConstraint(
@@ -411,6 +415,7 @@ class TruckEntry(EntryMixin, TimestampMixin, Base):
     driver_phone: Mapped[Optional[str]] = mapped_column(
         String(32), nullable=True)
     company: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    cab_number: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     scm_purchased: Mapped[Optional[Decimal]] = mapped_column(
         Numeric(12, 2), nullable=True
     )
@@ -500,6 +505,51 @@ class VisitorEntry(EntryMixin, TimestampMixin, Base):
 
 
 # --------------------------------------------------------------------------
+# Waybill (couriers bringing goods to the station)
+# --------------------------------------------------------------------------
+
+
+class WaybillEntry(EntryMixin, TimestampMixin, Base):
+    """One courier visit: who brought what, whether they came with a vehicle (and its plate),
+    time in + signature, time out + signature. The courier is found again by phone, like a
+    visitor, so their signature can be reused."""
+
+    __tablename__ = "waybill_entries"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, primary_key=True, default=uuid.uuid4)
+    # The courier's name. Called full_name like the other people logs, so the shared code
+    # (search, warnings, notifications) works on it unchanged.
+    full_name: Mapped[str] = mapped_column(String(150), nullable=False)
+    phone: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    # What was delivered: [{"name", "quantity" (int), "unit" (text or null)}, ...].
+    items: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False)
+    # Did the courier drive here? A courier on foot has no plate.
+    came_by_vehicle: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false())
+    plate_number: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+
+    __table_args__ = (
+        CheckConstraint(
+            "came_by_vehicle OR plate_number IS NULL", name="waybill_plate_needs_vehicle"),
+        Index("ix_waybill_entries_facility_phone", "facility_id", "phone"),
+        Index("ix_waybill_entries_facility_signed_in",
+              "facility_id", "signed_in_at"),
+        Index("ix_waybill_entries_facility_updated",
+              "facility_id", "updated_at"),
+        Index(
+            "ix_waybill_entries_open",
+            "facility_id",
+            postgresql_where=text("signed_out_at IS NULL"),
+        ),
+    )
+
+    @validates("plate_number")
+    def _normalize_plate(self, _key: str, value: Optional[str]) -> Optional[str]:
+        return None if value is None else normalize_plate(value)
+
+
+# --------------------------------------------------------------------------
 # Staff
 # --------------------------------------------------------------------------
 
@@ -530,4 +580,42 @@ class StaffEntry(EntryMixin, TimestampMixin, Base):
             "facility_id",
             postgresql_where=text("signed_out_at IS NULL"),
         ),
+    )
+
+
+# --------------------------------------------------------------------------
+# Events (the officer's own notes: "this is what I noticed")
+# --------------------------------------------------------------------------
+
+
+class OccurrenceEntry(TimestampMixin, Base):
+    """One note an officer wrote into the log: what happened or what they noticed. The time,
+    the officer and the gate are filled in by the server; the officer's signature is the one
+    from their latest duty sign-on, unless they had to sign on the spot. Never edited or
+    deleted. (Called "occurrence" in code so it is not confused with `events`, the alerts feed;
+    the app calls it "Events".)"""
+
+    __tablename__ = "occurrences"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, primary_key=True, default=uuid.uuid4)  # supplied by the phone
+    facility_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("facilities.id", ondelete="RESTRICT"), nullable=False
+    )
+    officer_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("officers.id", ondelete="RESTRICT"), nullable=False
+    )
+    gate: Mapped[Optional[int]] = mapped_column(SmallInteger, nullable=True)
+    note: Mapped[str] = mapped_column(String(2000), nullable=False)
+    logged_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    signature: Mapped[Optional[bytes]] = mapped_column(
+        LargeBinary, nullable=True, deferred=True)
+    # True when nobody drew it for this note: it is the officer's signature from duty.
+    signature_reused: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false())
+    device_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+
+    __table_args__ = (
+        Index("ix_occurrences_facility_logged_at", "facility_id", "logged_at"),
+        Index("ix_occurrences_facility_updated", "facility_id", "updated_at"),
     )

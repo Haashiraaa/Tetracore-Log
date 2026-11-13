@@ -164,6 +164,8 @@ export interface TruckLookup {
   driver_name: string;
   driver_phone: string | null;
   company: string | null;
+  /** The cab's own number, when the truck has one. */
+  cab_number: string | null;
   /** Set when the truck is in the middle of a visit: queued or on site. */
   open_entry_id: string | null;
   open_entry_status: "queued" | "on_site" | null;
@@ -178,6 +180,7 @@ export interface TruckSignInRequest extends Omit<EntrySignInBase, "signature"> {
   driver_name: string;
   driver_phone?: string | null;
   company?: string | null;
+  cab_number?: string | null;
   scm_purchased?: string | null;
   signature?: string | null;
   enter_now?: boolean;
@@ -205,6 +208,7 @@ export interface TruckEntry extends EntryBase {
   driver_name: string;
   driver_phone: string | null;
   company: string | null;
+  cab_number: string | null;
   scm_purchased: string | null;
   status: TruckStatus;
   /** When it was let in. signed_in_at is when it joined the queue. */
@@ -277,7 +281,63 @@ export interface StaffEntry extends EntryBase {
   phone: string | null;
 }
 
-export type AnyEntry = TruckEntry | VisitorEntry | StaffEntry;
+// ---- waybill (couriers bringing goods) ----
+
+/** What the gate sees when a courier's phone is typed: the vehicle they last came with. */
+export interface WaybillLookup extends PersonLookup {
+  came_by_vehicle: boolean;
+  plate_number: string | null;
+}
+
+export interface WaybillSignInRequest extends Omit<EntrySignInBase, "signature"> {
+  full_name: string; // the courier
+  phone: string; // identifies a returning courier
+  items: VisitorItem[]; // at least one
+  came_by_vehicle: boolean;
+  /** Required with a vehicle, absent on foot. */
+  plate_number?: string | null;
+  /** Leave out to use the one on file for this phone number. */
+  signature?: string | null;
+}
+
+export interface WaybillEntry extends EntryBase {
+  full_name: string;
+  phone: string | null;
+  items: VisitorItem[];
+  came_by_vehicle: boolean;
+  plate_number: string | null;
+}
+
+export type AnyEntry = TruckEntry | VisitorEntry | StaffEntry | WaybillEntry;
+
+// ---- events (an officer's own notes) ----
+
+/** One note in the Events log. Time, officer and gate are set by the server. */
+export interface OccurrenceEntry {
+  id: string;
+  facility_id: string;
+  facility_code: string;
+  officer_id: string;
+  officer_name: string;
+  gate: number | null;
+  note: string;
+  logged_at: string;
+  has_signature: boolean;
+  /** Nobody drew it for this note: it is the officer's signature from going on duty. */
+  signature_reused: boolean;
+  device_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OccurrenceCreateRequest {
+  id: string;
+  note: string;
+  logged_at?: string | null;
+  /** Only needed when the officer has no signature on file. */
+  signature?: string | null;
+  device_id?: string | null;
+}
 
 // ---- duty (security officers log themselves) ----
 

@@ -3,7 +3,7 @@
 // A log's own service (truckService, visitorService, staffService) adds what is specific to it.
 
 import * as entriesApi from "@/api/entries";
-import type { AnyEntry, EntryFilters, StaffEntry, TruckEntry, VisitorEntry } from "@/api/schemas";
+import type { AnyEntry, EntryFilters, StaffEntry, TruckEntry, VisitorEntry, WaybillEntry } from "@/api/schemas";
 import { EXPORT_ROW_CAP, PAGE_SIZE, TODAY_MAX_ROWS } from "@/config/env";
 import { toCsv } from "@/lib/csv";
 import { phoneSearchText } from "@/lib/people";
@@ -17,7 +17,7 @@ export type FieldErrors<K extends string> = Partial<Record<K, string>>;
 // ---- telling entries apart ----
 
 export function isTruck(e: AnyEntry): e is TruckEntry {
-  return "plate_number" in e;
+  return "truck_id" in e; // (a waybill entry has a plate too, but no truck)
 }
 
 export function isVisitor(e: AnyEntry): e is VisitorEntry {
@@ -26,6 +26,10 @@ export function isVisitor(e: AnyEntry): e is VisitorEntry {
 
 export function isStaff(e: AnyEntry): e is StaffEntry {
   return "capacity" in e;
+}
+
+export function isWaybill(e: AnyEntry): e is WaybillEntry {
+  return "came_by_vehicle" in e;
 }
 
 /** How any entry is shown in a list: a plate (trucks only), a name, and one line under it. */
@@ -38,7 +42,13 @@ export interface EntryFace {
 
 export function faceOf(e: AnyEntry): EntryFace {
   if (isTruck(e)) {
-    return { plate: e.plate_number, name: e.driver_name, sub: e.company, phone: e.driver_phone };
+    const sub = [e.company, e.cab_number ? `Cab ${e.cab_number}` : null].filter(Boolean).join(", ");
+    return { plate: e.plate_number, name: e.driver_name, sub: sub || null, phone: e.driver_phone };
+  }
+  if (isWaybill(e)) {
+    // The plate goes in the line under the name: only trucks get the plate column.
+    const sub = [itemsLabel(e), e.plate_number].filter(Boolean).join(" · ");
+    return { plate: null, name: e.full_name, sub: sub || null, phone: e.phone };
   }
   if (isVisitor(e)) {
     const sub = [e.company, e.purpose].filter(Boolean).join(", ");
@@ -156,6 +166,7 @@ const OWN_COLUMNS: Record<LogKind, Column[]> = {
     ["Full name", (e) => (isTruck(e) ? e.driver_name : "")],
     ["Phone", (e) => (isTruck(e) ? (e.driver_phone ?? "") : "")],
     ["Company", (e) => (isTruck(e) ? (e.company ?? "") : "")],
+    ["Cab number", (e) => (isTruck(e) ? (e.cab_number ?? "") : "")],
     ["SCM purchased", (e) => (isTruck(e) ? (e.scm_purchased ?? "") : "")],
     ["Status", (e) => (isTruck(e) ? STATUS_LABEL[e.status] : "")],
     ["Let in at", (e) => (isTruck(e) && e.entered_at ? formatDateTime(e.entered_at, true) : "")],
@@ -172,6 +183,13 @@ const OWN_COLUMNS: Record<LogKind, Column[]> = {
     ["Full name", (e) => (isStaff(e) ? e.full_name : "")],
     ["Capacity", (e) => (isStaff(e) ? (e.capacity ?? "") : "")],
     ["Phone number", (e) => (isStaff(e) ? (e.phone ?? "") : "")],
+  ],
+  waybill: [
+    ["Courier", (e) => (isWaybill(e) ? e.full_name : "")],
+    ["Phone number", (e) => (isWaybill(e) ? (e.phone ?? "") : "")],
+    ["Items", (e) => (isWaybill(e) ? itemsLabel(e) : "")],
+    ["Came by vehicle", (e) => (isWaybill(e) ? (e.came_by_vehicle ? "yes" : "no") : "")],
+    ["Plate", (e) => (isWaybill(e) ? (e.plate_number ?? "") : "")],
   ],
 };
 

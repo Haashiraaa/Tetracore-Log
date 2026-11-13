@@ -1310,3 +1310,28 @@ form.card {
   padding: 0;
   list-style: none;
 }
+
+/* ---------- events log: an officer's notes ---------- */
+
+.event-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.event-note__text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.event-note__input {
+  min-height: 7rem;
+  resize: vertical;
+  font: inherit;
+}
+
+.event-note .sig-view {
+  max-height: 4.5rem;
+  width: auto;
+}

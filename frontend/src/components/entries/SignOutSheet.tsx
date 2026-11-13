@@ -40,7 +40,12 @@ interface SignOutSheetProps {
   onDone: (entry: AnyEntry) => void;
 }
 
-const SIGNER: Record<LogKind, string> = { trucks: "Driver", visitors: "Visitor", staff: "Staff member" };
+const SIGNER: Record<LogKind, string> = {
+  trucks: "Driver",
+  visitors: "Visitor",
+  staff: "Staff member",
+  waybill: "Courier",
+};
 
 export function SignOutSheet({ target, onClose, onDone }: SignOutSheetProps) {
   const [scm, setScm] = useState("");

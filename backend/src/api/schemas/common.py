@@ -9,7 +9,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Annotated, Any, Optional
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, StrictInt, field_validator
 
 from backend.src.models import clean_full_name, clean_phone
 
@@ -118,6 +118,24 @@ class LookupOut(BaseModel):
 def blank_to_none(v: Optional[str]) -> Optional[str]:
     """For optional text fields: an empty box means "not given"."""
     return v or None
+
+
+MAX_ITEMS = 30
+MAX_QUANTITY = 100_000
+
+
+class Item(BaseModel):
+    """One thing brought to the station (a visitor's item, a waybill line): a name, a
+    whole-number quantity and an optional unit ("cartons", "litres"). The quantity must
+    arrive as a JSON integer, never as text."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    name: str = Field(min_length=1, max_length=100)
+    quantity: StrictInt = Field(ge=1, le=MAX_QUANTITY)
+    unit: Optional[str] = Field(default=None, max_length=20)
+
+    _unit = field_validator("unit")(blank_to_none)
 
 
 class EntryOut(BaseModel):

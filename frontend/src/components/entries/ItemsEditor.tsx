@@ -12,9 +12,11 @@ interface ItemsEditorProps {
   onChange: (items: ItemRow[]) => void;
   disabled?: boolean;
   error?: string | null;
+  /** What the list is called: "Items brought" (visitors), "Items delivered" (waybill). */
+  label?: string;
 }
 
-export function ItemsEditor({ items, onChange, disabled, error }: ItemsEditorProps) {
+export function ItemsEditor({ items, onChange, disabled, error, label = "Items brought" }: ItemsEditorProps) {
   const lastName = useRef<HTMLInputElement>(null);
   const grew = useRef(false);
 
@@ -37,7 +39,7 @@ export function ItemsEditor({ items, onChange, disabled, error }: ItemsEditorPro
   return (
     <div className="field items">
       <span className="field__label" id="items-label">
-        Items brought
+        {label}
       </span>
       {items.length > 0 && (
         <ul className="items__list" aria-labelledby="items-label">

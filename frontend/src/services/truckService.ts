@@ -39,6 +39,8 @@ export interface SignInForm {
   driverName: string;
   driverPhone: string;
   company: string;
+  /** Only some trucks have a cab number. Blank is fine. */
+  cabNumber: string;
 }
 
 type SignInField = "driverName" | "driverPhone" | "signature";
@@ -68,6 +70,7 @@ export function buildSignInRequest(
       driver_name: cleanFullName(driverName),
       driver_phone: driverPhone,
       company: form.company.trim() || null,
+      cab_number: form.cabNumber.trim() || null,
       // no signature + enter_now = the server uses the one on file for this plate
       ...(opts.enterNow ? { enter_now: true, ...(opts.signaturePng ? { signature: opts.signaturePng } : {}) } : {}),
       device_id: deviceId(),

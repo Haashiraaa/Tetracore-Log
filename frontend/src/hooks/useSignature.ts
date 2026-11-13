@@ -3,6 +3,7 @@
 // so a plain <img src> can't load it: fetch it as a blob and point the image at an object URL.
 import { useEffect, useState } from "react";
 import { getSignature } from "@/api/entries";
+import * as occurrencesApi from "@/api/occurrences";
 import type { SignatureSide } from "@/api/schemas";
 import { ErrorCode, errorMessage, hasCode } from "@/exceptions/errors";
 import type { LogKind } from "@/models";
@@ -14,6 +15,16 @@ export type SigState =
   | { kind: "error"; message: string };
 
 export function useSignature(kind: LogKind, entryId: string, has: boolean, side: SignatureSide): SigState {
+  return useSignatureImage(() => getSignature(kind, entryId, side), `${kind}/${entryId}/${side}`, has);
+}
+
+/** The officer's signature on one Events log note. */
+export function useNoteSignature(noteId: string, has: boolean): SigState {
+  return useSignatureImage(() => occurrencesApi.getSignature(noteId), `note/${noteId}`, has);
+}
+
+/** `key` says which image this is: a new key loads a new one. */
+function useSignatureImage(load: () => Promise<Blob>, key: string, has: boolean): SigState {
   const [state, setState] = useState<SigState>(has ? { kind: "loading" } : { kind: "none" });
 
   useEffect(() => {
@@ -24,7 +35,7 @@ export function useSignature(kind: LogKind, entryId: string, has: boolean, side:
     let objectUrl: string | null = null;
     let cancelled = false;
     setState({ kind: "loading" });
-    getSignature(kind, entryId, side)
+    load()
       .then((blob) => {
         if (cancelled) return;
         objectUrl = URL.createObjectURL(blob);
@@ -40,7 +51,8 @@ export function useSignature(kind: LogKind, entryId: string, has: boolean, side:
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [kind, entryId, has, side]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, has]);
 
   return state;
 }
