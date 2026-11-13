@@ -4,6 +4,17 @@ All notable changes to Log Book. Entries above the baseline are written automati
 release-please from commit messages when a release pull request is merged (see
 [docs/releasing.md](docs/releasing.md)), so do not edit them by hand.
 
+## [0.11.0](https://github.com/Haashiraaa/log-book/compare/v0.10.2...v0.11.0) (2026-11-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* the console commands are now `log-book` and `log-book-admin` (were `tetracore-log` and `tetracore-admin`); run `pip install -e .` again after updating. The default JWT issuer is now `log-book`, so access tokens issued before the update are refused once and the app refreshes them on its own.
+
+### Refactoring
+
+* rename the project to Log Book ([#30](https://github.com/Haashiraaa/log-book/issues/30)) ([4dbfec0](https://github.com/Haashiraaa/log-book/commit/4dbfec0a327c6aad23319d4e96286245f1fe09e0))
+
 ## [0.10.2](https://github.com/Haashiraaa/log-book/compare/v0.10.1...v0.10.2) (2026-11-13)
 
 
